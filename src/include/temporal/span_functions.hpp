@@ -31,7 +31,6 @@ struct SpanFunctions {
     // TODO (Type Range): static void Range_to_span(DataChunk &args, ExpressionState &state, Vector &result);
     // TODO (Type Range): static void Span_to_range(DataChunk &args, ExpressionState &state, Vector &result);
         // Set operators
-    static void Intersection_value_span(DataChunk &args, ExpressionState &state, Vector &result);
     
 };
 

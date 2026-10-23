@@ -958,6 +958,12 @@ inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p
 inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::tgeo_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::tgeo_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
+}
 inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
 }
@@ -1008,6 +1014,12 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 }
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
 }
 inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
@@ -1484,6 +1496,17 @@ static void Gen_tpcpoint_value_at_timestamptz(DataChunk &args, ExpressionState &
         });
 }
 
+static void Gen_tpcpoint_pcid(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            uint32_t r = tpcpoint_pcid(t);
+            free(t);
+            return r;
+        });
+}
+
 static void Gen_tpcpatch_start_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -1542,6 +1565,50 @@ static void Gen_tpcpatch_value_at_timestamptz(DataChunk &args, ExpressionState &
             free(t);
             if (! ok) { mask.SetInvalid(idx); return string_t(); }
             return PcpatchToBlob(result, o);
+        });
+}
+
+static void Gen_tpcpatch_pcid(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            uint32_t r = tpcpatch_pcid(t);
+            free(t);
+            return r;
+        });
+}
+
+static void Gen_tpcpatch_start_npoints(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            uint32_t r = tpcpatch_start_npoints(t);
+            free(t);
+            return r;
+        });
+}
+
+static void Gen_tpcpatch_end_npoints(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            uint32_t r = tpcpatch_end_npoints(t);
+            free(t);
+            return r;
+        });
+}
+
+static void Gen_tpcpatch_npoints(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            int64_t r = tpcpatch_npoints(t);
+            free(t);
+            return (int64_t) r;
         });
 }
 
@@ -2990,11 +3057,16 @@ void RegisterGenerated_meos_pointcloud_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValue", {TPcpointTypes::tpcpoint()}, TPcpointTypes::pcpoint(), Gen_tpcpoint_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {TPcpointTypes::tpcpoint(), LogicalType::INTEGER}, TPcpointTypes::pcpoint(), Gen_tpcpoint_value_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::pcpoint(), Gen_tpcpoint_value_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcid", {TPcpointTypes::tpcpoint()}, LogicalType::UINTEGER, Gen_tpcpoint_pcid));
     RegisterSerializedScalarFunction(loader, ScalarFunction("startValue", {TPcpatchTypes::tpcpatch()}, TPcpatchTypes::pcpatch(), Gen_tpcpatch_start_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("endValue", {TPcpatchTypes::tpcpatch()}, TPcpatchTypes::pcpatch(), Gen_tpcpatch_end_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getValue", {TPcpatchTypes::tpcpatch()}, TPcpatchTypes::pcpatch(), Gen_tpcpatch_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueN", {TPcpatchTypes::tpcpatch(), LogicalType::INTEGER}, TPcpatchTypes::pcpatch(), Gen_tpcpatch_value_n));
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueAtTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::pcpatch(), Gen_tpcpatch_value_at_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pcid", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_tpcpatch_pcid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("startNumPoints", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_tpcpatch_start_npoints));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("endNumPoints", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_tpcpatch_end_npoints));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numPoints", {TPcpatchTypes::tpcpatch()}, LogicalType::BIGINT, Gen_tpcpatch_npoints));
 }
 
 void RegisterGenerated_meos_pointcloud_schema_cache(ExtensionLoader &loader) {

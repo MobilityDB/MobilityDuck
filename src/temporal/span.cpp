@@ -97,21 +97,6 @@ void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     }
 }
 
-void SpanTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-    // The intersection of a value and a span, value first: MEOS publishes the span-first
-    // intersection_span_<value> alone, so the catalog declares no signature with the value first.
-    const std::vector<std::pair<LogicalType, LogicalType>> value_spans = {
-        {LogicalType::INTEGER, SpanTypes::intspan()}, {LogicalType::BIGINT, SpanTypes::bigintspan()},
-        {LogicalType::DOUBLE, SpanTypes::floatspan()}, {LogicalType::DATE, SpanTypes::datespan()},
-        {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}};
-    for (const auto &vs : value_spans) {
-        for (const char *name : {"spanIntersection", "*"}) {
-            duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(name, {vs.first, vs.second},
-                vs.second, SpanFunctions::Intersection_value_span));
-        }
-    }
-}
-
 } // namespace duckdb
 
 #ifndef MOBILITYDUCK_EXTENSION_TYPES

@@ -958,6 +958,12 @@ inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p
 inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
 }
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::tgeo_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * tgeo_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::tgeo_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
+}
 inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
 }
@@ -1008,6 +1014,12 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 }
 inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
     return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
+    return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
+}
+inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
+    return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
 }
 inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
     return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
@@ -1901,6 +1913,150 @@ static void Gen_tgeo_space_boxes_s2_a3(DataChunk &args, ExpressionState &, Vecto
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, true, true, &count);
         free(x0); free(g3);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_time_boxes_s0_a5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 5; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        int count = 0;
+        STBox *arr = tgeo_time_boxes(x0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value, FlatVector::GetData<bool>(args.data[3])[i], FlatVector::GetData<bool>(args.data[4])[i], &count);
+        free(x0);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_time_boxes_s0_a4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        int count = 0;
+        STBox *arr = tgeo_time_boxes(x0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value, FlatVector::GetData<bool>(args.data[3])[i], true, &count);
+        free(x0);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_time_boxes_s0_a3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        int count = 0;
+        STBox *arr = tgeo_time_boxes(x0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[2])[i]).value, true, true, &count);
+        free(x0);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        free(arr);
+    }
+}
+
+static void Gen_tgeo_time_boxes_s0_a2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto &outv = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) {
+            outv.SetInvalid(i); list_entries[i] = list_entry_t{off, 0};
+            continue;
+        }
+        string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
+        Temporal *x0 = BlobToTemporal(a0);
+        int32_t srid0 = tspatial_srid(x0);
+        int count = 0;
+        STBox *arr = tgeo_time_boxes(x0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[1])[i]), timestamptz_in("2000-01-03", -1), true, true, &count);
+        free(x0);
         int n = (arr && count > 0) ? count : 0;
         ListVector::Reserve(result, off + n);
         ListVector::SetListSize(result, off + n);
@@ -3348,6 +3504,120 @@ static void Tiles_stbox_time_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInp
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(STBox));
     }
     output.SetCardinality(rows);
+}
+
+static void Gen_tgeo_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &n3_vec = args.data[3];
+    n3_vec.Flatten(row_count);
+    auto &n4_vec = args.data[4];
+    n4_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull() || n4_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
+        bool n4_arg = FlatVector::GetData<bool>(n4_vec)[i];
+        int count = 0;
+        STBox * arr = tgeo_time_boxes(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, n4_arg, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tgeo_time_boxes_bitmatrix_border_inc(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &n2_vec = args.data[2];
+    n2_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
+        int count = 0;
+        STBox * arr = tgeo_time_boxes_bitmatrix_border_inc(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tgeo_time_boxes_bitmatrix_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &n_vec = args.data[1];
+    n_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
+        int count = 0;
+        STBox * arr = tgeo_time_boxes_bitmatrix_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
+        free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
 }
 
 
@@ -5875,6 +6145,54 @@ static void Gen_union_timestamptz_set(DataChunk &args, ExpressionState &, Vector
         });
 }
 
+static void Gen_intersection_bigint_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(b);
+            Span *r = intersection_bigint_span(a1, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_date_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<date_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](date_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(b);
+            Span *r = intersection_date_span(ToMeosDate(a1), s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_float_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(b);
+            Span *r = intersection_float_span(a1, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_int_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(b);
+            Span *r = intersection_int_span(a1, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
+        });
+}
+
 static void Gen_intersection_span_bigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -5971,6 +6289,18 @@ static void Gen_intersection_spanset_span(DataChunk &args, ExpressionState &, Ve
             free(x); free(y);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_timestamptz_span(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](timestamp_tz_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Span *s = BlobToSpan(b);
+            Span *r = intersection_timestamptz_span(DuckDBToMeosTimestamp(a1).value, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanToBlob(result, r);
         });
 }
 
@@ -6292,6 +6622,54 @@ static void Gen_union_timestamptz_span(DataChunk &args, ExpressionState &, Vecto
         });
 }
 
+static void Gen_intersection_bigint_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(b);
+            SpanSet *r = intersection_bigint_spanset(a1, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_date_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<date_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](date_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(b);
+            SpanSet *r = intersection_date_spanset(ToMeosDate(a1), s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_float_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<double, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](double a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(b);
+            SpanSet *r = intersection_float_spanset(a1, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_int_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<int32_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](int32_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(b);
+            SpanSet *r = intersection_int_spanset(a1, s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
 static void Gen_intersection_spanset_bigint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -6359,6 +6737,18 @@ static void Gen_intersection_spanset_timestamptz(DataChunk &args, ExpressionStat
         [&](string_t a, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(a);
             SpanSet *r = intersection_spanset_timestamptz(s, DuckDBToMeosTimestamp(a2).value);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return SpanSetToBlob(result, r);
+        });
+}
+
+static void Gen_intersection_timestamptz_spanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<timestamp_tz_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](timestamp_tz_t a1, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            SpanSet *s = BlobToSpanSet(b);
+            SpanSet *r = intersection_timestamptz_spanset(DuckDBToMeosTimestamp(a1).value, s);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
@@ -7114,6 +7504,14 @@ void RegisterGenerated_meos_geo_tile(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a4));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a3));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceBoxes", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_space_boxes_s2_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_s0_a2));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_tile_s0_a5));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, StboxType::stbox(), Gen_stbox_get_space_tile_s0_a4));
     RegisterSerializedScalarFunction(loader, ScalarFunction("getSpaceTile", {MobilityDuckGeometryType(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, StboxType::stbox(), Gen_stbox_get_space_tile_ysize_zsize_s0_a3));
@@ -7155,6 +7553,12 @@ void RegisterGenerated_meos_geo_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_stbox_time_tiles_s0_a4ExecFn, Tiles_stbox_time_tiles_s0_a4BindFn, Tiles_stbox_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, Tiles_stbox_time_tiles_s0_a3ExecFn, Tiles_stbox_time_tiles_s0_a3BindFn, Tiles_stbox_time_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL}, Tiles_stbox_time_tiles_s0_a2ExecFn, Tiles_stbox_time_tiles_s0_a2BindFn, Tiles_stbox_time_tiles_s0_a2InitFn));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_bitmatrix_border_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_bitmatrix_border_inc));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_bitmatrix_border_inc_torigin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_bitmatrix_border_inc_torigin));
 }
 
 void RegisterGenerated_meos_h3_traversal(ExtensionLoader &loader) {
@@ -7646,6 +8050,14 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
         RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {type, type}, type, Gen_intersection_span_span));
         RegisterSerializedScalarFunction(loader, ScalarFunction("*", {type, type}, type, Gen_intersection_span_span));
     }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpanTypes::bigintspan(), Gen_intersection_bigint_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpanTypes::bigintspan(), Gen_intersection_bigint_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {LogicalType::DATE, SpanTypes::datespan()}, SpanTypes::datespan(), Gen_intersection_date_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::DATE, SpanTypes::datespan()}, SpanTypes::datespan(), Gen_intersection_date_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {LogicalType::DOUBLE, SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_intersection_float_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::DOUBLE, SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_intersection_float_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {LogicalType::INTEGER, SpanTypes::intspan()}, SpanTypes::intspan(), Gen_intersection_int_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::INTEGER, SpanTypes::intspan()}, SpanTypes::intspan(), Gen_intersection_int_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_intersection_span_bigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_intersection_span_bigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {SpanTypes::datespan(), LogicalType::DATE}, SpanTypes::datespan(), Gen_intersection_span_date));
@@ -7676,6 +8088,8 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::datespanset(), SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_intersection_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_intersection_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_intersection_spanset_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spanIntersection", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpanTypes::tstzspan(), Gen_intersection_timestamptz_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpanTypes::tstzspan(), Gen_intersection_timestamptz_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::BIGINT, SpanTypes::bigintspan()}, SpansetTypes::bigintspanset(), Gen_minus_bigint_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanMinus", {LogicalType::DATE, SpanTypes::datespan()}, SpansetTypes::datespanset(), Gen_minus_date_span));
@@ -7776,6 +8190,14 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SpansetTypes::tstzspanset(), SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_spanset_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spanUnion", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_timestamptz_span));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {LogicalType::TIMESTAMP_TZ, SpanTypes::tstzspan()}, SpansetTypes::tstzspanset(), Gen_union_timestamptz_span));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {LogicalType::BIGINT, SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_intersection_bigint_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::BIGINT, SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_intersection_bigint_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {LogicalType::DATE, SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_intersection_date_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::DATE, SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_intersection_date_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {LogicalType::DOUBLE, SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_intersection_float_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::DOUBLE, SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_intersection_float_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {LogicalType::INTEGER, SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_intersection_int_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::INTEGER, SpansetTypes::intspanset()}, SpansetTypes::intspanset(), Gen_intersection_int_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_intersection_spanset_bigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_intersection_spanset_bigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::datespanset(), LogicalType::DATE}, SpansetTypes::datespanset(), Gen_intersection_spanset_date));
@@ -7786,6 +8208,8 @@ void RegisterGenerated_meos_setspan_set(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::intspanset(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intersection_spanset_int));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {SpansetTypes::tstzspanset(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_intersection_spanset_timestamptz));
     RegisterSerializedScalarFunction(loader, ScalarFunction("*", {SpansetTypes::tstzspanset(), LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_intersection_spanset_timestamptz));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("spansetIntersection", {LogicalType::TIMESTAMP_TZ, SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_intersection_timestamptz_spanset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {LogicalType::TIMESTAMP_TZ, SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset(), Gen_intersection_timestamptz_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {LogicalType::BIGINT, SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_minus_bigint_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {LogicalType::BIGINT, SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset(), Gen_minus_bigint_spanset));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spansetMinus", {LogicalType::DATE, SpansetTypes::datespanset()}, SpansetTypes::datespanset(), Gen_minus_date_spanset));
