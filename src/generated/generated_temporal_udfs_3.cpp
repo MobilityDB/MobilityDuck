@@ -2240,6 +2240,19 @@ static void Gen_nad_tfloat_tbox(DataChunk &args, ExpressionState &, Vector &resu
         });
 }
 
+static void Gen_nad_tfloat_tbox_rev(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> double {
+            TBox *bx = BlobToTbox(a);
+            Temporal *t = BlobToTemporal(b);
+            double r = nad_tfloat_tbox(t, bx);
+            free(bx); free(t);
+            if (r == std::numeric_limits<double>::max()) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
 static void Gen_nad_tbigint_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
@@ -2253,6 +2266,19 @@ static void Gen_nad_tbigint_tbox(DataChunk &args, ExpressionState &, Vector &res
         });
 }
 
+static void Gen_nad_tbigint_tbox_rev(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> double {
+            TBox *bx = BlobToTbox(a);
+            Temporal *t = BlobToTemporal(b);
+            int64_t r = nad_tbigint_tbox(t, bx);
+            free(bx); free(t);
+            if (r == std::numeric_limits<int64_t>::max()) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
 static void Gen_nad_tint_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
@@ -2261,6 +2287,19 @@ static void Gen_nad_tint_tbox(DataChunk &args, ExpressionState &, Vector &result
             TBox *bx = BlobToTbox(b);
             int32_t r = nad_tint_tbox(t, bx);
             free(t); free(bx);
+            if (r == std::numeric_limits<int32_t>::max()) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
+static void Gen_nad_tint_tbox_rev(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> double {
+            TBox *bx = BlobToTbox(a);
+            Temporal *t = BlobToTemporal(b);
+            int32_t r = nad_tint_tbox(t, bx);
+            free(bx); free(t);
             if (r == std::numeric_limits<int32_t>::max()) { mask.SetInvalid(idx); return double(); }
             return (double) r;
         });
@@ -2606,10 +2645,16 @@ void RegisterGenerated_meos_temporal_dist(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TemporalTypes::tint(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_nad_tint_tint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TemporalTypes::tfloat(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox_rev));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TboxType::tbox(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox_rev));
     RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tbigint(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tbigint_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TemporalTypes::tbigint(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tbigint_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_nad_tbigint_tbox_rev));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TboxType::tbox(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_nad_tbigint_tbox_rev));
     RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tint(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tint_tbox));
     RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TemporalTypes::tint(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tint_tbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_nad_tint_tbox_rev));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("|=|", {TboxType::tbox(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_nad_tint_tbox_rev));
 }
 
 void RegisterGenerated_meos_temporal_text(ExtensionLoader &loader) {
