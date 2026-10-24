@@ -1564,6 +1564,53 @@ static void Gen_tgeompoint_to_tgeometry(DataChunk &args, ExpressionState &, Vect
         });
 }
 
+static void Gen_tpoint_as_mvtgeom_row0(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size(), k = args.ColumnCount();
+    UnifiedVectorFormat u[5];
+    for (idx_t c = 0; c < k; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto &cols = StructVector::GetEntries(result);
+    auto &valid_out = FlatVector::Validity(result);
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    for (idx_t i = 0; i < rows; i++) {
+        idx_t r[5];
+        bool valid = true;
+        for (idx_t c = 0; c < k; c++) {
+            r[c] = u[c].sel->get_index(i);
+            valid = valid && u[c].validity.RowIsValid(r[c]);
+        }
+        if (!valid) { valid_out.SetInvalid(i); FlatVector::GetData<list_entry_t>(*cols[1])[i] = list_entry_t{ListVector::GetListSize(*cols[1]), 0}; continue; }
+        Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+        auto *x1 = BlobToStbox(UnifiedVectorFormat::GetData<string_t>(u[1])[r[1]]);
+        GSERIALIZED *o_gsarr = nullptr;
+        int64_t *o_timesarr = nullptr;
+        int o_count = 0;
+        bool found = tpoint_as_mvtgeom(t, x1, (k > 2 ? UnifiedVectorFormat::GetData<int32_t>(u[2])[r[2]] : 4096), (k > 3 ? UnifiedVectorFormat::GetData<int32_t>(u[3])[r[3]] : 256), (k > 4 ? UnifiedVectorFormat::GetData<bool>(u[4])[r[4]] : true), &o_gsarr, &o_timesarr, &o_count);
+        free(t); free(x1);
+        if (!found || !o_gsarr) {
+            valid_out.SetInvalid(i); free(o_gsarr); free(o_timesarr); FlatVector::GetData<list_entry_t>(*cols[1])[i] = list_entry_t{ListVector::GetListSize(*cols[1]), 0};
+            continue;
+        }
+        {
+            auto &v = *cols[0];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(o_gsarr, arena, v);
+            free(o_gsarr);
+        }
+        {
+            auto &v = *cols[1];
+            idx_t off = ListVector::GetListSize(v);
+            ListVector::Reserve(v, off + o_count);
+            auto d = FlatVector::GetData<int64_t>(ListVector::GetEntry(v));
+            for (int e = 0; e < o_count; e++) d[off + e] = (int64_t) o_timesarr[e];
+            FlatVector::GetData<list_entry_t>(v)[i] = list_entry_t{off, (idx_t) o_count};
+            ListVector::SetListSize(v, off + o_count);
+            free(o_timesarr);
+        }
+    }
+    if (args.AllConstant()) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_tpoint_tfloat_to_geomeas(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -3103,6 +3150,10 @@ void RegisterGenerated_meos_geo_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeogpoint", {TgeompointType::tgeompoint()}, TgeogpointType::tgeogpoint(), Gen_tgeompoint_to_tgeogpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {TGeometryTypes::tgeometry()}, TgeompointType::tgeompoint(), Gen_tgeometry_to_tgeompoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {TgeompointType::tgeompoint()}, TGeometryTypes::tgeometry(), Gen_tgeompoint_to_tgeometry));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asMVTGeom", {TgeompointType::tgeompoint(), StboxType::stbox(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"times", LogicalType::LIST(LogicalType::BIGINT)}}), Gen_tpoint_as_mvtgeom_row0));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asMVTGeom", {TgeompointType::tgeompoint(), StboxType::stbox(), LogicalType::INTEGER, LogicalType::INTEGER}, LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"times", LogicalType::LIST(LogicalType::BIGINT)}}), Gen_tpoint_as_mvtgeom_row0));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asMVTGeom", {TgeompointType::tgeompoint(), StboxType::stbox(), LogicalType::INTEGER}, LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"times", LogicalType::LIST(LogicalType::BIGINT)}}), Gen_tpoint_as_mvtgeom_row0));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("asMVTGeom", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"times", LogicalType::LIST(LogicalType::BIGINT)}}), Gen_tpoint_as_mvtgeom_row0));
     RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {TgeompointType::tgeompoint(), TemporalTypes::tfloat(), LogicalType::BOOLEAN}, MobilityDuckGeometryType(), Gen_tpoint_tfloat_to_geomeas));
     RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {TgeompointType::tgeompoint(), TemporalTypes::tfloat()}, MobilityDuckGeometryType(), Gen_tpoint_tfloat_to_geomeas_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("geoMeasure", {TgeogpointType::tgeogpoint(), TemporalTypes::tfloat(), LogicalType::BOOLEAN}, MobilityDuckGeometryType(), Gen_tpoint_tfloat_to_geomeas));

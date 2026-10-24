@@ -380,7 +380,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
-	TgeompointType::RegisterAnalyticsViz(loader);
 
 	TgeogpointType::RegisterType(loader);
 	TgeogpointType::RegisterCastFunctions(loader);

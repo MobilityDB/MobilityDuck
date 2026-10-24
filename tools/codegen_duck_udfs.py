@@ -3937,6 +3937,170 @@ def emit_split(f, S, s, ins, bound, bins):
           ""]
     return "\n".join(L)
 
+# ── one row of values MEOS writes back: a composite answered as a STRUCT ──────────────────────
+# MobilityDB declares asMVTGeom as RETURNS geom_times (`CREATE TYPE geom_times AS (geom geometry,
+# times bigint[])`): tpoint_as_mvtgeom answers whether the value meets the bounds and hands the
+# geometry back through one out-parameter and the times through an array and its count, which the
+# catalog states per signature (`columns`, `from` naming each out-parameter, an array column typed
+# `T[]` read whole). The scalar reads the arguments its call passes and the SQL default of the
+# others, as #emit_split reads them, and a call that meets nothing, or a NULL argument (the function
+# is STRICT), answers NULL.
+
+
+def _row_arg(p, sqlt):
+    """#_split_arg, and a box or another value a blob carries (`PTR_IN`) as the declared SQL type."""
+    a = _split_arg(p, sqlt)
+    if a is not None:
+        return a
+    b, n = base(p["canonical"]), norm(p["canonical"])
+    dt = SQL_BASE_TO_DUCK.get(sqlt)
+    if n.count("*") == 1 and b in PTR_IN and PTR_IN[b][0] != "MD_TEMPORAL" and dt:
+        return (dt, "string_t", PTR_IN[b][1] % "a2", True)
+    return None
+
+
+def _row_col(f, col, arrays, lenp):
+    """(DuckDB type, C type of the out-parameter's target, kind, element C++ type) for a column of
+    #shape_row_out: a geometry handed back alone, or an array of by-value elements read whole."""
+    p = next((q for q in f["params"] if q["name"] == col.get("from")), None)
+    if p is None:
+        return None
+    n = re.sub(r"^struct\s+", "", norm(p["canonical"]))
+    if not n.endswith("**"):
+        return None
+    tgt = n[:-1].strip()
+    if p["name"] in arrays:
+        elem = tgt[:-1].strip()
+        et = col["type"][:-2] if col["type"].endswith("[]") else None
+        dt = SQL_BASE_TO_DUCK.get(et or "")
+        if not lenp or elem not in SPLIT_BIN or SPLIT_BIN[elem][1] or not dt:
+            return None
+        return (f"LogicalType::LIST({dt})", tgt, "list", SPLIT_BIN[elem][0])
+    if tgt == "GSERIALIZED *" and col["type"] in ("geometry", "geography"):
+        return ("MobilityDuckGeometryType()", tgt, "geo", None)
+    return None
+
+
+def shape_row_out(f):
+    """[(sqlSignature, inputs, columns)] for a retired group's public function answering one row of
+    values it hands back through out-parameters, with a bool stating whether there is one; None
+    otherwise. `columns` holds the (column, marshal) of each declared column."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    if norm(f["returnType"]["canonical"]) != "bool":
+        return None
+    sh = f.get("shape") or {}
+    outs = sh.get("outParams") or []
+    arrays = {o.get("param") for o in sh.get("outputArrays") or []}
+    sigs = f.get("sqlSignatures") or []
+    if not sigs or not outs:
+        return None
+    forms = []
+    for s in sigs:
+        cols = s.get("columns") or []
+        froms = [c.get("from") for c in cols]
+        if s.get("retSet") or not cols or not set(froms) <= set(outs) or s.get("boundArgs"):
+            return None
+        rest = [o for o in outs if o not in froms]
+        lenp = rest[0] if len(rest) == 1 and arrays else None
+        if (arrays and not lenp) or (not arrays and rest):
+            return None
+        ms = [(c, _row_col(f, c, arrays, lenp)) for c in cols]
+        if any(m is None for _c, m in ms):
+            return None
+        ins = [p for p in f["params"] if p["name"] not in outs]
+        args = s.get("args") or []
+        if len(ins) != len(args) or args[0] not in SIG_TEMPORAL_ACC or base(ins[0]["canonical"]) != "Temporal":
+            return None
+        if any(_row_arg(p, a) is None for p, a in zip(ins[1:], args[1:])):
+            return None
+        forms.append((s, ins, ms))
+    return forms or None
+
+
+def emit_row_out(f, tag, s, ins, ms):
+    """The scalar of a signature of #shape_row_out, over every argument count its defaults allow."""
+    name = f["name"]
+    args = s["args"]
+    defs = s.get("argDefaults") or [None] * len(ins)
+    n = len(ins)
+    outs = f["shape"]["outParams"]
+    geo = any(m[2] == "geo" for _c, m in ms)
+    L = [f"static void Gen_{name}_{tag}(DataChunk &args, ExpressionState &, Vector &result) {{",
+         "    EnsureMeosThreadInitialized();",
+         "    const idx_t rows = args.size(), k = args.ColumnCount();",
+         f"    UnifiedVectorFormat u[{n}];",
+         "    for (idx_t c = 0; c < k; c++) args.data[c].ToUnifiedFormat(rows, u[c]);",
+         "    result.SetVectorType(VectorType::FLAT_VECTOR);",
+         "    auto &cols = StructVector::GetEntries(result);",
+         "    auto &valid_out = FlatVector::Validity(result);"]
+    if geo:
+        L.append("    ArenaAllocator arena(Allocator::DefaultAllocator());")
+    empty = "".join(f" FlatVector::GetData<list_entry_t>(*cols[{j}])[i] = list_entry_t{{ListVector::GetListSize(*cols[{j}]), 0}};"
+                    for j, (_c, m) in enumerate(ms) if m[2] == "list")
+    L += ["    for (idx_t i = 0; i < rows; i++) {",
+          f"        idx_t r[{n}];",
+          "        bool valid = true;",
+          "        for (idx_t c = 0; c < k; c++) {",
+          "            r[c] = u[c].sel->get_index(i);",
+          "            valid = valid && u[c].validity.RowIsValid(r[c]);",
+          "        }",
+          f"        if (!valid) {{ valid_out.SetInvalid(i);{empty} continue; }}",
+          "        Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);"]
+    call, frees = ["t"], []
+    for i, p in enumerate(ins[1:], 1):
+        _dt, cpp, expr, freed = _row_arg(p, args[i])
+        e = expr.replace("a2", f"UnifiedVectorFormat::GetData<{cpp}>(u[{i}])[r[{i}]]")
+        if defs[i] is not None:
+            d = forward_literal(p, defs[i])
+            if d is None or freed:
+                raise ValueError(f"{name}: no literal for {p['name']}")
+            e = f"(k > {i} ? {e} : {d})"
+        if freed:
+            L.append(f"        auto *x{i} = {e};")
+            frees.append(f"x{i}")
+            call.append(f"x{i}")
+        else:
+            call.append(e)
+    tgt = {c["from"]: m[1] for c, m in ms}
+    lenp = next((o for o in outs if o not in tgt), None)
+    for o in outs:
+        if o in tgt:
+            L.append(f"        {tgt[o]}{'' if tgt[o].endswith('*') else ' '}o_{o} = nullptr;")
+    if lenp:
+        L.append(f"        int o_{lenp} = 0;")
+    call += [f"&o_{o}" for o in outs]
+    L += [f"        bool found = {name}({', '.join(call)});",
+          "        free(t);" + "".join(f" free({x});" for x in frees),
+          "        if (!found" + "".join(f" || !o_{c['from']}" for c, m in ms if m[2] == "geo") + ") {",
+          "            valid_out.SetInvalid(i);" + "".join(f" free(o_{o});" for o in outs if o in tgt) + empty,
+          "            continue;",
+          "        }"]
+    for j, (c, m) in enumerate(ms):
+        o = c["from"]
+        if m[2] == "geo":
+            L += ["        {",
+                  f"            auto &v = *cols[{j}];",
+                  f"            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(o_{o}, arena, v);",
+                  f"            free(o_{o});",
+                  "        }"]
+        else:
+            L += ["        {",
+                  f"            auto &v = *cols[{j}];",
+                  "            idx_t off = ListVector::GetListSize(v);",
+                  f"            ListVector::Reserve(v, off + o_{lenp});",
+                  f"            auto d = FlatVector::GetData<{m[3]}>(ListVector::GetEntry(v));",
+                  f"            for (int e = 0; e < o_{lenp}; e++) d[off + e] = ({m[3]}) o_{o}[e];",
+                  f"            FlatVector::GetData<list_entry_t>(v)[i] = list_entry_t{{off, (idx_t) o_{lenp}}};",
+                  f"            ListVector::SetListSize(v, off + o_{lenp});",
+                  f"            free(o_{o});",
+                  "        }"]
+    L += ["    }",
+          "    if (args.AllConstant()) result.SetVectorType(VectorType::CONSTANT_VECTOR);",
+          "}",
+          ""]
+    return "\n".join(L)
+
 
 # ── the boxes of a spatial value and the tile of a point: one scalar per row ───────────────
 # spaceBoxes and spaceTimeBoxes answer stbox[] from a spatial temporal value, its sizes, an origin
@@ -5670,9 +5834,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # stboxX: the catalog gives stbox_make, whose eleven parameters the SQL constructor fills from
 # five arguments, the flags through boundArgs and the SRID read last in SQL and fourth in C; no
 # shape reads that mapping, and no hand registration answers stboxX either.
-# asMVTGeom: its result is the composite geom_times (a geometry and the bigint[] of its times),
-# which tpoint_as_mvtgeom hands back through three out-parameters; no shape builds a STRUCT from
-# out-parameters, so src/geo/tgeompoint.cpp keeps it. The clusters of a geometry array
+# The clusters of a geometry array
 # (clusterKMeans, clusterDBSCAN, clusterIntersecting, clusterWithin) answer an array, of integers
 # or of geometries, with its count through an out-parameter, which no shape returns from an
 # array of geometries; no hand registration answers them either.
@@ -5688,7 +5850,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # argument is NULL and which the catalog states no binding for, so src/raster/raquet.cpp keeps it.
 # tjsonbSet and tjsonbSetLax register nothing: tjsonb_set reads its keys as a text ** and a count
 # no marshalling fills from a text[], and tjsonbSet binds no literal for handle_null.
-RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet", "asMVTGeom",
+RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
                        "rasterFromBinary", "rasterFromHexWKB", "numBands", "upperLeftX",
@@ -7183,6 +7345,30 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         TILE_REGISTERED.add((nm, tuple(types_)))
                         specific_regs.append(f'    loader.RegisterFunction(TableFunction("{nm}", '
                                              f'{{{", ".join(types_)}}}, {S_}ExecFn, {S_}BindFn, {S_}InitFn));')
+            continue
+        # one row of values handed back through out-parameters (asMVTGeom): a STRUCT scalar per
+        # declared signature, over every argument count its defaults allow
+        _ro = shape_row_out(f)
+        if _ro:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            for j, (s_, ins_, ms_) in enumerate(_ro):
+                tag = f"row{j}"
+                rt_ = "LogicalType::STRUCT({%s})" % ", ".join(
+                    '{"%s", %s}' % (c["name"], m[0]) for c, m in ms_)
+                acc_ = SIG_TEMPORAL_ACC[s_["args"][0]]
+                regs_ = []
+                for k_ in box_tile_forms(s_, ins_):
+                    types_ = tuple([acc_] + [_row_arg(p, a)[0] for p, a in zip(ins_[1:k_], s_["args"][1:k_])])
+                    for nm in reg_names(f, s_.get("sqlName") or f["sqlfn"], aliases):
+                        if (reg_name(nm, f), types_) not in SPLIT_REGISTERED:
+                            regs_.append((reg_name(nm, f), types_))
+                if not regs_:
+                    continue
+                bodies.append(emit_row_out(f, tag, s_, ins_, ms_))
+                for nm, types_ in regs_:
+                    SPLIT_REGISTERED.add((nm, types_))
+                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                         f'"{nm}", {{{", ".join(types_)}}}, {rt_}, Gen_{f["name"]}_{tag}));')
             continue
         # the pieces of a temporal value with their bins (timeSplit, spaceTimeSplit): a table
         # function in-out per declared form, one body per form over every temporal type
