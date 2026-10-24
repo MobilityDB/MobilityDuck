@@ -5169,10 +5169,12 @@ def shape_container_scalar(f):
     return ops if any(k == "C" for k, _b in ops) else None
 
 def container_scalar_sigs(f, ops):
-    """[(duck argument types, reversed)] for each declared signature: one spelling the C operand
-    order, or the reversed one a commuted SQL form declares. A position naming a type this surface
-    does not register drops its signature. A base value matches where the DuckDB type of its SQL
-    name is the one its C type marshals through."""
+    """[(duck argument types, reversed, SQL name)] for each declared signature: one spelling the C
+    operand order, or the reversed one a commuted SQL form declares, under the name the signature
+    declares (spanDistance(intspan, intspanset) beside spansetDistance(intspanset, intspan) over
+    distance_intspanset_intspan). A position naming a type this surface does not register drops
+    its signature. A base value matches where the DuckDB type of its SQL name is the one its C type
+    marshals through."""
     def duck(op, sqlt):
         k, b = op
         if k == "C":
@@ -5185,10 +5187,11 @@ def container_scalar_sigs(f, ops):
             continue
         fwd = [duck(ops[0], a[0]), duck(ops[1], a[1])]
         rev = [duck(ops[1], a[0]), duck(ops[0], a[1])]
+        name = s.get("sqlName") or f["sqlfn"]
         if all(fwd):
-            out.append((fwd, False))
+            out.append((fwd, False, name))
         elif all(rev):
-            out.append((rev, True))
+            out.append((rev, True, name))
     return out
 
 def emit_container_scalar(f, ops, rev):
@@ -7486,12 +7489,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         n_set += 1
         fn = f["name"]
         dret = scalar_ret4(f)[0]
-        for rev in sorted({r for _a, r in sigs}):
+        for rev in sorted({r for _a, r, _n in sigs}):
             set_bodies.append(emit_container_scalar(f, ops, rev))
-        names = reg_names(f, f["sqlfn"], aliases)
-        for (a0, a1), rev in sigs:
+        for (a0, a1), rev, sqlnm in sigs:
             body = f"Gen_{fn}_rev" if rev else f"Gen_{fn}"
-            for nm in names:
+            for nm in reg_names(f, sqlnm, aliases):
                 set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {dret}, {body}));')
     # SET family — separate loop (the temporal path above is untouched).

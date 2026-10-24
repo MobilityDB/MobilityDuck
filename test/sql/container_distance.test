@@ -165,3 +165,18 @@ statement error
 SELECT set_distance(intset '{1, 5}', 7);
 ----
 does not exist
+
+# A span first and a span set second is spanDistance, as MobilityDB declares it, and answers
+# as spansetDistance with the operands swapped; spansetDistance takes no span first.
+query II
+SELECT spanDistance(intspan '[1, 3]', intspanset '{[10, 20]}')
+         = spansetDistance(intspanset '{[10, 20]}', intspan '[1, 3]'),
+       spanDistance(floatspan '[1, 3]', floatspanset '{[10, 20]}')
+         = spansetDistance(floatspanset '{[10, 20]}', floatspan '[1, 3]');
+----
+true	true
+
+statement error
+SELECT spansetDistance(intspan '[1, 3]', intspanset '{[10, 20]}');
+----
+No function matches the given name and argument types
