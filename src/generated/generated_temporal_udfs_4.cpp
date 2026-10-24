@@ -2371,6 +2371,220 @@ static void Gen_npoint_as_text_d(DataChunk &args, ExpressionState &, Vector &res
 }
 
 
+// ===== @ingroup meos_npoint_route =====
+static void Gen_contained_rid_bigint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            bool r = contained_rid_bigint_tnpoint(a1, t);
+            free(t);
+            return (bool) r;
+        });
+}
+
+static void Gen_contained_rid_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2) {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            bool r = contained_rid_tnpoint_tnpoint(t1, t2);
+            free(t1); free(t2);
+            return (bool) r;
+        });
+}
+
+static void Gen_contains_rid_tnpoint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2) {
+            Temporal *t = BlobToTemporal(in);
+            bool r = contains_rid_tnpoint_bigint(t, a2);
+            free(t);
+            return (bool) r;
+        });
+}
+
+static void Gen_contains_rid_tnpoint_npoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2) {
+            Temporal *t = BlobToTemporal(in);
+            Npoint *a2p = BlobToNpoint(a2);
+            bool r = contains_rid_tnpoint_npoint(t, a2p);
+            free(a2p); free(t);
+            return (bool) r;
+        });
+}
+
+static void Gen_contains_rid_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2) {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            bool r = contains_rid_tnpoint_tnpoint(t1, t2);
+            free(t1); free(t2);
+            return (bool) r;
+        });
+}
+
+static void Gen_overlaps_rid_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2) {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            bool r = overlaps_rid_tnpoint_tnpoint(t1, t2);
+            free(t1); free(t2);
+            return (bool) r;
+        });
+}
+
+static void Gen_same_rid_bigint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](int64_t a1, string_t in) {
+            Temporal *t = BlobToTemporal(in);
+            bool r = same_rid_bigint_tnpoint(a1, t);
+            free(t);
+            return (bool) r;
+        });
+}
+
+static void Gen_same_rid_tnpoint_bigint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int64_t a2) {
+            Temporal *t = BlobToTemporal(in);
+            bool r = same_rid_tnpoint_bigint(t, a2);
+            free(t);
+            return (bool) r;
+        });
+}
+
+static void Gen_same_rid_tnpoint_npoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2) {
+            Temporal *t = BlobToTemporal(in);
+            Npoint *a2p = BlobToNpoint(a2);
+            bool r = same_rid_tnpoint_npoint(t, a2p);
+            free(a2p); free(t);
+            return (bool) r;
+        });
+}
+
+static void Gen_same_rid_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2) {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            bool r = same_rid_tnpoint_tnpoint(t1, t2);
+            free(t1); free(t2);
+            return (bool) r;
+        });
+}
+
+static void Gen_contained_rid_bigintset_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Set *cc = BlobToSet(a);
+            Temporal *t = BlobToTemporal(b);
+            bool r = contained_rid_bigintset_tnpoint(cc, t);
+            free(cc); free(t);
+            return r;
+        });
+}
+
+static void Gen_contained_rid_tnpoint_bigintset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            bool r = contained_rid_tnpoint_bigintset(t, cc);
+            free(t); free(cc);
+            return r;
+        });
+}
+
+static void Gen_contains_rid_bigintset_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Set *cc = BlobToSet(a);
+            Temporal *t = BlobToTemporal(b);
+            bool r = contains_rid_bigintset_tnpoint(cc, t);
+            free(cc); free(t);
+            return r;
+        });
+}
+
+static void Gen_contains_rid_tnpoint_bigintset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            bool r = contains_rid_tnpoint_bigintset(t, cc);
+            free(t); free(cc);
+            return r;
+        });
+}
+
+static void Gen_overlaps_rid_bigintset_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Set *cc = BlobToSet(a);
+            Temporal *t = BlobToTemporal(b);
+            bool r = overlaps_rid_bigintset_tnpoint(cc, t);
+            free(cc); free(t);
+            return r;
+        });
+}
+
+static void Gen_overlaps_rid_tnpoint_bigintset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            bool r = overlaps_rid_tnpoint_bigintset(t, cc);
+            free(t); free(cc);
+            return r;
+        });
+}
+
+static void Gen_same_rid_bigintset_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Set *cc = BlobToSet(a);
+            Temporal *t = BlobToTemporal(b);
+            bool r = same_rid_bigintset_tnpoint(cc, t);
+            free(cc); free(t);
+            return r;
+        });
+}
+
+static void Gen_same_rid_tnpoint_bigintset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Temporal *t = BlobToTemporal(a);
+            Set *cc = BlobToSet(b);
+            bool r = same_rid_tnpoint_bigintset(t, cc);
+            free(t); free(cc);
+            return r;
+        });
+}
+
+
 // ===== @ingroup meos_pointcloud_set_inout =====
 static void Gen_pcpointset_in(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -5204,6 +5418,45 @@ void RegisterGenerated_meos_npoint_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {NpointTypes::npoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_npoint_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_text_d));
+}
+
+void RegisterGenerated_meos_npoint_route(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {LogicalType::BIGINT, NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_bigint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?@", {LogicalType::BIGINT, NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_bigint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?@", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containsRid", {NpointTypes::tnpoint(), LogicalType::BIGINT}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_bigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@?", {NpointTypes::tnpoint(), LogicalType::BIGINT}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_bigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containsRid", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_npoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@?", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_npoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containsRid", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@?", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlapsRid", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@@", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {LogicalType::BIGINT, NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_bigint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {LogicalType::BIGINT, NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_bigint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {NpointTypes::tnpoint(), LogicalType::BIGINT}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_bigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::tnpoint(), LogicalType::BIGINT}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_bigint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_npoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_npoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?@", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_contained_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?@", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_contained_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containsRid", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@?", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contains_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containsRid", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@?", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_contains_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlapsRid", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@@", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_overlaps_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("overlapsRid", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_overlaps_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@@", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_overlaps_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_bigintset_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_bigintset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_bigintset));
 }
 
 void RegisterGenerated_meos_pointcloud_set_inout(ExtensionLoader &loader) {

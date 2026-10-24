@@ -167,6 +167,7 @@ void RegisterGenerated_meos_npoint_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_dist(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_restrict(ExtensionLoader &loader);
+void RegisterGenerated_meos_npoint_route(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_set_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_set_constructor(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_set_conversion(ExtensionLoader &loader);
@@ -433,6 +434,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_npoint_dist(loader);
     RegisterGenerated_meos_npoint_inout(loader);
     RegisterGenerated_meos_npoint_restrict(loader);
+    RegisterGenerated_meos_npoint_route(loader);
     RegisterGenerated_meos_npoint_set_accessor(loader);
     RegisterGenerated_meos_npoint_set_constructor(loader);
     RegisterGenerated_meos_npoint_set_conversion(loader);
