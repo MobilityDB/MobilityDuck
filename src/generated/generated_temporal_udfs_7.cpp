@@ -1653,6 +1653,86 @@ static void Gen_pose_as_text_d(DataChunk &args, ExpressionState &, Vector &resul
 }
 
 
+// ===== @ingroup meos_quadbin_constructor =====
+static void Gen_tquadbininst_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *r = (Temporal *) tquadbininst_make(static_cast<uint64_t>(in0[i]), DuckDBToMeosTimestamp(in1[i]).value);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tquadbinseq_from_base_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Set *p1 = BlobToSet(in1[i]);
+        Temporal *r = (Temporal *) tquadbinseq_from_base_tstzset(static_cast<uint64_t>(in0[i]), p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tquadbinseq_from_base_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p1 = BlobToSpan(in1[i]);
+        Temporal *r = (Temporal *) tquadbinseq_from_base_tstzspan(static_cast<uint64_t>(in0[i]), p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tquadbinseqset_from_base_tstzspanset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        SpanSet *p1 = BlobToSpanSet(in1[i]);
+        Temporal *r = (Temporal *) tquadbinseqset_from_base_tstzspanset(static_cast<uint64_t>(in0[i]), p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
 // ===== @ingroup meos_quadbin_restrict =====
 static void Gen_tquadbin_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1839,6 +1919,13 @@ void RegisterGenerated_meos_pose_base_inout(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKT", {PoseTypes::pose()}, LogicalType::VARCHAR, Gen_pose_as_ewkt_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {PoseTypes::pose(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_pose_as_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {PoseTypes::pose()}, LogicalType::VARCHAR, Gen_pose_as_text_d));
+}
+
+void RegisterGenerated_meos_quadbin_constructor(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {QuadbinTypes::quadbin(), LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_tquadbininst_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {QuadbinTypes::quadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_tquadbinseq_from_base_tstzset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {QuadbinTypes::quadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_tquadbinseq_from_base_tstzspan));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {QuadbinTypes::quadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_tquadbinseqset_from_base_tstzspanset));
 }
 
 void RegisterGenerated_meos_quadbin_restrict(ExtensionLoader &loader) {

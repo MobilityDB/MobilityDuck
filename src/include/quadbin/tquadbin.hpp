@@ -19,7 +19,6 @@ struct QuadbinTypes {
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
-    static void RegisterScalarFunctions(ExtensionLoader &loader);
 };
 
 struct QuadbinFunctions {
@@ -30,12 +29,6 @@ struct QuadbinFunctions {
     /* In/out — TQUADBIN temporal value */
     static bool Tquadbin_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tquadbin_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* Constructor */
-    static void Tquadbin_make(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* Accessors (startValue/endValue/valueN/getValues are generated — see src/generated) */
-
 };
 
 } // namespace duckdb

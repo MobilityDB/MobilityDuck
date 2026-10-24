@@ -92,3 +92,31 @@ query I
 SELECT valueAtTimestamp(ts2cell '[89c25a3@2000-01-01, 89c25a3@2000-01-02]', TIMESTAMPTZ '2000-01-01 12:00:00')::VARCHAR;
 ----
 89c25a3
+
+# the constructors from a cell and a time value, as MobilityDB answers the
+# instant and the span forms (603_ts2cell.test.out); each is read against the
+# literal of its answer
+
+query I
+SELECT asText(ts2cell(s2cell '47c3c3', TIMESTAMPTZ '2001-01-01'))
+     = asText(ts2cell '47c3c3@2001-01-01');
+----
+true
+
+query I
+SELECT asText(ts2cell(s2cell '47c3c3', tstzset '{2001-01-01, 2001-01-02}'))
+     = asText(ts2cell '{47c3c3@2001-01-01, 47c3c3@2001-01-02}');
+----
+true
+
+query I
+SELECT asText(ts2cell(s2cell '47c3c3', tstzspan '[2001-01-01, 2001-01-02]'))
+     = asText(ts2cell '[47c3c3@2001-01-01, 47c3c3@2001-01-02]');
+----
+true
+
+query I
+SELECT asText(ts2cell(s2cell '47c3c3', tstzspanset '{[2001-01-01, 2001-01-02]}'))
+     = asText(ts2cell '{[47c3c3@2001-01-01, 47c3c3@2001-01-02]}');
+----
+true
