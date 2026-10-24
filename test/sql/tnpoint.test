@@ -157,3 +157,24 @@ SELECT asText(atStbox(tnpoint '[NPoint(1, 0.2)@2000-01-01, NPoint(1, 0.8)@2000-0
                          stbox 'STBOX T([2000-01-01,2000-01-02])'));
 ----
 {[NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01]}	{(NPoint(1,0.5)@2000-01-02 00:00:00+01, NPoint(1,0.8)@2000-01-03 00:00:00+01]}
+
+# The route operators with the network point first answer as their twins with the
+# temporal value first: containedRid(np, temp) asks whether the routes of temp hold the
+# route of np, as containsRid(temp, np) does, and sameRid is symmetric. Route 1 is held
+# by both values, route 3 by neither, and the second value has two routes. DuckDB reads
+# `?` as a prepared-statement parameter, so ?@ is called by its name.
+query IIII
+SELECT containedRid(npoint 'NPoint(1, 0.5)', tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(2, 0.5)@2001-01-02}'),
+       containedRid(npoint 'NPoint(3, 0.5)', tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(2, 0.5)@2001-01-02}'),
+       "?@"(npoint 'NPoint(1, 0.5)', tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(2, 0.5)@2001-01-02}'),
+       containsRid(tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(2, 0.5)@2001-01-02}', npoint 'NPoint(1, 0.5)');
+----
+true	false	true	true
+
+query IIII
+SELECT sameRid(npoint 'NPoint(1, 0.5)', tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(1, 0.6)@2001-01-02}'),
+       sameRid(npoint 'NPoint(1, 0.5)', tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(2, 0.5)@2001-01-02}'),
+       npoint 'NPoint(1, 0.5)' @= tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(1, 0.6)@2001-01-02}',
+       sameRid(tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(1, 0.6)@2001-01-02}', npoint 'NPoint(1, 0.5)');
+----
+true	false	true	true

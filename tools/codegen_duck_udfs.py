@@ -5398,6 +5398,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_s2cell_set_conversion",
                   "meos_cbuffer_set_constructor", "meos_h3_set_constructor",
                   "meos_json_set_constructor", "meos_npoint_set_constructor",
+                  # The route operators of a temporal network point, one public function per
+                  # signature and argument order: overlapsRid, containsRid, containedRid, sameRid
+                  "meos_npoint_route",
                   "meos_pointcloud_set_constructor", "meos_pose_set_constructor",
                   "meos_posechain_set_constructor", "meos_quadbin_set_constructor",
                   "meos_s2cell_set_constructor",
