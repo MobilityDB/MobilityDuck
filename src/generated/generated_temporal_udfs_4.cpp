@@ -2488,6 +2488,48 @@ static void Gen_same_rid_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vec
         });
 }
 
+static void Gen_contained_rid_npoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        bool r = contained_rid_npoint_tnpoint(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_rid_npoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        bool r = same_rid_npoint_tnpoint(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_contained_rid_bigintset_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -5441,6 +5483,10 @@ void RegisterGenerated_meos_npoint_route(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_npoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_tnpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_tnpoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_npoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("?@", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_npoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameRid", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_npoint_tnpoint));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("@=", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_same_rid_npoint_tnpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_bigintset_tnpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("?@", {SetTypes::bigintset(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_contained_rid_bigintset_tnpoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("containedRid", {NpointTypes::tnpoint(), SetTypes::bigintset()}, LogicalType::BOOLEAN, Gen_contained_rid_tnpoint_bigintset));
