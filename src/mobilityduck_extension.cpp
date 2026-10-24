@@ -430,7 +430,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
-	QuadbinTypes::RegisterScalarFunctions(loader);
 
 	S2cellTypes::RegisterTypes(loader);
 	S2cellTypes::RegisterCastFunctions(loader);

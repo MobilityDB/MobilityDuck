@@ -183,3 +183,29 @@ query II
 SELECT asText(valueAtTimestamp(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), TIMESTAMPTZ '2024-01-01')), typeof(valueAtTimestamp(tquadbin(quadbinTileToCell(1,0,1), TIMESTAMPTZ '2024-01-01'), TIMESTAMPTZ '2024-01-01'));
 ----
 4817ffffffffffff	quadbin
+
+# ── the constructors from a cell and a time value, as MobilityDB answers them
+# (352_tquadbin.test.out); each is read against the literal of that answer ──
+query I
+SELECT asText(tquadbin(quadbin '480fffffffffffff', TIMESTAMPTZ '2001-01-01 08:00'))
+     = asText(tquadbin '480fffffffffffff@2001-01-01 08:00');
+----
+true
+
+query I
+SELECT asText(tquadbin(quadbin '48a6227affffffff', tstzset '{2001-01-01, 2001-01-02}'))
+     = asText(tquadbin '{48a6227affffffff@2001-01-01, 48a6227affffffff@2001-01-02}');
+----
+true
+
+query I
+SELECT asText(tquadbin(quadbin '48a6227affffffff', tstzspan '[2001-01-01, 2001-01-02]'))
+     = asText(tquadbin '[48a6227affffffff@2001-01-01, 48a6227affffffff@2001-01-02]');
+----
+true
+
+query I
+SELECT asText(tquadbin(quadbin '48a6227affffffff', tstzspanset '{[2001-01-01, 2001-01-02]}'))
+     = asText(tquadbin '{[48a6227affffffff@2001-01-01, 48a6227affffffff@2001-01-02]}');
+----
+true

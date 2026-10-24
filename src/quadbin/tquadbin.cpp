@@ -1,11 +1,13 @@
 /* MobilityDuck binding for the MEOS QUADBIN cell index types (quadbin +
- * tquadbin).  Wraps every implemented export from `meos_quadbin.h` so DuckDB
- * SQL can call the full static-cell and temporal-cell surface.
+ * tquadbin).
  *
  * QUADBIN is surfaced as BIGINT (the 64-bit cell id reinterprets losslessly).
  * TQUADBIN is the temporal cell index, stored as a Temporal* blob (BLOB).
  * The analogue of H3INDEX / TH3INDEX for the square Web-Mercator DGGS.
- */
+ *
+ * Only the TYPE registration + text I/O casts are hand-written here, as for
+ * H3INDEX/TH3INDEX. The QUADBIN function surface is generated from the
+ * MEOS-API catalog. */
 
 #include "quadbin/tquadbin.hpp"
 #include "temporal/temporal.hpp"
@@ -142,47 +144,6 @@ bool QuadbinFunctions::Tquadbin_out_cast(
             return StringVector::AddString(result, copy);
         });
     return true;
-}
-
-/* =====================================================================
- * Constructor — tquadbininst_make wrapped as `tquadbin(cell, t)`
- * ===================================================================== */
-
-void QuadbinFunctions::Tquadbin_make(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    BinaryExecutor::Execute<int64_t, timestamp_tz_t, string_t>(
-        args.data[0], args.data[1], result, args.size(),
-        [&](int64_t cell, timestamp_tz_t t) -> string_t {
-            TInstant *inst = tquadbininst_make(
-                static_cast<Quadbin>(cell), ToMeosTimestamp(t));
-            return TempToBlob(result, reinterpret_cast<Temporal *>(inst));
-        });
-}
-
-/* =====================================================================
- * Registration
- * ===================================================================== */
-
-void QuadbinTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const auto QB  = QuadbinTypes::quadbin();
-    const auto TQB = QuadbinTypes::tquadbin();
-    const auto B   = LogicalType::BOOLEAN;
-    const auto V   = LogicalType::VARCHAR;
-    const auto TS  = LogicalType::TIMESTAMP_TZ;
-
-    /* Constructor */
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "tquadbin", {QB, TS}, TQB,
-        QuadbinFunctions::Tquadbin_make));
-
-    /* Accessors — startValue/endValue, valueN, getValues and valueAtTimestamp are generated
-     * from the catalog (meos_quadbin_accessor). */
-
-    /* Quadkey conversion */
-
-    /* tbigint ↔ tquadbin: deferred until TemporalTypes::TBIGINT() is published,
-     * same as the th3index binding. */
 }
 
 } // namespace duckdb
