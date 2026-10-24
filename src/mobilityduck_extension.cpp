@@ -334,10 +334,10 @@ static void LoadInternal(ExtensionLoader &loader) {
     }
 
 
-	// Register scalar function: mobilityduck_openssl_version
+	// Register scalar function: mobilityduckOpenSSLVersion
 	auto mobilityduck_openssl_version_scalar_function =
 	    ScalarFunction(
-	        "mobilityduck_openssl_version",
+	        "mobilityduckOpenSSLVersion",
 	        {LogicalType::VARCHAR},
 	        LogicalType::VARCHAR,
 	        MobilityduckOpenSSLVersionScalarFun
@@ -345,10 +345,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	duckdb::RegisterSerializedScalarFunction(loader,  mobilityduck_openssl_version_scalar_function);
 
 	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-		"mobilityduck_version", {}, LogicalType::VARCHAR,
+		"mobilityduckVersion", {}, LogicalType::VARCHAR,
 		MobilityduckVersionScalarFun));
 	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-		"mobilityduck_full_version", {}, LogicalType::VARCHAR,
+		"mobilityduckFullVersion", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
 	// Portable-SQL aliases — MobilityDB publishes `mobilitydbVersion` and
 	// `mobilitydbFullVersion`, so a query that probes for the engine version

@@ -191,8 +191,8 @@ same rows ordered by time.
 
 | MobilityDB | MobilityDuck |
 |---|---|
-| `mobilitydb_version()` | `mobilityduck_version()` |
-| `mobilitydb_full_version()` | `mobilityduck_full_version()` |
+| `mobilitydbVersion()` | `mobilityduckVersion()` |
+| `mobilitydbFullVersion()` | `mobilityduckFullVersion()` |
 
 The original `mobilitydb_*` names are also registered as aliases that
 return MobilityDuck's version stamp, so the same query text works on
@@ -278,4 +278,4 @@ These MobilityDB type families aren't part of MobilityDuck today:
 
 *Spotted something that should work but doesn't? Please open an
 issue with the function signature you tried to call and the version
-line from `mobilityduck_full_version()`.*
+line from `mobilityduckFullVersion()`.*

@@ -6,7 +6,7 @@ MobilityDuck is the DuckDB extension for MEOS-stored mobility data. Contribution
 
 Please open an issue at https://github.com/MobilityDB/MobilityDuck/issues with:
 
-- The MobilityDuck / MEOS / DuckDB versions you are running. Run `SELECT mobilityduck_full_version();` from the DuckDB shell — it returns the extension version, the linked MEOS commit, the DuckDB version, and the full toolchain.
+- The MobilityDuck / MEOS / DuckDB versions you are running. Run `SELECT mobilityduckFullVersion();` from the DuckDB shell — it returns the extension version, the linked MEOS commit, the DuckDB version, and the full toolchain.
 - The function signature or SQL query you tried.
 - The expected behaviour (typically what MobilityDB on PostgreSQL does for the same input — [`doc/PARITY.md`](doc/PARITY.md) is the reference for *"should work the same"*).
 - The actual behaviour, including any error messages.
