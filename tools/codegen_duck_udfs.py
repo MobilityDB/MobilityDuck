@@ -841,12 +841,14 @@ def sig_declared_accs(f):
     return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have] or None
 
 def sig_tt_pairs(f):
-    """[(first accessor, second accessor, declared temporal return accessor or None, commuted)]
-    for each signature the catalog declares over two temporal operands, as #container_scalar_sigs
-    reads them for a container pair. A pair of two types (tDistance(trgeometry, tgeompoint))
-    cannot be read off one scope type, and both C parameters are `Temporal *`, so the commuted
-    pair (tDistance(tgeompoint, trgeometry)) states its order through sqlArgParams, the C
-    parameters in SQL order, reversed against the kernel's own."""
+    """[(first accessor, second accessor, declared temporal return accessor or None, commuted,
+    SQL name)] for each signature the catalog declares over two temporal operands, as
+    #container_scalar_sigs reads them for a container pair. A pair of two types
+    (tDistance(trgeometry, tgeompoint)) cannot be read off one scope type, and both C parameters
+    are `Temporal *`, so the commuted pair (tDistance(tgeompoint, trgeometry)) states its order
+    through sqlArgParams, the C parameters in SQL order, reversed against the kernel's own. The
+    name is the one the signature declares: contains_tjsonb_tjsonb answers
+    tjsonbContains(tjsonb, tjsonb) and, its operands swapped, tjsonbContained(tjsonb, tjsonb)."""
     ins, _out = classify(f)
     cnames = [p.get("name") for p in ins]
     out = []
@@ -856,7 +858,7 @@ def sig_tt_pairs(f):
             continue
         rev = s.get("sqlArgParams") == cnames[::-1]
         out.append((SIG_TEMPORAL_ACC[a[0]], SIG_TEMPORAL_ACC[a[1]],
-                    SIG_TEMPORAL_ACC.get(s.get("ret")), rev))
+                    SIG_TEMPORAL_ACC.get(s.get("ret")), rev, s.get("sqlName") or f["sqlfn"]))
     return out
 
 def sig_commuted_accs(f):
@@ -872,6 +874,19 @@ def sig_commuted_accs(f):
             if len(s.get("args") or []) == 2 and s.get("sqlArgParams") == cnames[::-1]
             and s["args"][1] in SIG_TEMPORAL_ACC}
     return [SIG_TEMPORAL_ACC[t] for t in SIG_TEMPORAL_ACC if t in have]
+
+def sig_only_commuted(f, acc):
+    """True when every two-argument signature over the temporal type of accessor `acc` declares
+    the commuted order, and one does, read as #sig_commuted_accs reads that order: the form of
+    concat_tjsonb_jsonb binding invert to INVERT answers tConcat(jsonb, tjsonb) alone, so its
+    kernel's own order registers nothing."""
+    ins, _out = classify(f)
+    cnames = [p.get("name") for p in ins]
+    if len(cnames) != 2:
+        return False
+    over = [s for s in f.get("sqlSignatures") or []
+            if len(s.get("args") or []) == 2 and any(SIG_TEMPORAL_ACC.get(x) == acc for x in s["args"])]
+    return bool(over) and all(s.get("sqlArgParams") == cnames[::-1] for s in over)
 
 def sig_geo_first(f):
     """Which operand a geometry-and-temporal function takes FIRST **in SQL**, read from the
@@ -1274,11 +1289,19 @@ def project_signature_forms(f):
     sqlfn = kept_names.pop() if len(kept_names) == 1 else f["sqlfn"]
     out = [dict(f, sqlSignatures=keep, sqlfn=sqlfn)] if keep else []
     names = Counter("_".join(k for k, _v in key) for key in forms)
+    # every form is checked before any is recorded: a form left in FN_BY_NAME by a projection
+    # that then answers [f] claims the signatures f keeps (tjsonbPathExists, whose jsonb default
+    # '{}' no literal forwards), and a signature two public functions claim registers nothing
+    allits = {}
     for key, fsigs in forms.items():
         fixed = dict(key)
         lits = {p["name"]: forward_literal(p, fixed[p["name"]]) for p in params if p["name"] in fixed}
         if None in lits.values() or len({s["sqlName"] for s in fsigs}) != 1:
             return [f]
+        allits[key] = lits
+    for key, fsigs in forms.items():
+        fixed = dict(key)
+        lits = allits[key]
         suffix = "_".join(k for k, _v in key)
         if names[suffix] > 1:
             suffix = "_".join("%s_%s" % (k, re.sub(r"\W", "", str(v)).lower()) for k, v in key)
@@ -5343,6 +5366,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # set, a span or a span set, and the sequence constructors over an array
                   "meos_temporal_constructor", "meos_geo_constructor",
                   "meos_json_constructor", "meos_pointcloud_constructor",
+                  # The functions of the temporal JSON values, each the computation of one
+                  # operation (tjsonbObjectField, tjsonbPathExists and tjsonbPathExistsTz over one C
+                  # function binding its tz), called as the catalog places their arguments
+                  "meos_json_json",
                   # The temporal I/O: <type>FromText, FromEWKT, FromMFJSON, FromBinary, FromEWKB,
                   # FromHexEWKB, FromHexWKB and asText, asEWKT, asMFJSON, asBinary, asEWKB,
                   # asHexEWKB, asHexWKB, one signature per type MobilityDB declares
@@ -5415,7 +5442,9 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # raquet(bytea, integer, integer, quadbin, text, float) is not among them, its name being answered
 # by raquet(text): raquet_make takes `has_nodata`, which its wrapper sets from whether the nodata
 # argument is NULL and which the catalog states no binding for, so src/raster/raquet.cpp keeps it.
-RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
+# tjsonbSet and tjsonbSetLax register nothing: tjsonb_set reads its keys as a text ** and a count
+# no marshalling fills from a text[], and tjsonbSet binds no literal for handle_null.
+RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "spaceSplit", "spaceTimeSplit", "timeSplit",
                        "valueSplit", "valueTimeSplit", "asMVTGeom",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
@@ -6389,7 +6418,10 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
                     pre=["Temporal *p%d = BlobToTemporal(%s);" % (k, v)], post=["free(p%d);" % k],
                     cexpr={p["name"]: "p%d" % k})
     if n.count("*") == 1 and b in PTR_IN:
-        acc = BASE_LOGICAL.get(t) or SQL_BASE_TO_DUCK.get(t) or SET_SIG_ACC.get(t)
+        # or the SQL type the pointer's own DuckDB type is named after (jsonpath for JsonPath,
+        # TJsonbTypes::jsonpath()), a type no base, span or set map carries
+        acc = (BASE_LOGICAL.get(t) or SQL_BASE_TO_DUCK.get(t) or SET_SIG_ACC.get(t)
+               or (PTR_IN[b][0] if PTR_IN[b][0].endswith("::%s()" % t) else None))
         if not acc or (b in BASEVAL_PTR_IN and PTR_IN[b][0] != acc):
             return None
         return dict(kind="ptr", dt=acc, cpp="string_t",
@@ -6399,6 +6431,10 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
         return dict(kind="cstr", dt="LogicalType::VARCHAR", cpp="string_t",
                     pre=["std::string s%d = %s.GetString();" % (k, v)], post=[],
                     cexpr={p["name"]: "s%d.c_str()" % k})
+    if b == "text" and n.count("*") == 1 and t == "text":
+        return dict(kind="ptr", dt="LogicalType::VARCHAR", cpp="string_t",
+                    pre=["text *p%d = MakeText(%s);" % (k, v)], post=["free(p%d);" % k],
+                    cexpr={p["name"]: "p%d" % k})
     if "*" in n:
         return None
     if b in CELL_UINT and t in CELL_SQL:
@@ -6536,7 +6572,11 @@ def shape_sig_call(f):
     for s in f.get("sqlSignatures") or []:
         if re.search(r'_(out|in|send|recv)$', s.get("sqlName") or "") or sig_claims(s, f) > 1:
             continue
-        order = s.get("sqlArgParams") or shape.get("sqlArgParams") or [p["name"] for p in facing]
+        # the C parameters in order, but for those the signature binds to a literal (tz of
+        # tjsonbPathExists and tjsonbPathExistsTz, one C function under two SQL names)
+        sbound = s.get("boundArgs") or {}
+        order = (s.get("sqlArgParams") or shape.get("sqlArgParams")
+                 or [p["name"] for p in facing if p["name"] not in sbound])
         if len(order) != len(s["args"]) or any(nm not in byname for nm in order):
             continue
         bound = {}
@@ -7247,10 +7287,13 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         if _ttpairs and any(p[0] != p[1] or p[3] for p in _ttpairs):
             if any(p[3] for p in _ttpairs):
                 bodies.append(emit_binary_tt(f, kind, rev=True))
-            for a0, a1, ra, rv in _ttpairs:
+            for a0, a1, ra, rv, snm in _ttpairs:
                 _r = (ra or ret_temporal_type(fn, a0, f.get("group"), f.get("sqlReturnType"))
                       if dret == "MD_TEMPORAL" else dret)
-                for nm in reg_names(f, sqlfn, aliases, argsig):
+                # the operator is the function's: a signature under another name
+                # (tjsonbContained, contains_tjsonb_tjsonb over its operands swapped) takes
+                # that name alone, never the operator of the name it computes
+                for nm in (reg_names(f, snm, aliases, argsig) if snm == sqlfn else [snm]):
                     specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {_r}, '
                                          f'Gen_{fn}{"_rev" if rv else ""}));')
@@ -7264,6 +7307,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                     f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
         else:
             for a in accs:
+                # a retired binary kernel declared over this type in the commuted order alone
+                # registers that order below (Gen_<fn>_rev), never its own
+                if b and retired(f) and sig_only_commuted(f, a):
+                    continue
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))   # 1 or 2 accessor slots
                 r2 = (ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL"
                       else ret_set_type(fn, a) if dret == "MD_SET" else dret)

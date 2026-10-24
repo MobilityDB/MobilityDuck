@@ -955,20 +955,11 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
-inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
-    return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
-}
 inline STBox * tgeo_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
     return ::tgeo_time_boxes(p0, p1, p2, true, true, p3);
 }
 inline STBox * tgeo_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::tgeo_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
-    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
-}
-inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
-    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
 }
 inline STBox * stbox_get_space_tile_ysize_zsize(const GSERIALIZED * p0, double p1, const GSERIALIZED * p2) {
     return ::stbox_get_space_tile(p0, p1, 0, 0, p2);
@@ -976,23 +967,26 @@ inline STBox * stbox_get_space_tile_ysize_zsize(const GSERIALIZED * p0, double p
 inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, double p2, const GSERIALIZED * p3) {
     return ::stbox_get_space_tile(p0, p1, p2, 0, p3);
 }
-inline STBox * stbox_space_time_tiles_border_inc_torigin(const STBox * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
-    return ::stbox_space_time_tiles(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, p6);
-}
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
-inline Temporal ** tgeo_space_split_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, GSERIALIZED *** p5, int * p6) {
-    return ::tgeo_space_split(p0, p1, p2, p3, p4, true, true, p5, p6);
-}
-inline Temporal ** tgeo_space_time_split_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, GSERIALIZED *** p7, TimestampTz ** p8, int * p9) {
-    return ::tgeo_space_time_split(p0, p1, p2, p3, p4, p5, p6, true, true, p7, p8, p9);
-}
-inline Temporal ** tgeo_space_time_split_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, GSERIALIZED *** p6, TimestampTz ** p7, int * p8) {
-    return ::tgeo_space_time_split(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6, p7, p8);
-}
 inline char * cbufferset_out_maxdd(const Set * p0) {
     return ::cbufferset_out(p0, 15);
+}
+inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
+    return ::concat_tjsonb_jsonb(p0, p1, false);
+}
+inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const Jsonb * p1) {
+    return ::concat_tjsonb_jsonb(p0, p1, true);
+}
+inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
+    return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+}
+inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, const char * p1) {
+    return ::tjsonb_to_tgeogpoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+}
+inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
+    return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
 }
 inline char * npointset_out_maxdd(const Set * p0) {
     return ::npointset_out(p0, 15);
@@ -1012,20 +1006,11 @@ inline char * posechainset_out_maxdd(const Set * p0) {
 inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
     return ::raster_summary_stats(p0, 1, true);
 }
-inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
-    return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
-}
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
     return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
-    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
-}
-inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
-    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
 }
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
