@@ -5366,6 +5366,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # set, a span or a span set, and the sequence constructors over an array
                   "meos_temporal_constructor", "meos_geo_constructor",
                   "meos_json_constructor", "meos_pointcloud_constructor",
+                  "meos_h3_constructor", "meos_quadbin_constructor", "meos_s2cell_constructor",
                   # The functions of the temporal JSON values, each the computation of one
                   # operation (tjsonbObjectField, tjsonbPathExists and tjsonbPathExistsTz over one C
                   # function binding its tz), called as the catalog places their arguments
@@ -6421,6 +6422,7 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
         # or the SQL type the pointer's own DuckDB type is named after (jsonpath for JsonPath,
         # TJsonbTypes::jsonpath()), a type no base, span or set map carries
         acc = (BASE_LOGICAL.get(t) or SQL_BASE_TO_DUCK.get(t) or SET_SIG_ACC.get(t)
+               or SPANSET_TYPES.get(t)
                or (PTR_IN[b][0] if PTR_IN[b][0].endswith("::%s()" % t) else None))
         if not acc or (b in BASEVAL_PTR_IN and PTR_IN[b][0] != acc):
             return None
