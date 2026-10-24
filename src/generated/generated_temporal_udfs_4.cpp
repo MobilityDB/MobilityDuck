@@ -955,20 +955,11 @@ inline Temporal * tgeo_scale_geo_sorigin(const Temporal * p0, const GSERIALIZED 
 inline Temporal * tgeo_translate_deltaz(const Temporal * p0, double p1, double p2) {
     return ::tgeo_translate(p0, p1, p2, 0);
 }
-inline STBox * tgeo_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
-    return ::tgeo_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
-}
 inline STBox * tgeo_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
     return ::tgeo_time_boxes(p0, p1, p2, true, true, p3);
 }
 inline STBox * tgeo_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::tgeo_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
-    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
-}
-inline STBox * tgeo_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
-    return ::tgeo_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
 }
 inline STBox * stbox_get_space_tile_ysize_zsize(const GSERIALIZED * p0, double p1, const GSERIALIZED * p2) {
     return ::stbox_get_space_tile(p0, p1, 0, 0, p2);
@@ -976,23 +967,26 @@ inline STBox * stbox_get_space_tile_ysize_zsize(const GSERIALIZED * p0, double p
 inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, double p2, const GSERIALIZED * p3) {
     return ::stbox_get_space_tile(p0, p1, p2, 0, p3);
 }
-inline STBox * stbox_space_time_tiles_border_inc_torigin(const STBox * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
-    return ::stbox_space_time_tiles(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, p6);
-}
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
-inline Temporal ** tgeo_space_split_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, GSERIALIZED *** p5, int * p6) {
-    return ::tgeo_space_split(p0, p1, p2, p3, p4, true, true, p5, p6);
-}
-inline Temporal ** tgeo_space_time_split_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, GSERIALIZED *** p7, TimestampTz ** p8, int * p9) {
-    return ::tgeo_space_time_split(p0, p1, p2, p3, p4, p5, p6, true, true, p7, p8, p9);
-}
-inline Temporal ** tgeo_space_time_split_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, GSERIALIZED *** p6, TimestampTz ** p7, int * p8) {
-    return ::tgeo_space_time_split(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6, p7, p8);
-}
 inline char * cbufferset_out_maxdd(const Set * p0) {
     return ::cbufferset_out(p0, 15);
+}
+inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
+    return ::concat_tjsonb_jsonb(p0, p1, false);
+}
+inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const Jsonb * p1) {
+    return ::concat_tjsonb_jsonb(p0, p1, true);
+}
+inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
+    return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+}
+inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, const char * p1) {
+    return ::tjsonb_to_tgeogpoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+}
+inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
+    return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
 }
 inline char * npointset_out_maxdd(const Set * p0) {
     return ::npointset_out(p0, 15);
@@ -1012,20 +1006,11 @@ inline char * posechainset_out_maxdd(const Set * p0) {
 inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
     return ::raster_summary_stats(p0, 1, true);
 }
-inline STBox * trgeometry_space_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const GSERIALIZED * p4, int * p5) {
-    return ::trgeometry_space_boxes(p0, p1, p2, p3, p4, true, true, p5);
-}
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
     return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, TimestampTz p6, int * p7) {
-    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, p6, true, true, p7);
-}
-inline STBox * trgeometry_space_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, double p1, double p2, double p3, const MeosInterval * p4, const GSERIALIZED * p5, int * p6) {
-    return ::trgeometry_space_time_boxes(p0, p1, p2, p3, p4, p5, timestamptz_in("2000-01-03", -1), true, true, p6);
 }
 inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
     return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
@@ -2205,7 +2190,26 @@ static void Gen_jsonbset_extract_path(DataChunk &args, ExpressionState &, Vector
             Set *t = BlobToSet(in);
             int n = 0;
             text **elems = ListToTextArr(child, le, &n);
-            Set *r = jsonbset_extract_path(t, elems, n, false, c2);
+            Set *r = jsonbset_extract_path(t, elems, n, c2);
+            free(t); FreeTextArr(elems, n);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_jsonbset_extract_path_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto rc = args.size();
+    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &child = ListVector::GetEntry(lst);
+    child.Flatten(ListVector::GetListSize(lst));
+    nullHandleType c2 = (nullHandleType) 0;
+    { auto &cv = args.data[2]; cv.Flatten(rc); Value v = cv.GetValue(0); if (!v.IsNull()) c2 = null_handle_type_from_string(v.ToString().c_str()); }
+    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
+        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *t = BlobToSet(in);
+            int n = 0;
+            text **elems = ListToTextArr(child, le, &n);
+            Set *r = jsonbset_extract_path_text(t, elems, n, c2);
             free(t); FreeTextArr(elems, n);
             return SetToBlobN(result, r, mask, idx);
         });
@@ -5181,6 +5185,7 @@ void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("-", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_delete_array));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetDeletePath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_delete_path));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetExtractPath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_jsonbset_extract_path));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_text));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetInsert", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, SetTypes::jsonbset(), Gen_jsonbset_insert));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetArrayLength", {SetTypes::jsonbset()}, SetTypes::intset(), Gen_jsonbset_array_length));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbsetDeleteIndex", {SetTypes::jsonbset(), LogicalType::INTEGER}, SetTypes::jsonbset(), Gen_jsonbset_delete_index));
@@ -5223,6 +5228,7 @@ void RegisterGenerated_meos_quadbin_comp_temp(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_quadbin_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbin", {LogicalType::BIGINT}, QuadbinTypes::quadbin(), Gen_bigint_to_quadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("quadbin_recv", {LogicalType::BIGINT}, QuadbinTypes::quadbin(), Gen_bigint_to_quadbin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {TemporalTypes::tbigint()}, QuadbinTypes::tquadbin(), Gen_tbigint_to_tquadbin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {QuadbinTypes::tquadbin()}, TemporalTypes::tbigint(), Gen_tquadbin_to_tbigint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbin", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_tgeogpoint_to_tquadbin));

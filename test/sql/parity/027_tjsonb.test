@@ -170,6 +170,44 @@ SELECT tjsonbPathQueryFirst(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), '$.a.b'::j
 ----
 "7"@2000-01-01 00:00:00+01	"[7]"@2000-01-01 00:00:00+01
 
+# Each path function has a Tz twin, one C function binding tz, and a three-argument form
+# whose silent flag takes its SQL default.
+query III
+SELECT tjsonbPathMatch(TJSONB('"{\"a\":1}"@2000-01-01'), '$.a == 1'::jsonpath, '{}'::jsonb)::VARCHAR,
+       tjsonbPathMatchTz(TJSONB('"{\"a\":1}"@2000-01-01'), '$.a == 2'::jsonpath, '{}'::jsonb)::VARCHAR,
+       tjsonbPathExistsTz(TJSONB('"{\"a\":1}"@2000-01-01'), '$.a'::jsonpath, '{}'::jsonb, false)::VARCHAR;
+----
+t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01	t@2000-01-01 00:00:00+01
+
+# The key forms without a mode use_json_null, the mode their SQL default names; ->> is the
+# operator of tjsonbObjectFieldText.
+query III
+SELECT tjsonbObjectField(TJSONB('"{\"a\":1}"@2000-01-01'), 'a')::VARCHAR
+         = tjsonbObjectField(TJSONB('"{\"a\":1}"@2000-01-01'), 'a', 'use_json_null')::VARCHAR,
+       (TJSONB('"{\"a\":1}"@2000-01-01') ->> 'a')::VARCHAR
+         = tjsonbObjectFieldText(TJSONB('"{\"a\":1}"@2000-01-01'), 'a', 'use_json_null')::VARCHAR,
+       tjsonObjectField(ttext '"{\"a\":1}"@2000-01-01', 'a')::VARCHAR;
+----
+true	true	"1"@2000-01-01 00:00:00+01
+
+# tjsonbContained(a, b) answers tjsonbContains(b, a): one object holding the other answers
+# true in one order and false in the other.
+query IIII
+SELECT tjsonbContained(TJSONB('"{\"a\":1}"@2000-01-01'), TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'))::VARCHAR,
+       tjsonbContains(TJSONB('"{\"a\":1}"@2000-01-01'), TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'))::VARCHAR,
+       tjsonbContained('{"a":1}'::jsonb, TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'))::VARCHAR,
+       tjsonbContains('{"a":1}'::jsonb, TJSONB('"{\"a\":1,\"b\":2}"@2000-01-01'))::VARCHAR;
+----
+t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01	t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01
+
+# The concatenation of a JSONB value and a temporal one keeps the order of its operands.
+query II
+SELECT tConcat('[0]'::jsonb, TJSONB('"[1]"@2000-01-01'))::VARCHAR,
+       ('[0]'::jsonb || TJSONB('"[1]"@2000-01-01'))::VARCHAR
+         = tConcat(TJSONB('"[1]"@2000-01-01'), '[0]'::jsonb)::VARCHAR;
+----
+"[0, 1]"@2000-01-01 00:00:00+01	false
+
 # Insert takes the path as a list and the new value as jsonb. The last argument chooses
 # which side of an existing element the value lands on, so a path naming a key the object
 # does not hold creates it whichever way the flag reads.
