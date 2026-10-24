@@ -3491,6 +3491,1170 @@ static void Tiles_stbox_time_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInp
     output.SetCardinality(rows);
 }
 
+struct Split_tgeo_space_split_7Info : public TableFunctionInfo {
+    Split_tgeo_space_split_7Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_split_7State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_split_7State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_split_7BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_split_7Info>();
+    types = {MobilityDuckGeometryType(), info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_split_7InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_split_7State>();
+}
+static OperatorResultType Split_tgeo_space_split_7InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_split_7State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[7];
+            idx_t r[7];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g4 = (k > 4 ? GeometryToGSerialized(UnifiedVectorFormat::GetData<string_t>(u[4])[r[4]], 0) : geom_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], UnifiedVectorFormat::GetData<double>(u[3])[r[3]], g4, (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), (k > 6 ? UnifiedVectorFormat::GetData<bool>(u[6])[r[6]] : true), &st.b0, &st.count);
+                free(t); free(g4);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_split_7Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_split_7BindFn;
+    fn.init_local = Split_tgeo_space_split_7InitFn;
+    fn.in_out_function = Split_tgeo_space_split_7InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_split_7Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_split_8Info : public TableFunctionInfo {
+    Split_tgeo_space_split_8Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_split_8State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_split_8State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_split_8BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_split_8Info>();
+    types = {MobilityDuckGeometryType(), info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_split_8InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_split_8State>();
+}
+static OperatorResultType Split_tgeo_space_split_8InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_split_8State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[5];
+            idx_t r[5];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g2 = (k > 2 ? GeometryToGSerialized(UnifiedVectorFormat::GetData<string_t>(u[2])[r[2]], 0) : geom_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], 0, 0, g2, (k > 3 ? UnifiedVectorFormat::GetData<bool>(u[3])[r[3]] : true), (k > 4 ? UnifiedVectorFormat::GetData<bool>(u[4])[r[4]] : true), &st.b0, &st.count);
+                free(t); free(g2);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_split_8Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_split_8BindFn;
+    fn.init_local = Split_tgeo_space_split_8InitFn;
+    fn.in_out_function = Split_tgeo_space_split_8InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_split_8Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_split_9Info : public TableFunctionInfo {
+    Split_tgeo_space_split_9Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_split_9State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_split_9State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_split_9BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_split_9Info>();
+    types = {MobilityDuckGeometryType(), info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_split_9InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_split_9State>();
+}
+static OperatorResultType Split_tgeo_space_split_9InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_split_9State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[6];
+            idx_t r[6];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g3 = (k > 3 ? GeometryToGSerialized(UnifiedVectorFormat::GetData<string_t>(u[3])[r[3]], 0) : geom_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], 0, g3, (k > 4 ? UnifiedVectorFormat::GetData<bool>(u[4])[r[4]] : true), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), &st.b0, &st.count);
+                free(t); free(g3);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_split_9Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_split_9BindFn;
+    fn.init_local = Split_tgeo_space_split_9InitFn;
+    fn.in_out_function = Split_tgeo_space_split_9InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_split_9Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_split_10Info : public TableFunctionInfo {
+    Split_tgeo_space_split_10Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_split_10State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_split_10State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_split_10BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_split_10Info>();
+    types = {MobilityDuckGeometryType(), info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_split_10InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_split_10State>();
+}
+static OperatorResultType Split_tgeo_space_split_10InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_split_10State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[7];
+            idx_t r[7];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g4 = (k > 4 ? GeogFromGeometry(UnifiedVectorFormat::GetData<string_t>(u[4])[r[4]]) : geog_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], UnifiedVectorFormat::GetData<double>(u[3])[r[3]], g4, (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), (k > 6 ? UnifiedVectorFormat::GetData<bool>(u[6])[r[6]] : true), &st.b0, &st.count);
+                free(t); free(g4);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_split_10Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_split_10BindFn;
+    fn.init_local = Split_tgeo_space_split_10InitFn;
+    fn.in_out_function = Split_tgeo_space_split_10InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_split_10Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_split_11Info : public TableFunctionInfo {
+    Split_tgeo_space_split_11Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_split_11State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_split_11State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_split_11BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_split_11Info>();
+    types = {MobilityDuckGeometryType(), info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_split_11InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_split_11State>();
+}
+static OperatorResultType Split_tgeo_space_split_11InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_split_11State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[5];
+            idx_t r[5];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g2 = (k > 2 ? GeogFromGeometry(UnifiedVectorFormat::GetData<string_t>(u[2])[r[2]]) : geog_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], 0, 0, g2, (k > 3 ? UnifiedVectorFormat::GetData<bool>(u[3])[r[3]] : true), (k > 4 ? UnifiedVectorFormat::GetData<bool>(u[4])[r[4]] : true), &st.b0, &st.count);
+                free(t); free(g2);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_split_11Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_split_11BindFn;
+    fn.init_local = Split_tgeo_space_split_11InitFn;
+    fn.in_out_function = Split_tgeo_space_split_11InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_split_11Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_split_12Info : public TableFunctionInfo {
+    Split_tgeo_space_split_12Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_split_12State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_split_12State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_split_12BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_split_12Info>();
+    types = {MobilityDuckGeometryType(), info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_split_12InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_split_12State>();
+}
+static OperatorResultType Split_tgeo_space_split_12InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_split_12State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[6];
+            idx_t r[6];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g3 = (k > 3 ? GeogFromGeometry(UnifiedVectorFormat::GetData<string_t>(u[3])[r[3]]) : geog_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], 0, g3, (k > 4 ? UnifiedVectorFormat::GetData<bool>(u[4])[r[4]] : true), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), &st.b0, &st.count);
+                free(t); free(g3);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_split_12Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_split_12BindFn;
+    fn.init_local = Split_tgeo_space_split_12InitFn;
+    fn.in_out_function = Split_tgeo_space_split_12InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_split_12Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_time_split_13Info : public TableFunctionInfo {
+    Split_tgeo_space_time_split_13Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_time_split_13State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_time_split_13State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_time_split_13BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_time_split_13Info>();
+    types = {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_time_split_13InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_time_split_13State>();
+}
+static OperatorResultType Split_tgeo_space_time_split_13InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_time_split_13State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[9];
+            idx_t r[9];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g5 = (k > 5 ? GeometryToGSerialized(UnifiedVectorFormat::GetData<string_t>(u[5])[r[5]], 0) : geom_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], UnifiedVectorFormat::GetData<double>(u[3])[r[3]], MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[4])[r[4]]), g5, (k > 6 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[6])[r[6]]).value : timestamptz_in("2000-01-03", -1)), (k > 7 ? UnifiedVectorFormat::GetData<bool>(u[7])[r[7]] : true), (k > 8 ? UnifiedVectorFormat::GetData<bool>(u[8])[r[8]] : true), &st.b0, &st.b1, &st.count);
+                free(t); free(g5);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_time_split_13Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_time_split_13BindFn;
+    fn.init_local = Split_tgeo_space_time_split_13InitFn;
+    fn.in_out_function = Split_tgeo_space_time_split_13InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_time_split_13Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_time_split_14Info : public TableFunctionInfo {
+    Split_tgeo_space_time_split_14Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_time_split_14State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_time_split_14State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_time_split_14BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_time_split_14Info>();
+    types = {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_time_split_14InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_time_split_14State>();
+}
+static OperatorResultType Split_tgeo_space_time_split_14InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_time_split_14State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[7];
+            idx_t r[7];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g3 = (k > 3 ? GeometryToGSerialized(UnifiedVectorFormat::GetData<string_t>(u[3])[r[3]], 0) : geom_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], 0, 0, MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[2])[r[2]]), g3, (k > 4 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[4])[r[4]]).value : timestamptz_in("2000-01-03", -1)), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), (k > 6 ? UnifiedVectorFormat::GetData<bool>(u[6])[r[6]] : true), &st.b0, &st.b1, &st.count);
+                free(t); free(g3);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_time_split_14Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_time_split_14BindFn;
+    fn.init_local = Split_tgeo_space_time_split_14InitFn;
+    fn.in_out_function = Split_tgeo_space_time_split_14InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_time_split_14Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_time_split_15Info : public TableFunctionInfo {
+    Split_tgeo_space_time_split_15Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_time_split_15State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_time_split_15State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_time_split_15BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_time_split_15Info>();
+    types = {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_time_split_15InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_time_split_15State>();
+}
+static OperatorResultType Split_tgeo_space_time_split_15InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_time_split_15State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[8];
+            idx_t r[8];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g4 = (k > 4 ? GeometryToGSerialized(UnifiedVectorFormat::GetData<string_t>(u[4])[r[4]], 0) : geom_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], 0, MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[3])[r[3]]), g4, (k > 5 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[5])[r[5]]).value : timestamptz_in("2000-01-03", -1)), (k > 6 ? UnifiedVectorFormat::GetData<bool>(u[6])[r[6]] : true), (k > 7 ? UnifiedVectorFormat::GetData<bool>(u[7])[r[7]] : true), &st.b0, &st.b1, &st.count);
+                free(t); free(g4);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_time_split_15Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_time_split_15BindFn;
+    fn.init_local = Split_tgeo_space_time_split_15InitFn;
+    fn.in_out_function = Split_tgeo_space_time_split_15InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_time_split_15Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_time_split_16Info : public TableFunctionInfo {
+    Split_tgeo_space_time_split_16Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_time_split_16State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_time_split_16State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_time_split_16BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_time_split_16Info>();
+    types = {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_time_split_16InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_time_split_16State>();
+}
+static OperatorResultType Split_tgeo_space_time_split_16InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_time_split_16State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[9];
+            idx_t r[9];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g5 = (k > 5 ? GeogFromGeometry(UnifiedVectorFormat::GetData<string_t>(u[5])[r[5]]) : geog_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], UnifiedVectorFormat::GetData<double>(u[3])[r[3]], MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[4])[r[4]]), g5, (k > 6 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[6])[r[6]]).value : timestamptz_in("2000-01-03", -1)), (k > 7 ? UnifiedVectorFormat::GetData<bool>(u[7])[r[7]] : true), (k > 8 ? UnifiedVectorFormat::GetData<bool>(u[8])[r[8]] : true), &st.b0, &st.b1, &st.count);
+                free(t); free(g5);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_time_split_16Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_time_split_16BindFn;
+    fn.init_local = Split_tgeo_space_time_split_16InitFn;
+    fn.in_out_function = Split_tgeo_space_time_split_16InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_time_split_16Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_time_split_17Info : public TableFunctionInfo {
+    Split_tgeo_space_time_split_17Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_time_split_17State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_time_split_17State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_time_split_17BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_time_split_17Info>();
+    types = {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_time_split_17InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_time_split_17State>();
+}
+static OperatorResultType Split_tgeo_space_time_split_17InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_time_split_17State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[7];
+            idx_t r[7];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g3 = (k > 3 ? GeogFromGeometry(UnifiedVectorFormat::GetData<string_t>(u[3])[r[3]]) : geog_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], 0, 0, MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[2])[r[2]]), g3, (k > 4 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[4])[r[4]]).value : timestamptz_in("2000-01-03", -1)), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), (k > 6 ? UnifiedVectorFormat::GetData<bool>(u[6])[r[6]] : true), &st.b0, &st.b1, &st.count);
+                free(t); free(g3);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_time_split_17Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_time_split_17BindFn;
+    fn.init_local = Split_tgeo_space_time_split_17InitFn;
+    fn.in_out_function = Split_tgeo_space_time_split_17InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_time_split_17Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tgeo_space_time_split_18Info : public TableFunctionInfo {
+    Split_tgeo_space_time_split_18Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tgeo_space_time_split_18State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    GSERIALIZED **b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+            free(b0[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tgeo_space_time_split_18State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tgeo_space_time_split_18BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tgeo_space_time_split_18Info>();
+    types = {MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tgeo_space_time_split_18InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tgeo_space_time_split_18State>();
+}
+static OperatorResultType Split_tgeo_space_time_split_18InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tgeo_space_time_split_18State>();
+    ArenaAllocator arena(Allocator::DefaultAllocator());
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[8];
+            idx_t r[8];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                GSERIALIZED *g4 = (k > 4 ? GeogFromGeometry(UnifiedVectorFormat::GetData<string_t>(u[4])[r[4]]) : geog_in("Point(0 0 0)", -1));
+                st.parts = tgeo_space_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], UnifiedVectorFormat::GetData<double>(u[2])[r[2]], 0, MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[3])[r[3]]), g4, (k > 5 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[5])[r[5]]).value : timestamptz_in("2000-01-03", -1)), (k > 6 ? UnifiedVectorFormat::GetData<bool>(u[6])[r[6]] : true), (k > 7 ? UnifiedVectorFormat::GetData<bool>(u[7])[r[7]] : true), &st.b0, &st.b1, &st.count);
+                free(t); free(g4);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            GSERIALIZED *x = st.b0[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tgeo_space_time_split_18Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tgeo_space_time_split_18BindFn;
+    fn.init_local = Split_tgeo_space_time_split_18InitFn;
+    fn.in_out_function = Split_tgeo_space_time_split_18InOutFn;
+    fn.function_info = make_shared_ptr<Split_tgeo_space_time_split_18Info>(t, std::move(names));
+    return fn;
+}
+
 static void Gen_tgeo_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -7538,6 +8702,87 @@ void RegisterGenerated_meos_geo_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_stbox_time_tiles_s0_a4ExecFn, Tiles_stbox_time_tiles_s0_a4BindFn, Tiles_stbox_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, Tiles_stbox_time_tiles_s0_a3ExecFn, Tiles_stbox_time_tiles_s0_a3BindFn, Tiles_stbox_time_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {StboxType::stbox(), LogicalType::INTERVAL}, Tiles_stbox_time_tiles_s0_a2ExecFn, Tiles_stbox_time_tiles_s0_a2BindFn, Tiles_stbox_time_tiles_s0_a2InitFn));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TGeometryTypes::tgeometry(), {"point", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_7Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_8Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_9Table(TableFunction("spaceSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TgeompointType::tgeompoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_10Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_10Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_10Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_10Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_11Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_11Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_11Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_11Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_12Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_12Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType(), LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_12Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, MobilityDuckGeometryType()}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_split_12Table(TableFunction("spaceSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TgeogpointType::tgeogpoint(), {"point", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TGeometryTypes::tgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TGeometryTypes::tgeometry(), {"point", "time", "tgeo"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_13Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_14Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_15Table(TableFunction("spaceTimeSplit", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TgeompointType::tgeompoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_16Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_16Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_16Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_16Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_16Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_17Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_17Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_17Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_17Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_17Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_18Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_18Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_18Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_18Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
+    loader.RegisterFunction(Split_tgeo_space_time_split_18Table(TableFunction("spaceTimeSplit", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TgeogpointType::tgeogpoint(), {"point", "time", "tpoint"}));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes));
     RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_tgeo_time_boxes_bitmatrix_border_inc));

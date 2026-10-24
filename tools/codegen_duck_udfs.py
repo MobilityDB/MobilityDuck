@@ -3697,6 +3697,246 @@ def emit_box_tiles(f, tag, s, ins, bound, k):
           ""]
     return "\n".join(L)
 
+# ── the pieces of a temporal value with the bins MEOS writes back: (bins..., piece) rows ──────
+# MobilityDB declares timeSplit, valueSplit, valueTimeSplit, spaceSplit and spaceTimeSplit as SETOF
+# a composite of the bins and the piece (`CREATE TYPE time_tint AS (time timestamptz, temp tint)`);
+# the C function returns the pieces and hands each bin array back through an out-parameter
+# (`outputArrays`), with the count. The catalog states per signature which array fills each column
+# (`columns`, `from` naming the out-parameter or the return), the SQL defaults (`argDefaults`) and
+# the sizes a short form binds (`boundArgs`). Each callable form is a table function in-out over
+# its input rows, as the temporal value of a LATERAL call is a column: each row makes the one MEOS
+# call when the output reaches it, and its rows are handed out a vector at a time, each bin and
+# piece freed as it is written. The signatures that differ only in the temporal type share one
+# body, which reads that type from its TableFunctionInfo. MobilityDB's functions are STRICT, so a
+# NULL argument has no row.
+SPLIT_REGISTERED = set()
+SPLIT_BODIES = {}  # split_body_key -> the name of the body emitted for it
+# The C element of a bin array -> (the C++ type of its column's vector, the conversion of `x`, None
+# for a by-value element stored as #shape_unnest stores one)
+SPLIT_BIN = {"TimestampTz": ("timestamp_tz_t", "TakeTimestamp(x)"), "int": ("int32_t", None),
+             "int64_t": ("int64_t", None), "double": ("double", None)}
+
+
+def _split_arg(p, sqlt):
+    """(DuckDB type, C++ type of the vector, the C expression over `a2`, freed) for an argument of a
+    split, `sqlt` the SQL type the signature declares for it; None otherwise."""
+    b, n = base(p["canonical"]), norm(p["canonical"])
+    if b == "Interval" and n.count("*") == 1:
+        return ("LogicalType::INTERVAL", "interval_t", "MeosIntervalArg(a2)", False)
+    if b == "GSERIALIZED" and n.count("*") == 1 and sqlt in ("geometry", "geography"):
+        return ("MobilityDuckGeometryType()", "string_t",
+                "GeogFromGeometry(a2)" if sqlt == "geography" else "GeometryToGSerialized(a2, 0)", True)
+    if b in SCALAR_ARG and "*" not in n:
+        dt, cpp, expr = SCALAR_ARG[b]
+        return (dt, cpp, expr, False)
+    return None
+
+
+def _split_bin(f, oname, col):
+    """(DuckDB type, C element, the write of element `x` into column vector `v`, element freed) for
+    the column a bin array `oname` fills; None otherwise."""
+    p = next((q for q in f["params"] if q["name"] == oname), None)
+    if p is None:
+        return None
+    n = re.sub(r"^struct\s+", "", norm(p["canonical"]))
+    if not n.endswith("**"):
+        return None
+    elem = n[:-2].strip()
+    if elem == "GSERIALIZED *" and col["type"] in ("geometry", "geography"):
+        return ("MobilityDuckGeometryType()", elem,
+                "FlatVector::GetData<string_t>(v)[i] = GSerializedToGeometry(x, arena, v); free(x);", True)
+    dt = SQL_BASE_TO_DUCK.get(col["type"])
+    if elem in SPLIT_BIN and dt:
+        cpp, conv = SPLIT_BIN[elem]
+        return (dt, elem, f"FlatVector::GetData<{cpp}>(v)[i] = {conv or '(%s) x' % cpp};", False)
+    return None
+
+
+def shape_split(f):
+    """[(sqlSignature, inputs, bound, bins)] for a retired group's public function answering the
+    pieces of a temporal value with the bins it hands back through out-parameters, `bins` the
+    (column, marshal) of each bin column in the declared order; None otherwise."""
+    if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
+        return None
+    sh = f.get("shape") or {}
+    ar = sh.get("arrayReturn") or {}
+    if norm((ar.get("element") or {}).get("canonical") or "") != "Temporal *":
+        return None
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    outs = [o.get("param") for o in sh.get("outputArrays") or []]
+    if not lf or not outs:
+        return None
+    ps = [p for p in f.get("params") or [] if p["name"] != lf and p["name"] not in outs]
+    if not ps or base(ps[0]["canonical"]) != "Temporal":
+        return None
+    forms = []
+    for s in f.get("sqlSignatures") or []:
+        cols = s.get("columns") or []
+        froms = [c.get("from") for c in cols]
+        if not s.get("retSet") or froms[-1:] != ["return"] or sorted(froms[:-1]) != sorted(outs):
+            return None
+        args = s.get("args") or []
+        if not args or args[0] not in SIG_TEMPORAL_ACC or cols[-1].get("type") != args[0]:
+            return None
+        bound = s.get("boundArgs") or {}
+        ins = [p for p in ps if p["name"] not in bound]
+        if len(ins) != len(args):
+            return None
+        if any(_split_arg(p, t) is None for p, t in zip(ins[1:], args[1:])):
+            return None
+        bins = [(c, _split_bin(f, c["from"], c)) for c in cols[:-1]]
+        if any(m is None for _c, m in bins):
+            return None
+        forms.append((s, ins, bound, bins))
+    return forms or None
+
+
+def split_body_key(f, s, bound, bins):
+    """What a body of #shape_split depends on beyond the temporal type and the column names it reads
+    from its info: the parameters bound, the declared arguments and defaults, the bin types."""
+    return (f["name"], tuple(sorted(bound.items())), tuple(s["args"][1:]),
+            tuple(str(a) for a in s.get("argDefaults") or []), tuple(m[0] for _c, m in bins))
+
+
+def emit_split(f, S, s, ins, bound, bins):
+    """The info, bind, local state and in-out function of the forms of a signature of #shape_split:
+    each reads the arguments its call passes and the SQL default of the others, and the info holds
+    the temporal type and the column names."""
+    name = f["name"]
+    args = s["args"]
+    defs = s.get("argDefaults") or [None] * len(ins)
+    byname = {p["name"]: i for i, p in enumerate(ins)}
+    lf = f["shape"]["arrayReturn"]["lengthFrom"]["name"]
+    outs = [o["param"] for o in f["shape"]["outputArrays"]]
+    slot = {c["from"]: j for j, (c, _m) in enumerate(bins)}
+    geo = any(m[0] == "MobilityDuckGeometryType()" for _c, m in bins)
+    n = len(ins)
+    types = ", ".join([m[0] for _c, m in bins] + ["info.ttype"])
+    L = [f"struct {S}Info : public TableFunctionInfo {{",
+         f"    {S}Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {{}}",
+         "    LogicalType ttype;",
+         "    vector<string> names;",
+         "};",
+         f"struct {S}State : public LocalTableFunctionState {{",
+         "    Temporal **parts = nullptr; int count = 0; int idx = 0;"]
+    ptr = lambda c: c + ("" if c.endswith("*") else " ")  # noqa: E731 -- `GSERIALIZED **`, `int *`
+    L += [f"    {ptr(m[1])}*b{j} = nullptr;" for j, (_c, m) in enumerate(bins)]
+    L += ["    idx_t row = 0; bool loaded = false;",
+          "    void Release() {",
+          "        for (int k = idx; k < count; k++) {",
+          "            free(parts[k]);"]
+    L += [f"            free(b{j}[k]);" for j, (_c, m) in enumerate(bins) if m[3]]
+    L += ["        }",
+          "        free(parts);" + "".join(f" free(b{j});" for j in range(len(bins))),
+          "        parts = nullptr;" + "".join(f" b{j} = nullptr;" for j in range(len(bins)))
+          + " count = 0; idx = 0;",
+          "    }",
+          f"    ~{S}State() {{ Release(); }}",
+          "};",
+          f"static unique_ptr<FunctionData> {S}BindFn(ClientContext &, TableFunctionBindInput &input,",
+          "                                          vector<LogicalType> &types, vector<string> &names) {",
+          f"    auto &info = input.info->Cast<{S}Info>();",
+          f"    types = {{{types}}};",
+          "    names = info.names;",
+          "    return make_uniq<TableFunctionData>();",
+          "}",
+          f"static unique_ptr<LocalTableFunctionState> {S}InitFn(ExecutionContext &context, TableFunctionInitInput &,",
+          "                                          GlobalTableFunctionState *) {",
+          "    EnsureMeosThreadInitialized(context.client);",
+          f"    return make_uniq<{S}State>();",
+          "}",
+          f"static OperatorResultType {S}InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,",
+          "                                          DataChunk &output) {",
+          f"    auto &st = data.local_state->Cast<{S}State>();"]
+    if geo:
+        L.append("    ArenaAllocator arena(Allocator::DefaultAllocator());")
+    L += ["    idx_t i = 0;",
+          "    while (i < STANDARD_VECTOR_SIZE) {",
+          "        if (!st.loaded) {",
+          "            if (st.row >= input.size()) {",
+          "                if (i > 0) {",
+          "                    output.SetCardinality(i);",
+          "                    return OperatorResultType::HAVE_MORE_OUTPUT;",
+          "                }",
+          "                st.row = 0;",
+          "                return OperatorResultType::NEED_MORE_INPUT;",
+          "            }",
+          "            const idx_t k = input.ColumnCount();",
+          f"            UnifiedVectorFormat u[{n}];",
+          f"            idx_t r[{n}];",
+          "            bool valid = true;",
+          "            for (idx_t c = 0; c < k; c++) {",
+          "                input.data[c].ToUnifiedFormat(input.size(), u[c]);",
+          "                r[c] = u[c].sel->get_index(st.row);",
+          "                valid = valid && u[c].validity.RowIsValid(r[c]);",
+          "            }",
+          "            if (valid) {",
+          "                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);"]
+    call, frees = ["t"], []
+    for p in [q for q in f["params"] if q["name"] != lf and q["name"] not in outs][1:]:
+        nm = p["name"]
+        if nm in bound:
+            call.append(str(bound[nm]))
+            continue
+        i = byname[nm]
+        _dt, cpp, expr, freed = _split_arg(p, args[i])
+        e = expr.replace("a2", f"UnifiedVectorFormat::GetData<{cpp}>(u[{i}])[r[{i}]]")
+        if defs[i] is not None:
+            if freed:
+                d = '%s("%s", -1)' % ("geog_in" if args[i] == "geography" else "geom_in",
+                                      str(defs[i]).strip().strip("'"))
+            else:
+                d = forward_literal(p, defs[i])
+                if d is None or base(p["canonical"]) == "Interval":
+                    raise ValueError(f"{name}: no literal for {nm}")
+            e = f"(k > {i} ? {e} : {d})"
+        if freed:
+            L.append(f"                GSERIALIZED *g{i} = {e};")
+            frees.append(f"g{i}")
+            call.append(f"g{i}")
+        else:
+            call.append(e)
+    call += [f"&st.b{slot[o]}" for o in outs] + ["&st.count"]
+    L += [f"                st.parts = {name}({', '.join(call)});",
+          "                free(t);" + "".join(f" free({g});" for g in frees),
+          "                if (!st.parts) st.count = 0;",
+          "            }",
+          "            st.loaded = true;",
+          "        }",
+          "        if (st.idx >= st.count) {",
+          "            st.Release();",
+          "            st.loaded = false;",
+          "            st.row++;",
+          "            continue;",
+          "        }"]
+    for j, (_c, m) in enumerate(bins):
+        L += ["        {",
+              f"            auto &v = output.data[{j}];",
+              f"            {ptr(m[1])}x = st.b{j}[st.idx];",
+              f"            {m[2]}",
+              "        }"]
+    L += ["        {",
+          f"            auto &v = output.data[{len(bins)}];",
+          "            Temporal *x = st.parts[st.idx];",
+          "            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, "
+          "temporal_mem_size(x));",
+          "            free(x);",
+          "        }",
+          "        st.idx++; i++;",
+          "    }",
+          "    output.SetCardinality(i);",
+          "    return OperatorResultType::HAVE_MORE_OUTPUT;",
+          "}",
+          f"static TableFunction {S}Table(TableFunction fn, const LogicalType &t, vector<string> names) {{",
+          f"    fn.bind = {S}BindFn;",
+          f"    fn.init_local = {S}InitFn;",
+          f"    fn.in_out_function = {S}InOutFn;",
+          f"    fn.function_info = make_shared_ptr<{S}Info>(t, std::move(names));",
+          "    return fn;",
+          "}",
+          ""]
+    return "\n".join(L)
+
 
 # ── the boxes of a spatial value and the tile of a point: one scalar per row ───────────────
 # spaceBoxes and spaceTimeBoxes answer stbox[] from a spatial temporal value, its sizes, an origin
@@ -5425,9 +5665,6 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # no longer listed here. Empty: every @sqlfn of a retired group is generated.
 # unnest: DuckDB's own unnest cannot be overloaded, so the temporal unnest registers under the
 # name the catalog gives the other engines, temporalUnnest (#shape_unnest).
-# The tile and bin groups: the splits of a temporal value into its tiles (spaceSplit, timeSplit,
-# valueSplit and their combinations) return arrays of temporal values that no shape takes yet;
-# src/temporal/temporal.cpp keeps them.
 # box2d and box3d: PostGIS's box types, which DuckDB does not have, so box2d(stbox) and
 # box3d(stbox) answer no type this surface registers; no hand registration answers them either.
 # stboxX: the catalog gives stbox_make, whose eleven parameters the SQL constructor fills from
@@ -5451,9 +5688,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # argument is NULL and which the catalog states no binding for, so src/raster/raquet.cpp keeps it.
 # tjsonbSet and tjsonbSetLax register nothing: tjsonb_set reads its keys as a text ** and a count
 # no marshalling fills from a text[], and tjsonbSet binds no literal for handle_null.
-RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
-                       "spaceSplit", "spaceTimeSplit", "timeSplit",
-                       "valueSplit", "valueTimeSplit", "asMVTGeom",
+RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet", "asMVTGeom",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
                        "rasterFromBinary", "rasterFromHexWKB", "numBands", "upperLeftX",
@@ -6948,6 +7183,30 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         TILE_REGISTERED.add((nm, tuple(types_)))
                         specific_regs.append(f'    loader.RegisterFunction(TableFunction("{nm}", '
                                              f'{{{", ".join(types_)}}}, {S_}ExecFn, {S_}BindFn, {S_}InitFn));')
+            continue
+        # the pieces of a temporal value with their bins (timeSplit, spaceTimeSplit): a table
+        # function in-out per declared form, one body per form over every temporal type
+        _sp = shape_split(f)
+        if _sp:
+            STATE["grp"] = f.get("group") or "meos_ungrouped"
+            for s_, ins_, bound_, bins_ in _sp:
+                acc_ = SIG_TEMPORAL_ACC[s_["args"][0]]
+                key_ = split_body_key(f, s_, bound_, bins_)
+                cols_ = ", ".join('"%s"' % c["name"] for c in s_["columns"])
+                for k_ in box_tile_forms(s_, ins_):
+                    S_ = f"Split_{f['name']}_{len(SPLIT_BODIES)}" if key_ not in SPLIT_BODIES else None
+                    types_ = [acc_] + [_split_arg(p, t)[0] for p, t in zip(ins_[1:k_], s_["args"][1:k_])]
+                    nms = [reg_name(nm, f) for nm in reg_names(f, s_.get("sqlName") or f["sqlfn"], aliases)
+                           if (reg_name(nm, f), tuple(types_)) not in SPLIT_REGISTERED]
+                    if not nms:
+                        continue
+                    if S_:
+                        SPLIT_BODIES[key_] = S_
+                        bodies.append(emit_split(f, S_, s_, ins_, bound_, bins_))
+                    for nm in nms:
+                        SPLIT_REGISTERED.add((nm, tuple(types_)))
+                        specific_regs.append(f'    loader.RegisterFunction({SPLIT_BODIES[key_]}Table(TableFunction('
+                                             f'"{nm}", {{{", ".join(types_)}}}, nullptr), {acc_}, {{{cols_}}}));')
             continue
         # the boxes of a spatial value and the tile of a point (spaceBoxes, getSpaceTile): a scalar
         # per declared form over the first operand types its signatures name

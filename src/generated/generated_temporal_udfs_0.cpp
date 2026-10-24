@@ -3106,6 +3106,285 @@ static void Gen_overlaps_spanset_spanset(DataChunk &args, ExpressionState &, Vec
 
 
 // ===== @ingroup meos_temporal_analytics_tile =====
+struct Split_temporal_time_split_0Info : public TableFunctionInfo {
+    Split_temporal_time_split_0Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_temporal_time_split_0State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    TimestampTz *b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_temporal_time_split_0State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_temporal_time_split_0BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_temporal_time_split_0Info>();
+    types = {LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_temporal_time_split_0InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_temporal_time_split_0State>();
+}
+static OperatorResultType Split_temporal_time_split_0InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_temporal_time_split_0State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[4];
+            idx_t r[4];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = temporal_time_split(t, MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[1])[r[1]]), (k > 2 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[2])[r[2]]).value : timestamptz_in("2000-01-03", -1)), (k > 3 ? UnifiedVectorFormat::GetData<bool>(u[3])[r[3]] : true), &st.b0, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            TimestampTz x = st.b0[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_temporal_time_split_0Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_temporal_time_split_0BindFn;
+    fn.init_local = Split_temporal_time_split_0InitFn;
+    fn.in_out_function = Split_temporal_time_split_0InOutFn;
+    fn.function_info = make_shared_ptr<Split_temporal_time_split_0Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tbigint_value_split_1Info : public TableFunctionInfo {
+    Split_tbigint_value_split_1Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tbigint_value_split_1State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    int64_t *b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tbigint_value_split_1State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tbigint_value_split_1BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tbigint_value_split_1Info>();
+    types = {LogicalType::BIGINT, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tbigint_value_split_1InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tbigint_value_split_1State>();
+}
+static OperatorResultType Split_tbigint_value_split_1InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tbigint_value_split_1State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[4];
+            idx_t r[4];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = tbigint_value_split(t, UnifiedVectorFormat::GetData<int64_t>(u[1])[r[1]], (k > 2 ? UnifiedVectorFormat::GetData<int64_t>(u[2])[r[2]] : 0), (k > 3 ? UnifiedVectorFormat::GetData<bool>(u[3])[r[3]] : true), &st.b0, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            int64_t x = st.b0[st.idx];
+            FlatVector::GetData<int64_t>(v)[i] = (int64_t) x;
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tbigint_value_split_1Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tbigint_value_split_1BindFn;
+    fn.init_local = Split_tbigint_value_split_1InitFn;
+    fn.in_out_function = Split_tbigint_value_split_1InOutFn;
+    fn.function_info = make_shared_ptr<Split_tbigint_value_split_1Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tbigint_value_time_split_2Info : public TableFunctionInfo {
+    Split_tbigint_value_time_split_2Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tbigint_value_time_split_2State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    int64_t *b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tbigint_value_time_split_2State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tbigint_value_time_split_2BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tbigint_value_time_split_2Info>();
+    types = {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tbigint_value_time_split_2InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tbigint_value_time_split_2State>();
+}
+static OperatorResultType Split_tbigint_value_time_split_2InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tbigint_value_time_split_2State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[6];
+            idx_t r[6];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = tbigint_value_time_split(t, UnifiedVectorFormat::GetData<int64_t>(u[1])[r[1]], MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[2])[r[2]]), (k > 3 ? UnifiedVectorFormat::GetData<int64_t>(u[3])[r[3]] : 0), (k > 4 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[4])[r[4]]).value : timestamptz_in("2000-01-03", -1)), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), &st.b0, &st.b1, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            int64_t x = st.b0[st.idx];
+            FlatVector::GetData<int64_t>(v)[i] = (int64_t) x;
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tbigint_value_time_split_2Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tbigint_value_time_split_2BindFn;
+    fn.init_local = Split_tbigint_value_time_split_2InitFn;
+    fn.in_out_function = Split_tbigint_value_time_split_2InOutFn;
+    fn.function_info = make_shared_ptr<Split_tbigint_value_time_split_2Info>(t, std::move(names));
+    return fn;
+}
+
 struct Tiles_tbigintbox_value_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
 struct Tiles_tbigintbox_value_tiles_s0_a4State : public GlobalTableFunctionState {
     TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
@@ -3656,6 +3935,194 @@ static void Tiles_tbox_time_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInpu
     output.SetCardinality(rows);
 }
 
+struct Split_tfloat_value_split_3Info : public TableFunctionInfo {
+    Split_tfloat_value_split_3Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tfloat_value_split_3State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    double *b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tfloat_value_split_3State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tfloat_value_split_3BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tfloat_value_split_3Info>();
+    types = {LogicalType::DOUBLE, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tfloat_value_split_3InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tfloat_value_split_3State>();
+}
+static OperatorResultType Split_tfloat_value_split_3InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tfloat_value_split_3State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[4];
+            idx_t r[4];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = tfloat_value_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], (k > 2 ? UnifiedVectorFormat::GetData<double>(u[2])[r[2]] : 0.0), (k > 3 ? UnifiedVectorFormat::GetData<bool>(u[3])[r[3]] : true), &st.b0, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            double x = st.b0[st.idx];
+            FlatVector::GetData<double>(v)[i] = (double) x;
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tfloat_value_split_3Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tfloat_value_split_3BindFn;
+    fn.init_local = Split_tfloat_value_split_3InitFn;
+    fn.in_out_function = Split_tfloat_value_split_3InOutFn;
+    fn.function_info = make_shared_ptr<Split_tfloat_value_split_3Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tfloat_value_time_split_4Info : public TableFunctionInfo {
+    Split_tfloat_value_time_split_4Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tfloat_value_time_split_4State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    double *b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tfloat_value_time_split_4State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tfloat_value_time_split_4BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tfloat_value_time_split_4Info>();
+    types = {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tfloat_value_time_split_4InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tfloat_value_time_split_4State>();
+}
+static OperatorResultType Split_tfloat_value_time_split_4InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tfloat_value_time_split_4State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[6];
+            idx_t r[6];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = tfloat_value_time_split(t, UnifiedVectorFormat::GetData<double>(u[1])[r[1]], MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[2])[r[2]]), (k > 3 ? UnifiedVectorFormat::GetData<double>(u[3])[r[3]] : 0.0), (k > 4 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[4])[r[4]]).value : timestamptz_in("2000-01-03", -1)), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), &st.b0, &st.b1, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            double x = st.b0[st.idx];
+            FlatVector::GetData<double>(v)[i] = (double) x;
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tfloat_value_time_split_4Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tfloat_value_time_split_4BindFn;
+    fn.init_local = Split_tfloat_value_time_split_4InitFn;
+    fn.in_out_function = Split_tfloat_value_time_split_4InOutFn;
+    fn.function_info = make_shared_ptr<Split_tfloat_value_time_split_4Info>(t, std::move(names));
+    return fn;
+}
+
 struct Tiles_tfloatbox_value_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
 struct Tiles_tfloatbox_value_tiles_s0_a4State : public GlobalTableFunctionState {
     TBox *tiles = nullptr; int count = 0; idx_t idx = 0;
@@ -3940,6 +4407,194 @@ static void Tiles_tfloatbox_value_time_tiles_s0_a3ExecFn(ClientContext &, TableF
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) &st.tiles[st.idx], sizeof(TBox));
     }
     output.SetCardinality(rows);
+}
+
+struct Split_tint_value_split_5Info : public TableFunctionInfo {
+    Split_tint_value_split_5Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tint_value_split_5State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    int *b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tint_value_split_5State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tint_value_split_5BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tint_value_split_5Info>();
+    types = {LogicalType::INTEGER, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tint_value_split_5InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tint_value_split_5State>();
+}
+static OperatorResultType Split_tint_value_split_5InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tint_value_split_5State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[4];
+            idx_t r[4];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = tint_value_split(t, UnifiedVectorFormat::GetData<int32_t>(u[1])[r[1]], (k > 2 ? UnifiedVectorFormat::GetData<int32_t>(u[2])[r[2]] : 0), (k > 3 ? UnifiedVectorFormat::GetData<bool>(u[3])[r[3]] : true), &st.b0, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            int x = st.b0[st.idx];
+            FlatVector::GetData<int32_t>(v)[i] = (int32_t) x;
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tint_value_split_5Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tint_value_split_5BindFn;
+    fn.init_local = Split_tint_value_split_5InitFn;
+    fn.in_out_function = Split_tint_value_split_5InOutFn;
+    fn.function_info = make_shared_ptr<Split_tint_value_split_5Info>(t, std::move(names));
+    return fn;
+}
+
+struct Split_tint_value_time_split_6Info : public TableFunctionInfo {
+    Split_tint_value_time_split_6Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_tint_value_time_split_6State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    int *b0 = nullptr;
+    TimestampTz *b1 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0); free(b1);
+        parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_tint_value_time_split_6State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_tint_value_time_split_6BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_tint_value_time_split_6Info>();
+    types = {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_tint_value_time_split_6InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_tint_value_time_split_6State>();
+}
+static OperatorResultType Split_tint_value_time_split_6InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_tint_value_time_split_6State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[6];
+            idx_t r[6];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                st.parts = tint_value_time_split(t, UnifiedVectorFormat::GetData<int32_t>(u[1])[r[1]], MeosIntervalArg(UnifiedVectorFormat::GetData<interval_t>(u[2])[r[2]]), (k > 3 ? UnifiedVectorFormat::GetData<int32_t>(u[3])[r[3]] : 0), (k > 4 ? DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[4])[r[4]]).value : timestamptz_in("2000-01-03", -1)), (k > 5 ? UnifiedVectorFormat::GetData<bool>(u[5])[r[5]] : true), &st.b0, &st.b1, &st.count);
+                free(t);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            int x = st.b0[st.idx];
+            FlatVector::GetData<int32_t>(v)[i] = (int32_t) x;
+        }
+        {
+            auto &v = output.data[1];
+            TimestampTz x = st.b1[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[2];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_tint_value_time_split_6Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tint_value_time_split_6BindFn;
+    fn.init_local = Split_tint_value_time_split_6InitFn;
+    fn.in_out_function = Split_tint_value_time_split_6InOutFn;
+    fn.function_info = make_shared_ptr<Split_tint_value_time_split_6Info>(t, std::move(names));
+    return fn;
 }
 
 struct Tiles_tintbox_value_tiles_s0_a4Bind : public TableFunctionData { vector<Value> in; };
@@ -5777,6 +6432,73 @@ void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
+    loader.RegisterFunction(Split_tbigint_value_split_1Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_split_1Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_split_1Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, Tiles_tbigintbox_value_tiles_s0_a4ExecFn, Tiles_tbigintbox_value_tiles_s0_a4BindFn, Tiles_tbigintbox_value_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, Tiles_tbigintbox_value_tiles_s0_a3ExecFn, Tiles_tbigintbox_value_tiles_s0_a3BindFn, Tiles_tbigintbox_value_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT}, Tiles_tbigintbox_value_tiles_s0_a2ExecFn, Tiles_tbigintbox_value_tiles_s0_a2BindFn, Tiles_tbigintbox_value_tiles_s0_a2InitFn));
@@ -5794,6 +6516,13 @@ void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_tbox_time_tiles_s0_a4ExecFn, Tiles_tbox_time_tiles_s0_a4BindFn, Tiles_tbox_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, Tiles_tbox_time_tiles_s0_a3ExecFn, Tiles_tbox_time_tiles_s0_a3BindFn, Tiles_tbox_time_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL}, Tiles_tbox_time_tiles_s0_a2ExecFn, Tiles_tbox_time_tiles_s0_a2BindFn, Tiles_tbox_time_tiles_s0_a2InitFn));
+    loader.RegisterFunction(Split_tfloat_value_split_3Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_split_3Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_split_3Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, Tiles_tfloatbox_value_tiles_s0_a4ExecFn, Tiles_tfloatbox_value_tiles_s0_a4BindFn, Tiles_tfloatbox_value_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, Tiles_tfloatbox_value_tiles_s0_a3ExecFn, Tiles_tfloatbox_value_tiles_s0_a3BindFn, Tiles_tfloatbox_value_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE}, Tiles_tfloatbox_value_tiles_s0_a2ExecFn, Tiles_tfloatbox_value_tiles_s0_a2BindFn, Tiles_tfloatbox_value_tiles_s0_a2InitFn));
@@ -5801,6 +6530,13 @@ void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, Tiles_tfloatbox_value_time_tiles_s0_a5ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a5BindFn, Tiles_tfloatbox_value_time_tiles_s0_a5InitFn));
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, Tiles_tfloatbox_value_time_tiles_s0_a4ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a4BindFn, Tiles_tfloatbox_value_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL}, Tiles_tfloatbox_value_time_tiles_s0_a3ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a3BindFn, Tiles_tfloatbox_value_time_tiles_s0_a3InitFn));
+    loader.RegisterFunction(Split_tint_value_split_5Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_split_5Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_split_5Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, Tiles_tintbox_value_tiles_s0_a4ExecFn, Tiles_tintbox_value_tiles_s0_a4BindFn, Tiles_tintbox_value_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, Tiles_tintbox_value_tiles_s0_a3ExecFn, Tiles_tintbox_value_tiles_s0_a3BindFn, Tiles_tintbox_value_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER}, Tiles_tintbox_value_tiles_s0_a2ExecFn, Tiles_tintbox_value_tiles_s0_a2BindFn, Tiles_tintbox_value_tiles_s0_a2InitFn));
