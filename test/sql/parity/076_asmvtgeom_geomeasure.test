@@ -39,6 +39,35 @@ SELECT ST_AsText((asMVTGeom(tgeompoint '[POINT(0 0)@2000-01-01, POINT(10 10)@200
 ----
 LINESTRING (0 100, 100 0)
 
+# MobilityDB: asMVTGeom(tgeompoint '[Point(0 0)@2001-01-01, Point(100 100)@2001-04-10]',
+#   stbox 'STBOX X((40,40),(60,60))', clip := false)
+query I
+SELECT ST_AsText(round((asMVTGeom(tgeompoint '[Point(0 0)@2001-01-01, Point(100 100)@2001-04-10]',
+                              stbox 'STBOX X((40,40),(60,60))', 4096, 256, false)).geom, 6));
+----
+LINESTRING (-8192 12288, 12288 -8192)
+
+# MobilityDB: asMVTGeom(tgeompoint '[Point(0 0 0)@2001-01-01, Point(100 100 100)@2001-04-10]',
+#   stbox 'STBOX X((40,40),(60,60))')
+query I
+SELECT ST_AsText(round((asMVTGeom(tgeompoint '[Point(0 0 0)@2001-01-01, Point(100 100 100)@2001-04-10]',
+                              stbox 'STBOX X((40,40),(60,60))')).geom, 6));
+----
+LINESTRING Z (-256 4352 38.75, 4352 -256 61.25)
+
+# A value that meets nothing in the bounds answers NULL, as MobilityDB's does
+query I
+SELECT asMVTGeom(tgeompoint '{[Point(0 0)@2001-01-01], [Point(100 100)@2001-04-10]}',
+                 stbox 'STBOX X((0,0),(60,60))') IS NULL;
+----
+true
+
+statement error
+SELECT asMVTGeom(tgeompoint '[Point(0 0)@2001-01-01, Point(100 100)@2001-04-10]',
+                 stbox 'STBOX X((40,40),(60,60))', 0);
+----
+Extent must be greater than 0
+
 # geoMeasure adds the M coordinate from the measure tfloat
 
 query I

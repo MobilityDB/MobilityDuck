@@ -6,6 +6,11 @@
 
 require mobilityduck
 
+# The bins of UTC-midnight data under the default origin, which MobilityDB reads in the session
+# time zone
+statement ok
+SET TimeZone='UTC'
+
 # spaceSplit: 10x10 trajectory with 5x5 cells -> 3 bins (0,0), (5,5), (10,10)
 
 query I
@@ -14,9 +19,9 @@ SELECT count(*) FROM spaceSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, 
 3
 
 query II
-SELECT ST_AsText(spaceBin), tempSubtype(tpoint)
+SELECT ST_AsText(point), tempSubtype(tpoint)
 FROM spaceSplit(tgeompoint '[POINT(0 0)@2000-01-01 00:00:00+00, POINT(10 10)@2000-01-05 00:00:00+00]', 5.0, 5.0, 5.0)
-ORDER BY ST_AsText(spaceBin);
+ORDER BY ST_AsText(point);
 ----
 POINT (0 0)	SequenceSet
 POINT (10 10)	SequenceSet
@@ -53,4 +58,4 @@ SELECT count(*) FROM spaceTimeSplit(
     ST_GeomFromText('POINT(0 0)'),
     TIMESTAMP '2000-01-01');
 ----
-5
+3

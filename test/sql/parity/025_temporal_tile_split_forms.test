@@ -1,0 +1,52 @@
+# name: test/sql/parity/025_temporal_tile_split_forms.test
+# description: The splits over the temporal types and the size forms MobilityDB declares, each
+#              against the rows MobilityDB answers in its regression time zone
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone='America/Los_Angeles'
+
+# MobilityDB: SELECT valueSplit(tbigint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]', 2);
+query II
+SELECT number, tnumber::VARCHAR FROM valueSplit(tbigint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]', 2)
+ORDER BY number;
+----
+0	{[1@2001-01-01 00:00:00-08, 1@2001-01-02 00:00:00-08), [1@2001-01-03 00:00:00-08]}
+2	{[2@2001-01-02 00:00:00-08, 2@2001-01-03 00:00:00-08)}
+
+# MobilityDB: SELECT valueTimeSplit(tbigint '{1@2001-01-01, 2@2001-01-02, 1@2001-01-03}', 2, '1 week');
+query III
+SELECT number, "time", tnumber::VARCHAR
+FROM valueTimeSplit(tbigint '{1@2001-01-01, 2@2001-01-02, 1@2001-01-03}', 2, INTERVAL '1 week')
+ORDER BY number;
+----
+0	2001-01-01 00:00:00-08	{1@2001-01-01 00:00:00-08, 1@2001-01-03 00:00:00-08}
+2	2001-01-01 00:00:00-08	{2@2001-01-02 00:00:00-08}
+
+# MobilityDB: SELECT timeSplit(ttext '[AAA@2001-01-01, BBB@2001-01-02, AAA@2001-01-03]', '1 week');
+query II
+SELECT "time", temp::VARCHAR FROM timeSplit(ttext '[AAA@2001-01-01, BBB@2001-01-02, AAA@2001-01-03]', INTERVAL '1 week');
+----
+2001-01-01 00:00:00-08	["AAA"@2001-01-01 00:00:00-08, "BBB"@2001-01-02 00:00:00-08, "AAA"@2001-01-03 00:00:00-08]
+
+# MobilityDB: spaceTimeSplit(tgeometry '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(1 1)@2001-01-03],
+#   [Point(3 3)@2001-01-04, Point(3 3)@2001-01-05]}', 2.0, interval '2 days', 'Point(0.5 0.5)', '2001-01-15'),
+# the one-size form
+query III
+SELECT ST_AsText(point), "time", asText(tgeo)
+FROM spaceTimeSplit(tgeometry '{[Point(1 1)@2001-01-01, Point(2 2)@2001-01-02, Point(1 1)@2001-01-03],[Point(3 3)@2001-01-04, Point(3 3)@2001-01-05]}',
+  2.0, INTERVAL '2 days', ST_GeomFromText('Point(0.5 0.5)'), TIMESTAMPTZ '2001-01-15')
+ORDER BY 2, 1;
+----
+POINT (0.5 0.5)	2001-01-01 00:00:00-08	{[POINT(1 1)@2001-01-01 00:00:00-08, POINT(2 2)@2001-01-02 00:00:00-08, POINT(2 2)@2001-01-03 00:00:00-08)}
+POINT (0.5 0.5)	2001-01-03 00:00:00-08	{[POINT(1 1)@2001-01-03 00:00:00-08]}
+POINT (2.5 2.5)	2001-01-03 00:00:00-08	{[POINT(3 3)@2001-01-04 00:00:00-08, POINT(3 3)@2001-01-05 00:00:00-08)}
+POINT (2.5 2.5)	2001-01-05 00:00:00-08	{[POINT(3 3)@2001-01-05 00:00:00-08]}
+
+# MobilityDB's functions are STRICT: a NULL argument splits into no row
+query I
+SELECT count(*) FROM timeSplit(tint '[1@2001-01-01, 2@2001-01-02]', NULL::INTERVAL);
+----
+0
