@@ -2141,6 +2141,28 @@ static void Gen_jsonb_to_set(DataChunk &args, ExpressionState &, Vector &result)
         });
 }
 
+static void Gen_jsonbset_to_textset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Set *r = jsonbset_to_textset(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_textset_to_jsonbset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(in);
+            Set *r = textset_to_jsonbset(s);
+            free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
 
 // ===== @ingroup meos_json_set_json =====
 static void Gen_jsonbset_delete_array(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5434,6 +5456,8 @@ void RegisterGenerated_meos_h3_comp_temp(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_json_set_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("set", {TJsonbTypes::jsonb()}, SetTypes::jsonbset(), Gen_jsonb_to_set));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("textset", {SetTypes::jsonbset()}, SetTypes::textset(), Gen_jsonbset_to_textset));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbset", {SetTypes::textset()}, SetTypes::jsonbset(), Gen_textset_to_jsonbset));
 }
 
 void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
