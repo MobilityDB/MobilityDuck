@@ -3237,6 +3237,20 @@ static void Gen_trgeometry_to_tgeometry(DataChunk &args, ExpressionState &, Vect
         });
 }
 
+static void Gen_trgeometry_geom(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            GSERIALIZED * r = trgeometry_geom(t);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
 
 // ===== @ingroup meos_rgeo_rel_ever =====
 static void Gen_econtains_geo_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
@@ -7437,6 +7451,7 @@ void RegisterGenerated_meos_rgeo_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tpose", {TrgeometryTypes::trgeometry()}, PoseTypes::tpose(), Gen_trgeometry_to_tpose));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeompoint", {TrgeometryTypes::trgeometry()}, TgeompointType::tgeompoint(), Gen_trgeometry_to_tgeompoint));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tgeometry", {TrgeometryTypes::trgeometry()}, TGeometryTypes::tgeometry(), Gen_trgeometry_to_tgeometry));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("geometry", {TrgeometryTypes::trgeometry()}, MobilityDuckGeometryType(), Gen_trgeometry_geom));
 }
 
 void RegisterGenerated_meos_rgeo_rel_ever(ExtensionLoader &loader) {
