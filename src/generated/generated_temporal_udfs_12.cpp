@@ -27,6 +27,7 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -290,6 +291,26 @@ inline Raquet *BlobToRaquet(string_t blob) {
     Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
     if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
     return rq;
+}
+// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the
+// WKB serialisation of the raster, the form its text hex-encodes.
+inline string_t RasterToBlob(Vector &result, Raster *rast) {
+    size_t sz = 0;
+    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
+    free(rast);
+    if (!wkb) throw InvalidInputException("raster: cannot serialise the raster");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {
+    if (!rast) { mask.SetInvalid(idx); return string_t(); }
+    return RasterToBlob(result, rast);
+}
+inline Raster *BlobToRaster(string_t blob) {
+    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rast) throw InvalidInputException("raster: invalid raster serialisation");
+    return rast;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -2777,6 +2798,116 @@ static void Gen_raquet_band_has_nodata_value(DataChunk &args, ExpressionState &,
         });
 }
 
+static void Gen_raster_num_bands(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            int32_t r = raster_num_bands(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_width(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            int32_t r = raster_width(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_height(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            int32_t r = raster_height(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_srid(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, int32_t>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            int32_t r = raster_srid(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_upper_left_x(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            double r = raster_upper_left_x(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_upper_left_y(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            double r = raster_upper_left_y(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_scale_x(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            double r = raster_scale_x(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_scale_y(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            double r = raster_scale_y(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_skew_x(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            double r = raster_skew_x(v);
+            free(v);
+            return r;
+        });
+}
+
+static void Gen_raster_skew_y(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in) {
+            Raster *v = BlobToRaster(in);
+            double r = raster_skew_y(v);
+            free(v);
+            return r;
+        });
+}
+
 static void Gen_raquet_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2851,6 +2982,124 @@ static void Gen_raquet_pixels(DataChunk &args, ExpressionState &, Vector &result
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raster_band_has_nodata_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        bool r = raster_band_has_nodata_value(p0, in1[i]);
+        free(p0);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_band_has_nodata_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        bool r = raster_band_has_nodata_value(p0, 1);
+        free(p0);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_band_nodata_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        double v{};
+        bool found = raster_band_nodata_value(p0, in1[i], &v);
+        free(p0);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_band_nodata_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        double v{};
+        bool found = raster_band_nodata_value(p0, 1, &v);
+        free(p0);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_band_pixels(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raster_band_pixels(p0, in1[i], &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_band_pixels_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raster_band_pixels(p0, 1, &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_tile_value_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2881,6 +3130,28 @@ static void Gen_raster_tile_value_quadbin(DataChunk &args, ExpressionState &, Ve
         out[i] = TemporalToBlob(result, r);
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_band_pixel_type(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, int32_t a2) {
+            Raster *s = BlobToRaster(a);
+            char *r = raster_band_pixel_type(s, a2);
+            free(s);
+            return TakeCString(result, r);
+        });
+}
+
+static void Gen_raster_band_pixel_type_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            Raster *s = BlobToRaster(a);
+            char *r = raster_band_pixel_type(s, 1);
+            free(s);
+            return TakeCString(result, r);
+        });
 }
 
 
@@ -4644,11 +4915,29 @@ void RegisterGenerated_meos_raster_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("width", {RaquetTypes::raquet()}, LogicalType::INTEGER, Gen_raquet_width));
     RegisterSerializedScalarFunction(loader, ScalarFunction("height", {RaquetTypes::raquet()}, LogicalType::INTEGER, Gen_raquet_height));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandHasNoDataValue", {RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_band_has_nodata_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("numBands", {RasterTypes::raster()}, LogicalType::INTEGER, Gen_raster_num_bands));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("width", {RasterTypes::raster()}, LogicalType::INTEGER, Gen_raster_width));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("height", {RasterTypes::raster()}, LogicalType::INTEGER, Gen_raster_height));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {RasterTypes::raster()}, LogicalType::INTEGER, Gen_raster_srid));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperLeftX", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_upper_left_x));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("upperLeftY", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_upper_left_y));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleX", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_scale_x));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleY", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_scale_y));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("skewX", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_skew_x));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("skewY", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_skew_y));
     RegisterSerializedScalarFunction(loader, ScalarFunction("quadbin", {RaquetTypes::raquet()}, QuadbinTypes::quadbin(), Gen_raquet_quadbin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandPixelType", {RaquetTypes::raquet()}, LogicalType::VARCHAR, Gen_raquet_band_pixel_type));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandNoDataValue", {RaquetTypes::raquet()}, LogicalType::DOUBLE, Gen_raquet_band_nodata_value));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RaquetTypes::raquet()}, LogicalType::BLOB, Gen_raquet_pixels));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandHasNoDataValue", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_raster_band_has_nodata_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandHasNoDataValue", {RasterTypes::raster()}, LogicalType::BOOLEAN, Gen_raster_band_has_nodata_value_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandNoDataValue", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::DOUBLE, Gen_raster_band_nodata_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandNoDataValue", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_band_nodata_value_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::BLOB, Gen_raster_band_pixels));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_band_pixels_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rasterTileValueQuadbin", {TgeompointType::tgeompoint(), LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, QuadbinTypes::quadbin(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_raster_tile_value_quadbin));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandPixelType", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_raster_band_pixel_type));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("bandPixelType", {RasterTypes::raster()}, LogicalType::VARCHAR, Gen_raster_band_pixel_type_d));
 }
 
 void RegisterGenerated_meos_s2cell_set_setops(ExtensionLoader &loader) {

@@ -27,6 +27,7 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -290,6 +291,26 @@ inline Raquet *BlobToRaquet(string_t blob) {
     Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
     if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
     return rq;
+}
+// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the
+// WKB serialisation of the raster, the form its text hex-encodes.
+inline string_t RasterToBlob(Vector &result, Raster *rast) {
+    size_t sz = 0;
+    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
+    free(rast);
+    if (!wkb) throw InvalidInputException("raster: cannot serialise the raster");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {
+    if (!rast) { mask.SetInvalid(idx); return string_t(); }
+    return RasterToBlob(result, rast);
+}
+inline Raster *BlobToRaster(string_t blob) {
+    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rast) throw InvalidInputException("raster: invalid raster serialisation");
+    return rast;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -3396,6 +3417,28 @@ static void Gen_raquet_hash(DataChunk &args, ExpressionState &, Vector &result) 
         });
 }
 
+static void Gen_raster_not_same_alignment_reason(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        char *r = raster_not_same_alignment_reason(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raquet_cmp(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -3495,6 +3538,18 @@ static void Gen_raquet_gt(DataChunk &args, ExpressionState &, Vector &result) {
             Raquet *s1 = BlobToRaquet(a);
             Raquet *s2 = BlobToRaquet(b);
             bool r = raquet_gt(s1, s2);
+            free(s1); free(s2);
+            return r;
+        });
+}
+
+static void Gen_raster_same_alignment(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b) {
+            Raster *s1 = BlobToRaster(a);
+            Raster *s2 = BlobToRaster(b);
+            bool r = raster_same_alignment(s1, s2);
             free(s1); free(s2);
             return r;
         });
@@ -3722,6 +3777,7 @@ void RegisterGenerated_meos_posechain_set_conversion(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_raster_base_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {RaquetTypes::raquet()}, LogicalType::UINTEGER, Gen_raquet_hash));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("notSameAlignmentReason", {RasterTypes::raster(), RasterTypes::raster()}, LogicalType::VARCHAR, Gen_raster_not_same_alignment_reason));
     RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::INTEGER, Gen_raquet_cmp));
     RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {RaquetTypes::raquet(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_raquet_hash_extended));
     RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_eq));
@@ -3736,6 +3792,7 @@ void RegisterGenerated_meos_raster_base_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction(">=", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_ge));
     RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_gt));
     RegisterSerializedScalarFunction(loader, ScalarFunction(">", {RaquetTypes::raquet(), RaquetTypes::raquet()}, LogicalType::BOOLEAN, Gen_raquet_gt));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("sameAlignment", {RasterTypes::raster(), RasterTypes::raster()}, LogicalType::BOOLEAN, Gen_raster_same_alignment));
 }
 
 } // namespace duckdb

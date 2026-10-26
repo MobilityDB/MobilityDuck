@@ -27,6 +27,7 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -290,6 +291,26 @@ inline Raquet *BlobToRaquet(string_t blob) {
     Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
     if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
     return rq;
+}
+// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the
+// WKB serialisation of the raster, the form its text hex-encodes.
+inline string_t RasterToBlob(Vector &result, Raster *rast) {
+    size_t sz = 0;
+    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
+    free(rast);
+    if (!wkb) throw InvalidInputException("raster: cannot serialise the raster");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {
+    if (!rast) { mask.SetInvalid(idx); return string_t(); }
+    return RasterToBlob(result, rast);
+}
+inline Raster *BlobToRaster(string_t blob) {
+    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rast) throw InvalidInputException("raster: invalid raster serialisation");
+    return rast;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -1968,6 +1989,24 @@ static void Gen_raquet_to_stbox(DataChunk &args, ExpressionState &, Vector &resu
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raster_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        STBox *r = raster_to_stbox(p0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 
 // ===== @ingroup meos_rgeo_dist =====
 static void Gen_tdistance_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3333,6 +3372,7 @@ void RegisterGenerated_meos_posechain_comp_ever(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_raster_base_conversion(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {RaquetTypes::raquet()}, StboxType::stbox(), Gen_raquet_to_stbox));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {RasterTypes::raster()}, StboxType::stbox(), Gen_raster_to_stbox));
 }
 
 void RegisterGenerated_meos_rgeo_dist(ExtensionLoader &loader) {

@@ -27,6 +27,7 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -290,6 +291,26 @@ inline Raquet *BlobToRaquet(string_t blob) {
     Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
     if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
     return rq;
+}
+// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the
+// WKB serialisation of the raster, the form its text hex-encodes.
+inline string_t RasterToBlob(Vector &result, Raster *rast) {
+    size_t sz = 0;
+    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
+    free(rast);
+    if (!wkb) throw InvalidInputException("raster: cannot serialise the raster");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {
+    if (!rast) { mask.SetInvalid(idx); return string_t(); }
+    return RasterToBlob(result, rast);
+}
+inline Raster *BlobToRaster(string_t blob) {
+    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rast) throw InvalidInputException("raster: invalid raster serialisation");
+    return rast;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -3989,6 +4010,60 @@ static void Gen_union_set_quadbin(DataChunk &args, ExpressionState &, Vector &re
 }
 
 
+// ===== @ingroup meos_raster_base_math =====
+static void Gen_add_raster_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Raster *s1 = BlobToRaster(a);
+            Raster *s2 = BlobToRaster(b);
+            Raster *r = add_raster_raster(s1, s2);
+            free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RasterToBlob(result, r);
+        });
+}
+
+static void Gen_div_raster_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Raster *s1 = BlobToRaster(a);
+            Raster *s2 = BlobToRaster(b);
+            Raster *r = div_raster_raster(s1, s2);
+            free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RasterToBlob(result, r);
+        });
+}
+
+static void Gen_mul_raster_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Raster *s1 = BlobToRaster(a);
+            Raster *s2 = BlobToRaster(b);
+            Raster *r = mul_raster_raster(s1, s2);
+            free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RasterToBlob(result, r);
+        });
+}
+
+static void Gen_sub_raster_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> string_t {
+            Raster *s1 = BlobToRaster(a);
+            Raster *s2 = BlobToRaster(b);
+            Raster *r = sub_raster_raster(s1, s2);
+            free(s1); free(s2);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RasterToBlob(result, r);
+        });
+}
+
+
 // ===== @ingroup meos_temporal_bool =====
 static void Gen_tand_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -4533,6 +4608,17 @@ void RegisterGenerated_meos_quadbin_set_setops(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {QuadbinTypes::quadbin(), SetTypes::quadbinset()}, SetTypes::quadbinset(), Gen_union_quadbin_set));
     RegisterSerializedScalarFunction(loader, ScalarFunction("setUnion", {SetTypes::quadbinset(), QuadbinTypes::quadbin()}, SetTypes::quadbinset(), Gen_union_set_quadbin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("+", {SetTypes::quadbinset(), QuadbinTypes::quadbin()}, SetTypes::quadbinset(), Gen_union_set_quadbin));
+}
+
+void RegisterGenerated_meos_raster_base_math(ExtensionLoader &loader) {
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterAdd", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_add_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("+", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_add_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterDiv", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_div_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("/", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_div_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterMul", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_mul_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("*", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_mul_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterSub", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_sub_raster_raster));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("-", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_sub_raster_raster));
 }
 
 void RegisterGenerated_meos_temporal_bool(ExtensionLoader &loader) {

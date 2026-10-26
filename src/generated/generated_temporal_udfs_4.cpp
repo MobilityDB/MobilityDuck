@@ -27,6 +27,7 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -290,6 +291,26 @@ inline Raquet *BlobToRaquet(string_t blob) {
     Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
     if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
     return rq;
+}
+// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the
+// WKB serialisation of the raster, the form its text hex-encodes.
+inline string_t RasterToBlob(Vector &result, Raster *rast) {
+    size_t sz = 0;
+    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
+    free(rast);
+    if (!wkb) throw InvalidInputException("raster: cannot serialise the raster");
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
+    free(wkb);
+    return out;
+}
+inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {
+    if (!rast) { mask.SetInvalid(idx); return string_t(); }
+    return RasterToBlob(result, rast);
+}
+inline Raster *BlobToRaster(string_t blob) {
+    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
+    if (!rast) throw InvalidInputException("raster: invalid raster serialisation");
+    return rast;
 }
 // Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
 inline string_t StboxToBlob(Vector &result, STBox *b) {
@@ -2913,6 +2934,323 @@ static void Gen_raster_tile_value(DataChunk &args, ExpressionState &, Vector &re
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
+}
+
+static void Gen_raster_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto in4 = FlatVector::GetData<string_t>(args.data[4]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        std::string s4 = in4[i].GetString();
+        Temporal *r = (Temporal *) raster_value(p0, p1, in2[i], in3[i], s4.c_str());
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Temporal *r = (Temporal *) raster_value(p0, p1, in2[i], in3[i], "nearest");
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Temporal *r = (Temporal *) raster_value(p0, p1, in2[i], true, "nearest");
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Temporal *r = (Temporal *) raster_value(p0, p1, 1, true, "nearest");
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_at_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        Temporal *r = (Temporal *) raster_at_value(p0, p1, in3[i], p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_at_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        Temporal *r = (Temporal *) raster_at_value(p0, p1, 1, p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        Temporal *r = (Temporal *) raster_minus_value(p0, p1, in3[i], p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_minus_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        Temporal *r = (Temporal *) raster_minus_value(p0, p1, 1, p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_eraster_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        int r = eraster_value(p0, p1, in3[i], p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_eraster_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        int r = eraster_value(p0, p1, 1, p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_araster_value(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        int r = araster_value(p0, p1, in3[i], p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_araster_value_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Raster *p1 = BlobToRaster(in1[i]);
+        Span *p2 = BlobToSpan(in2[i]);
+        int r = araster_value(p0, p1, 1, p2);
+        free(p0);
+        free(p1);
+        free(p2);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 static void Gen_raster_at_value_gdal(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5568,6 +5906,18 @@ void RegisterGenerated_meos_raster(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rasterValue", {TgeompointType::tgeompoint(), LogicalType::VARCHAR, LogicalType::INTEGER}, TemporalTypes::tfloat(), Gen_raster_value_gdal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rasterValue", {TgeompointType::tgeompoint(), LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_raster_value_gdal_d));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rasterTileValue", {TgeompointType::tgeompoint(), RaquetTypes::raquet()}, TemporalTypes::tfloat(), Gen_raster_tile_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_raster_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_raster_value_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), LogicalType::INTEGER}, TemporalTypes::tfloat(), Gen_raster_value_v2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("rasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster()}, TemporalTypes::tfloat(), Gen_raster_value_v3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_raster_at_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("atRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan()}, TgeompointType::tgeompoint(), Gen_raster_at_value_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_raster_minus_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("minusRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan()}, TgeompointType::tgeompoint(), Gen_raster_minus_value_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_eraster_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("eRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_eraster_value_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan(), LogicalType::INTEGER}, LogicalType::BOOLEAN, Gen_araster_value));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("aRasterValue", {TgeompointType::tgeompoint(), RasterTypes::raster(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_araster_value_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atRasterValue", {TgeompointType::tgeompoint(), LogicalType::VARCHAR, SpanTypes::floatspan(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_raster_at_value_gdal));
     RegisterSerializedScalarFunction(loader, ScalarFunction("atRasterValue", {TgeompointType::tgeompoint(), LogicalType::VARCHAR, SpanTypes::floatspan()}, TgeompointType::tgeompoint(), Gen_raster_at_value_gdal_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("minusRasterValue", {TgeompointType::tgeompoint(), LogicalType::VARCHAR, SpanTypes::floatspan(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_raster_minus_value_gdal));
@@ -6303,6 +6653,10 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::VARCHAR}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeq", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, QuadbinTypes::tquadbin(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeq", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, TrgeometryTypes::trgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeq", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeq", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_tsequence_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeq", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::VARCHAR, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell())}, S2cellTypes::ts2cell(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::VARCHAR}, S2cellTypes::ts2cell(), Gen_tsequence_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeq", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::VARCHAR, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tsequence_make));
@@ -6340,6 +6694,7 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tposeSeqSet", {LogicalType::LIST(PoseTypes::tpose())}, PoseTypes::tpose(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSet", {LogicalType::LIST(PosechainTypes::tposechain())}, PosechainTypes::tposechain(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeqSet", {LogicalType::LIST(QuadbinTypes::tquadbin())}, QuadbinTypes::tquadbin(), Gen_tsequenceset_make));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSet", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, TrgeometryTypes::trgeometry(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeqSet", {LogicalType::LIST(S2cellTypes::ts2cell())}, S2cellTypes::ts2cell(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeqSet", {LogicalType::LIST(TemporalTypes::tbool())}, TemporalTypes::tbool(), Gen_tsequenceset_make));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tintSeqSet", {LogicalType::LIST(TemporalTypes::tint())}, TemporalTypes::tint(), Gen_tsequenceset_make));
@@ -6384,6 +6739,10 @@ void RegisterGenerated_meos_temporal_constructor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("tposechainSeqSetGaps", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeqSetGaps", {LogicalType::LIST(QuadbinTypes::tquadbin())}, QuadbinTypes::tquadbin(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tquadbinSeqSetGaps", {LogicalType::LIST(QuadbinTypes::tquadbin()), LogicalType::INTERVAL}, QuadbinTypes::tquadbin(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSetGaps", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, TrgeometryTypes::trgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSetGaps", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::INTERVAL}, TrgeometryTypes::trgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSetGaps", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::INTERVAL, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_tsequenceset_make_gaps));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSetGaps", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeqSetGaps", {LogicalType::LIST(S2cellTypes::ts2cell())}, S2cellTypes::ts2cell(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cellSeqSetGaps", {LogicalType::LIST(S2cellTypes::ts2cell()), LogicalType::INTERVAL}, S2cellTypes::ts2cell(), Gen_tsequenceset_make_gaps));
     RegisterSerializedScalarFunction(loader, ScalarFunction("tboolSeqSetGaps", {LogicalType::LIST(TemporalTypes::tbool())}, TemporalTypes::tbool(), Gen_tsequenceset_make_gaps));

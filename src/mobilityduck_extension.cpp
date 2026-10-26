@@ -25,6 +25,7 @@
 #include "quadbin/tquadbin.hpp"
 #include "s2cell/ts2cell.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "h3/th3index.hpp"
 #include "cbuffer/tcbuffer.hpp"
 #include "json/tjsonb.hpp"
@@ -435,6 +436,11 @@ static void LoadInternal(ExtensionLoader &loader) {
 	RaquetTypes::RegisterTypes(loader);
 	RaquetTypes::RegisterCastFunctions(loader);
 	RaquetTypes::RegisterScalarFunctions(loader);
+
+	// MEOS's raster: type registration and text casts are the hand layer, its
+	// function surface is generated.
+	RasterTypes::RegisterTypes(loader);
+	RasterTypes::RegisterCastFunctions(loader);
 
 	// H3 cell index types (h3index/th3index). Type registration + casts are the
 	// hand layer; the H3 function surface is generated (no RegisterScalarFunctions).

@@ -71,6 +71,7 @@ PTR_IN  = {  # MEOS base type -> (DuckDB arg LogicalType, "C++ expr producing th
     "PoseChain":    ("PosechainTypes::posechain()", "BlobToPosechain(%s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "BlobToNsegment(%s)"),
     "Raquet":       ("RaquetTypes::raquet()", "BlobToRaquet(%s)"),
+    "Raster":       ("RasterTypes::raster()", "BlobToRaster(%s)"),
 }
 PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing string_t from MEOS ptr `%s` in `result`")
     "Temporal":     ("MD_TEMPORAL", "TemporalToBlob(result, %s)"),
@@ -91,6 +92,7 @@ PTR_RET = {  # MEOS base type -> (DuckDB ret LogicalType, "C++ expr producing st
     "PoseChain":    ("PosechainTypes::posechain()", "PosechainToBlob(result, %s)"),
     "Nsegment":     ("NpointTypes::nsegment()", "NsegmentToBlob(result, %s)"),
     "Raquet":       ("RaquetTypes::raquet()", "RaquetToBlob(result, %s)"),
+    "Raster":       ("RasterTypes::raster()", "RasterToBlob(result, %s)"),
 }
 # The temporal-family pointer returns that marshal as one DuckDB temporal handle. A MEOS
 # accessor/cast can return a concrete subtype pointer (TInstant */TSequence */TSequenceSet *
@@ -964,11 +966,12 @@ BASE_LOGICAL = {
     "pose": "PoseTypes::pose()", "posechain": "PosechainTypes::posechain()",
     "pcpoint": "TPcpointTypes::pcpoint()", "pcpatch": "TPcpatchTypes::pcpatch()",
     "raquet": "RaquetTypes::raquet()",
+    "raster": "RasterTypes::raster()",
 }
 # The base values no set type holds: MEOS declares no T_<BASE>SET for them, so they stay out of
 # BASE_ORDER, which SET_TYPES and the set type registration read, and take the base-value arms
-# alone. raquet, the raster tile, is one.
-BASE_ONLY = ["raquet"]
+# alone. raquet, the raster tile, is one, and raster, MEOS's raster, another.
+BASE_ONLY = ["raquet", "raster"]
 def set_reg_scope(name):
     """('all',None) for generic set_* | ('types',[acc]) for <elem>set_* | None."""
     if name.startswith("set_"):
@@ -1261,18 +1264,32 @@ def project_signature_forms(f):
         if len(sqlin) != len(s["args"]):
             return [f]
         defs = s.get("argDefaults") or [None] * len(s["args"])
+        nbinds = s.get("nullDefaultBinds") or {}
         tails = [0] if bound else []
         k = 0
         while k < len(defs) and defs[len(defs) - 1 - k] is not None:
             k += 1
-            if k >= 2:
+            # A signature binding nothing keeps the function, whose calls the catalog places
+            # (#sig_call_forms) register each shorter form, an omitted argument whose default is
+            # NULL passing what its wrapper passes for a NULL argument (`nullDefaultBinds`):
+            # addBand(raster, raster) is raster_add_band_raster taking fromband 1 and toindex 0
+            # there, and a form stated here would register it twice.
+            if k >= 2 and (bound or not any(str(i) in nbinds
+                                            for i in range(len(defs) - k, len(defs)))):
                 tails.append(k)
         if not bound:
             keep.append(s)
+        # An omitted argument whose default is NULL passes what its wrapper passes for a NULL
+        # argument (`nullDefaultBinds`, keyed by the position of the SQL argument), as JMEOS reads
+        # it (#_null_default_signatures in tools/codegen_jvm.py).
         for k in tails:
             fixed = dict(bound)
-            fixed.update({p["name"]: defs[len(defs) - k + i]
-                          for i, p in enumerate(sqlin[len(sqlin) - k:])})
+            for i, p in enumerate(sqlin[len(sqlin) - k:]):
+                pos = len(defs) - k + i
+                if str(defs[pos]).strip().upper() == "NULL" and str(pos) in nbinds:
+                    fixed.update(nbinds[str(pos)])
+                else:
+                    fixed[p["name"]] = defs[pos]
             key = tuple(sorted(fixed.items()))
             ns = {kk: v for kk, v in s.items() if kk not in ("boundArgs", "argDefaults")}
             ns["args"] = s["args"][:len(s["args"]) - k]
@@ -5222,7 +5239,7 @@ TPCBOX_C = dict(cbase="TPCBox", blobto="BlobToTpcbox", toblob="TpcboxToBlob",
 # absent: quadbin and h3index are the eight bytes of the Datum, so they take no descriptor here.
 BASE_CBASE = {"jsonb": "Jsonb", "cbuffer": "Cbuffer", "npoint": "Npoint", "pose": "Pose",
               "posechain": "PoseChain", "pcpoint": "Pcpoint", "pcpatch": "Pcpatch",
-              "raquet": "Raquet"}
+              "raquet": "Raquet", "raster": "Raster"}
 BASEVAL_C = [dict(cbase=BASE_CBASE[b], blobto="BlobTo" + b.capitalize(),
                   toblob=b.capitalize() + "ToBlob", elem={}, scope=None,
                   ret=(lambda n, a: a), single=BASE_LOGICAL[b])
@@ -5842,20 +5859,23 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # rows of its tables pointcloud_schemas and pointcloud_dimensions, so the catalog states no
 # signature for meos_pc_schema_register_dims, whose dimensions are an array of PCDimensionSpec
 # with its count; src/pointcloud/pcschema.cpp keeps it.
-# The functions over MobilityDB's raster type (rasterFromBinary, numBands, scaleX, summaryStats and
-# the others): the raster is PostGIS's, which DuckDB does not have, so they answer or take no type
-# this surface registers; no hand registration answers them either. The raquet constructor
-# raquet(bytea, integer, integer, quadbin, text, float) is not among them, its name being answered
-# by raquet(text): raquet_make takes `has_nodata`, which its wrapper sets from whether the nodata
-# argument is NULL and which the catalog states no binding for, so src/raster/raquet.cpp keeps it.
+# The raster constructor raster(bytea, integer, integer, float, float, float, float, float, float,
+# integer, text, float): raster_make takes `has_nodata`, which its wrapper sets from whether the
+# nodata argument is NULL, a presence flag no shape reads; no hand registration answers it. The
+# raquet constructor raquet(bytea, integer, integer, quadbin, text, float) takes the same flag, its
+# name being answered by raquet(text), and src/raster/raquet.cpp keeps it.
+# summaryStats and the summarystats accessors (summarystatsCount, summarystatsSum,
+# summarystatsMean, summarystatsStddev, summarystatsMin, summarystatsMax) answer or take
+# summarystats, a structure no DuckDB type of this surface carries yet; valueCount answers rows of
+# a ValueCount, which no shape returns; no hand registration answers them either.
 # tjsonbSet and tjsonbSetLax register nothing: tjsonb_set reads its keys as a text ** and a count
 # no marshalling fills from a text[], and tjsonbSet binds no literal for handle_null.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
-                       "rasterFromBinary", "rasterFromHexWKB", "numBands", "upperLeftX",
-                       "upperLeftY", "scaleX", "scaleY", "skewX", "skewY", "summaryStats",
-                       "valueCount", "sameAlignment", "notSameAlignmentReason"}
+                       "raster", "summaryStats", "summarystatsCount", "summarystatsSum",
+                       "summarystatsMean", "summarystatsStddev", "summarystatsMin",
+                       "summarystatsMax", "valueCount"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -8469,6 +8489,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "rgeo/trgeometry.hpp"\n'          # TrgeometryTypes::trgeometry()
            '#include "posechain/tposechain.hpp"\n'     # PosechainTypes::posechain()/tposechain()
            '#include "raster/raquet.hpp"\n'           # RaquetTypes::raquet()
+           '#include "raster/raster.hpp"\n'           # RasterTypes::raster()
            '#include "spatial/spatial_types.hpp"\n'   # MobilityDuckGeometryType() (duckdb-spatial)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
@@ -8658,6 +8679,21 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());\n"
            "    if (!rq) throw InvalidInputException(\"raquet: invalid tile serialisation\");\n"
            "    return rq;\n}\n"
+           "// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the\n"
+           "// WKB serialisation of the raster, the form its text hex-encodes.\n"
+           "inline string_t RasterToBlob(Vector &result, Raster *rast) {\n"
+           "    size_t sz = 0;\n"
+           "    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);\n"
+           "    free(rast);\n"
+           "    if (!wkb) throw InvalidInputException(\"raster: cannot serialise the raster\");\n"
+           "    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);\n"
+           "    free(wkb);\n    return out;\n}\n"
+           "inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {\n"
+           "    if (!rast) { mask.SetInvalid(idx); return string_t(); }\n    return RasterToBlob(result, rast);\n}\n"
+           "inline Raster *BlobToRaster(string_t blob) {\n"
+           "    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());\n"
+           "    if (!rast) throw InvalidInputException(\"raster: invalid raster serialisation\");\n"
+           "    return rast;\n}\n"
            "// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).\n"
            "inline string_t StboxToBlob(Vector &result, STBox *b) {\n"
            "    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));\n"
@@ -9010,6 +9046,7 @@ BASE_HEADER = {
     "pose": "pose/tpose.hpp", "posechain": "posechain/tposechain.hpp",
     "pcpoint": "pointcloud/tpcpoint.hpp", "pcpatch": "pointcloud/tpcpatch.hpp",
     "raquet": "raster/raquet.hpp",
+    "raster": "raster/raster.hpp",
 }
 # suffix (longest first so spanset wins over span), class, mapping struct, DEFINE
 # macro, and whether the family carries the spanset-only Set/Base child mappings.
