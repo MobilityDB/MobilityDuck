@@ -1480,9 +1480,10 @@ static void Gen_h3indexset_cover_cells(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_geo_to_h3index_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, int32_t res) {
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);
             uint64_t r = geo_to_h3index_cell(gs, res);
             free(gs);
             return (int64_t) r;
@@ -1491,9 +1492,10 @@ static void Gen_geo_to_h3index_cell(DataChunk &args, ExpressionState &, Vector &
 
 static void Gen_geo_to_h3index_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, int32_t res) {
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);
             Set *r = geo_to_h3index_set(gs, res);
             free(gs);
             return SetToBlob(result, r);
@@ -2092,7 +2094,9 @@ static void Gen_always_eq_geo_trgeometry(DataChunk &args, ExpressionState &state
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<bool>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2100,7 +2104,7 @@ static void Gen_always_eq_geo_trgeometry(DataChunk &args, ExpressionState &state
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         Temporal *p1 = BlobToTemporal(in1[i]);
         int32_t r = always_eq_geo_trgeometry(x0, p1);
         free(p1);
@@ -2113,10 +2117,11 @@ static void Gen_always_eq_geo_trgeometry(DataChunk &args, ExpressionState &state
 
 static void Gen_always_eq_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2146,7 +2151,9 @@ static void Gen_always_ne_geo_trgeometry(DataChunk &args, ExpressionState &state
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<bool>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2154,7 +2161,7 @@ static void Gen_always_ne_geo_trgeometry(DataChunk &args, ExpressionState &state
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         Temporal *p1 = BlobToTemporal(in1[i]);
         int32_t r = always_ne_geo_trgeometry(x0, p1);
         free(p1);
@@ -2167,10 +2174,11 @@ static void Gen_always_ne_geo_trgeometry(DataChunk &args, ExpressionState &state
 
 static void Gen_always_ne_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2200,7 +2208,9 @@ static void Gen_ever_eq_geo_trgeometry(DataChunk &args, ExpressionState &state, 
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<bool>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2208,7 +2218,7 @@ static void Gen_ever_eq_geo_trgeometry(DataChunk &args, ExpressionState &state, 
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         Temporal *p1 = BlobToTemporal(in1[i]);
         int32_t r = ever_eq_geo_trgeometry(x0, p1);
         free(p1);
@@ -2221,10 +2231,11 @@ static void Gen_ever_eq_geo_trgeometry(DataChunk &args, ExpressionState &state, 
 
 static void Gen_ever_eq_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2254,7 +2265,9 @@ static void Gen_ever_ne_geo_trgeometry(DataChunk &args, ExpressionState &state, 
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<bool>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2262,7 +2275,7 @@ static void Gen_ever_ne_geo_trgeometry(DataChunk &args, ExpressionState &state, 
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         Temporal *p1 = BlobToTemporal(in1[i]);
         int32_t r = ever_ne_geo_trgeometry(x0, p1);
         free(p1);
@@ -2275,10 +2288,11 @@ static void Gen_ever_ne_geo_trgeometry(DataChunk &args, ExpressionState &state, 
 
 static void Gen_ever_ne_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;

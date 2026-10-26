@@ -1,11 +1,17 @@
 #pragma once
 
+#include <algorithm>
+
 #include "meos_wrapper_simple.hpp"
 #include "duckdb/common/allocator.hpp"
+#include "duckdb/common/string_util.hpp"
 #include "duckdb/common/vector.hpp"
 #include "duckdb/storage/arena_allocator.hpp"
 #include "duckdb/execution/expression_executor_state.hpp"
 #include "duckdb_version_compat.hpp"
+#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+#include "duckdb/common/types/geometry_crs.hpp"
+#endif
 #if !MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 #include "spatial/geometry/geometry_serialization.hpp"
 #include "spatial/geometry/sgl.hpp"
@@ -26,6 +32,44 @@ inline GSERIALIZED* GeometryToGSerialized(string_t geometry_blob, int32_t srid) 
         throw InvalidInputException("Failed to parse WKB into a geometry");
     }
     return gs;
+}
+
+/**
+ * The SRID the coordinate reference system of a GEOMETRY argument's type states, or 0 when the
+ * type states none. DuckDB keeps a CRS on the type, never on a value, so a typed
+ * GEOMETRY('EPSG:n') states n for every row, and the caller passes it to GeometryToGSerialized
+ * in place of the SRID it would otherwise take, for MEOS to test against the other values of the
+ * call. A CRS naming no EPSG code (another authority, a definition with no identifier) states no
+ * SRID MEOS reads, and is refused rather than read as none.
+ */
+inline int32_t GeometryCrsSrid(const LogicalType &type) {
+#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+    // a list of geometries states the CRS of its element type
+    if (type.id() == LogicalTypeId::LIST) {
+        return GeometryCrsSrid(ListType::GetChildType(type));
+    }
+    if (type.id() != LogicalTypeId::GEOMETRY || !GeoType::HasCRS(type)) {
+        return 0;
+    }
+    const string &id = GeoType::GetCRS(type).GetIdentifier();
+    const string upper = StringUtil::Upper(id);
+    string code;
+    if (StringUtil::StartsWith(upper, "EPSG:")) {
+        code = id.substr(5);
+    } else if (upper == "OGC:CRS84") {
+        return 4326;
+    } else {
+        code = id;
+    }
+    if (!code.empty() && code.size() <= 9 &&
+        std::all_of(code.begin(), code.end(), [](char c) { return c >= '0' && c <= '9'; })) {
+        return (int32_t) std::stoi(code);
+    }
+    throw InvalidInputException("The coordinate reference system '%s' of a GEOMETRY names no EPSG code", id);
+#else
+    (void) type;
+    return 0;
+#endif
 }
 
 inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &arena, Vector &result) {

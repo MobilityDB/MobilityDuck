@@ -1,0 +1,101 @@
+# name: test/sql/geometry_crs.test
+# description: A GEOMETRY whose type states a coordinate reference system is read
+#              in the SRID it names; one stating none takes the SRID of the value
+#              it is read against, and MEOS refuses two different SRIDs.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'UTC';
+
+# ── a geometry against a temporal value ──────────────────────────────────────
+
+# Untyped, in EPSG:4326 and in OGC:CRS84, the polygon is read in the SRID of
+# the trajectory, 4326.
+query III
+SELECT eIntersects(t, 'POLYGON((0 0,2 0,2 2,0 2,0 0))'::GEOMETRY),
+  eIntersects(t, CAST('POLYGON((0 0,2 0,2 2,0 2,0 0))' AS GEOMETRY('EPSG:4326'))),
+  eIntersects(t, CAST('POLYGON((0 0,2 0,2 2,0 2,0 0))' AS GEOMETRY('OGC:CRS84')))
+FROM (SELECT tgeompoint 'SRID=4326;[Point(1 1)@2001-01-01, Point(3 3)@2001-01-02]' AS t);
+----
+true	true	true
+
+# A polygon in EPSG:3857 against a trajectory in 4326 states two reference
+# systems, in either argument order.
+statement error
+SELECT eIntersects(tgeompoint 'SRID=4326;[Point(1 1)@2001-01-01, Point(3 3)@2001-01-02]',
+  CAST('POLYGON((0 0,2 0,2 2,0 2,0 0))' AS GEOMETRY('EPSG:3857')));
+----
+Operation on mixed SRID
+
+statement error
+SELECT aTouches(CAST('POLYGON((0 0,2 0,2 2,0 2,0 0))' AS GEOMETRY('EPSG:3857')),
+  tgeompoint 'SRID=4326;[Point(1 1)@2001-01-01, Point(3 3)@2001-01-02]');
+----
+Operation on mixed SRID
+
+# A geometry after the temporal value: the centre of a rotation.
+query I
+SELECT SRID(rotate(tgeompoint 'SRID=3857;Point(1 0)@2001-01-01', pi(),
+  CAST('POINT(0 0)' AS GEOMETRY('EPSG:3857'))));
+----
+3857
+
+statement error
+SELECT rotate(tgeompoint 'SRID=3857;Point(1 0)@2001-01-01', pi(),
+  CAST('POINT(0 0)' AS GEOMETRY('EPSG:4326')));
+----
+Operation on mixed SRID
+
+# ── geometries alone ─────────────────────────────────────────────────────────
+
+# An untyped geometry takes the SRID of the typed one beside it.
+query I
+SELECT distance(CAST('POINT(0 0)' AS GEOMETRY('EPSG:3857')), 'POINT(3 4)'::GEOMETRY);
+----
+5.0
+
+statement error
+SELECT distance(CAST('POINT(0 0)' AS GEOMETRY('EPSG:3857')), CAST('POINT(3 4)' AS GEOMETRY('EPSG:4326')));
+----
+Operation on mixed SRID
+
+query I
+SELECT bearing(CAST('POINT(0 0)' AS GEOMETRY('EPSG:3857')), CAST('POINT(0 4)' AS GEOMETRY('EPSG:3857')));
+----
+0.0
+
+statement error
+SELECT bearing(CAST('POINT(0 0)' AS GEOMETRY('EPSG:3857')), CAST('POINT(3 4)' AS GEOMETRY('EPSG:4326')));
+----
+Operation on mixed SRID
+
+# ── values built from geometries carry their SRID ────────────────────────────
+
+query III
+SELECT SRID(tgeompoint(CAST('POINT(1 1)' AS GEOMETRY('EPSG:3857')), timestamptz '2001-01-01')),
+  SRID(tgeompoint('POINT(1 1)'::GEOMETRY, timestamptz '2001-01-01')),
+  SRID(set([CAST('POINT(1 1)' AS GEOMETRY('EPSG:3857')), CAST('POINT(2 2)' AS GEOMETRY('EPSG:3857'))]));
+----
+3857	0	3857
+
+query I
+SELECT stbox(CAST('POINT(1 1)' AS GEOMETRY('EPSG:3857')))::VARCHAR;
+----
+SRID=3857;STBOX X((1,1),(1,1))
+
+# ── a cell of a geometry ─────────────────────────────────────────────────────
+
+# The cell of a point needs longitudes and latitudes: OGC:CRS84 states them,
+# EPSG:3857 does not.
+query I
+SELECT latLngToCell(CAST('POINT(4.35 50.85)' AS GEOMETRY('OGC:CRS84')), 5) =
+  latLngToCell('POINT(4.35 50.85)'::GEOMETRY, 5);
+----
+true
+
+statement error
+SELECT latLngToCell(CAST('POINT(4.35 50.85)' AS GEOMETRY('EPSG:3857')), 5);
+----
+Only lon/lat coordinate systems are supported

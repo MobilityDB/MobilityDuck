@@ -1070,7 +1070,10 @@ static void Gen_geo_distance(DataChunk &args, ExpressionState &state, Vector &re
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs1 ? crs1 : 0;
     auto out = FlatVector::GetData<double>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1078,8 +1081,8 @@ static void Gen_geo_distance(DataChunk &args, ExpressionState &state, Vector &re
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : crs_any);
         double r = geo_distance(x0, p1);
         free(p1);
         free(x0);
@@ -1094,7 +1097,10 @@ static void Gen_geo_shortestline(DataChunk &args, ExpressionState &state, Vector
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs1 ? crs1 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1102,8 +1108,8 @@ static void Gen_geo_shortestline(DataChunk &args, ExpressionState &state, Vector
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : crs_any);
         GSERIALIZED *r = geo_shortestline(x0, p1);
         free(p1);
         free(x0);
@@ -1119,7 +1125,10 @@ static void Gen_geom_max_distance(DataChunk &args, ExpressionState &state, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs1 ? crs1 : 0;
     auto out = FlatVector::GetData<double>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1127,8 +1136,8 @@ static void Gen_geom_max_distance(DataChunk &args, ExpressionState &state, Vecto
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : crs_any);
         double r = geom_max_distance(x0, p1);
         free(p1);
         free(x0);
@@ -1145,6 +1154,7 @@ static void Gen_geo_affine(DataChunk &args, ExpressionState &state, Vector &resu
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 13; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
     auto in3 = FlatVector::GetData<double>(args.data[3]);
@@ -1157,6 +1167,7 @@ static void Gen_geo_affine(DataChunk &args, ExpressionState &state, Vector &resu
     auto in10 = FlatVector::GetData<double>(args.data[10]);
     auto in11 = FlatVector::GetData<double>(args.data[11]);
     auto in12 = FlatVector::GetData<double>(args.data[12]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1164,7 +1175,7 @@ static void Gen_geo_affine(DataChunk &args, ExpressionState &state, Vector &resu
         for (idx_t c = 0; c < 13; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_affine(x0, in1[i], in2[i], in3[i], in4[i], in5[i], in6[i], in7[i], in8[i], in9[i], in10[i], in11[i], in12[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1179,12 +1190,14 @@ static void Gen_geo_affine_c_f_g_h_i_zoff(DataChunk &args, ExpressionState &stat
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
     auto in3 = FlatVector::GetData<double>(args.data[3]);
     auto in4 = FlatVector::GetData<double>(args.data[4]);
     auto in5 = FlatVector::GetData<double>(args.data[5]);
     auto in6 = FlatVector::GetData<double>(args.data[6]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1192,7 +1205,7 @@ static void Gen_geo_affine_c_f_g_h_i_zoff(DataChunk &args, ExpressionState &stat
         for (idx_t c = 0; c < 7; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_affine_c_f_g_h_i_zoff(x0, in1[i], in2[i], in3[i], in4[i], in5[i], in6[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1207,6 +1220,8 @@ static void Gen_geo_reverse(DataChunk &args, ExpressionState &state, Vector &res
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1214,7 +1229,7 @@ static void Gen_geo_reverse(DataChunk &args, ExpressionState &state, Vector &res
         for (idx_t c = 0; c < 1; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_reverse(x0);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1229,9 +1244,11 @@ static void Gen_geo_rotate(DataChunk &args, ExpressionState &state, Vector &resu
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
     auto in3 = FlatVector::GetData<double>(args.data[3]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1239,7 +1256,7 @@ static void Gen_geo_rotate(DataChunk &args, ExpressionState &state, Vector &resu
         for (idx_t c = 0; c < 4; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_rotate(x0, in1[i], in2[i], in3[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1254,8 +1271,11 @@ static void Gen_geo_rotate_geo(DataChunk &args, ExpressionState &state, Vector &
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs2 ? crs2 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1263,8 +1283,8 @@ static void Gen_geo_rotate_geo(DataChunk &args, ExpressionState &state, Vector &
         for (idx_t c = 0; c < 3; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
-        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], crs2 ? crs2 : crs_any);
         GSERIALIZED *r = geo_rotate_geo(x0, in1[i], p2);
         free(p2);
         free(x0);
@@ -1280,7 +1300,9 @@ static void Gen_geo_rotate_x(DataChunk &args, ExpressionState &state, Vector &re
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1288,7 +1310,7 @@ static void Gen_geo_rotate_x(DataChunk &args, ExpressionState &state, Vector &re
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_rotate_x(x0, in1[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1303,7 +1325,9 @@ static void Gen_geo_rotate_y(DataChunk &args, ExpressionState &state, Vector &re
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1311,7 +1335,7 @@ static void Gen_geo_rotate_y(DataChunk &args, ExpressionState &state, Vector &re
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_rotate_y(x0, in1[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1326,7 +1350,9 @@ static void Gen_geo_rotate_z(DataChunk &args, ExpressionState &state, Vector &re
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1334,7 +1360,7 @@ static void Gen_geo_rotate_z(DataChunk &args, ExpressionState &state, Vector &re
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_rotate_z(x0, in1[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1349,7 +1375,9 @@ static void Gen_geo_round(DataChunk &args, ExpressionState &state, Vector &resul
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1357,7 +1385,7 @@ static void Gen_geo_round(DataChunk &args, ExpressionState &state, Vector &resul
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_round(x0, in1[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1372,6 +1400,8 @@ static void Gen_geo_round_d(DataChunk &args, ExpressionState &state, Vector &res
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1379,7 +1409,7 @@ static void Gen_geo_round_d(DataChunk &args, ExpressionState &state, Vector &res
         for (idx_t c = 0; c < 1; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_round(x0, 0);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1394,9 +1424,11 @@ static void Gen_geo_scale(DataChunk &args, ExpressionState &state, Vector &resul
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
     auto in3 = FlatVector::GetData<double>(args.data[3]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1404,7 +1436,7 @@ static void Gen_geo_scale(DataChunk &args, ExpressionState &state, Vector &resul
         for (idx_t c = 0; c < 4; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_scale(x0, in1[i], in2[i], in3[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1419,8 +1451,10 @@ static void Gen_geo_scale_zfactor(DataChunk &args, ExpressionState &state, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1428,7 +1462,7 @@ static void Gen_geo_scale_zfactor(DataChunk &args, ExpressionState &state, Vecto
         for (idx_t c = 0; c < 3; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_scale_zfactor(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1443,8 +1477,12 @@ static void Gen_geo_scale_geo(DataChunk &args, ExpressionState &state, Vector &r
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
     auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs1 ? crs1 : crs2 ? crs2 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1452,9 +1490,9 @@ static void Gen_geo_scale_geo(DataChunk &args, ExpressionState &state, Vector &r
         for (idx_t c = 0; c < 3; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
-        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : crs_any);
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], crs2 ? crs2 : crs_any);
         GSERIALIZED *r = geo_scale_geo(x0, p1, p2);
         free(p1);
         free(p2);
@@ -1471,7 +1509,10 @@ static void Gen_geo_scale_geo_sorigin(DataChunk &args, ExpressionState &state, V
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs1 ? crs1 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1479,8 +1520,8 @@ static void Gen_geo_scale_geo_sorigin(DataChunk &args, ExpressionState &state, V
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : crs_any);
         GSERIALIZED *r = geo_scale_geo_sorigin(x0, p1);
         free(p1);
         free(x0);
@@ -1496,7 +1537,9 @@ static void Gen_geo_segmentize(DataChunk &args, ExpressionState &state, Vector &
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1504,7 +1547,7 @@ static void Gen_geo_segmentize(DataChunk &args, ExpressionState &state, Vector &
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_segmentize(x0, in1[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1519,9 +1562,11 @@ static void Gen_geo_translate(DataChunk &args, ExpressionState &state, Vector &r
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
     auto in3 = FlatVector::GetData<double>(args.data[3]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1529,7 +1574,7 @@ static void Gen_geo_translate(DataChunk &args, ExpressionState &state, Vector &r
         for (idx_t c = 0; c < 4; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_translate(x0, in1[i], in2[i], in3[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1544,8 +1589,10 @@ static void Gen_geo_translate_deltaz(DataChunk &args, ExpressionState &state, Ve
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1553,7 +1600,7 @@ static void Gen_geo_translate_deltaz(DataChunk &args, ExpressionState &state, Ve
         for (idx_t c = 0; c < 3; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_translate_deltaz(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1568,10 +1615,12 @@ static void Gen_geo_transscale(DataChunk &args, ExpressionState &state, Vector &
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<double>(args.data[1]);
     auto in2 = FlatVector::GetData<double>(args.data[2]);
     auto in3 = FlatVector::GetData<double>(args.data[3]);
     auto in4 = FlatVector::GetData<double>(args.data[4]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1579,7 +1628,7 @@ static void Gen_geo_transscale(DataChunk &args, ExpressionState &state, Vector &
         for (idx_t c = 0; c < 5; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         GSERIALIZED *r = geo_transscale(x0, in1[i], in2[i], in3[i], in4[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1593,10 +1642,11 @@ static void Gen_geo_transscale(DataChunk &args, ExpressionState &state, Vector &
 // ===== @ingroup meos_geo_comp_ever =====
 static void Gen_always_eq_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1610,10 +1660,11 @@ static void Gen_always_eq_geo_tgeo(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_always_eq_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1640,10 +1691,11 @@ static void Gen_always_eq_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &
 
 static void Gen_always_ne_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1657,10 +1709,11 @@ static void Gen_always_ne_geo_tgeo(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_always_ne_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1687,10 +1740,11 @@ static void Gen_always_ne_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &
 
 static void Gen_ever_eq_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1704,10 +1758,11 @@ static void Gen_ever_eq_geo_tgeo(DataChunk &args, ExpressionState &, Vector &res
 
 static void Gen_ever_eq_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1734,10 +1789,11 @@ static void Gen_ever_eq_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &re
 
 static void Gen_ever_ne_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1751,10 +1807,11 @@ static void Gen_ever_ne_geo_tgeo(DataChunk &args, ExpressionState &, Vector &res
 
 static void Gen_ever_ne_tgeo_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2020,10 +2077,11 @@ static void Gen_raster_to_stbox(DataChunk &args, ExpressionState &, Vector &resu
 // ===== @ingroup meos_rgeo_dist =====
 static void Gen_tdistance_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2036,10 +2094,11 @@ static void Gen_tdistance_trgeometry_geo(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_tdistance_trgeometry_geo_rev(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2088,10 +2147,11 @@ static void Gen_tdistance_trgeometry_trgeometry(DataChunk &args, ExpressionState
 
 static void Gen_nad_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> double {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2105,10 +2165,11 @@ static void Gen_nad_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_nad_trgeometry_geo_rev(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> double {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2161,10 +2222,11 @@ static void Gen_nad_trgeometry_trgeometry(DataChunk &args, ExpressionState &, Ve
 
 static void Gen_nai_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2177,10 +2239,11 @@ static void Gen_nai_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_nai_trgeometry_geo_rev(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2229,10 +2292,11 @@ static void Gen_nai_trgeometry_trgeometry(DataChunk &args, ExpressionState &, Ve
 
 static void Gen_shortestline_trgeometry_geo(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2248,10 +2312,11 @@ static void Gen_shortestline_trgeometry_geo(DataChunk &args, ExpressionState &st
 
 static void Gen_shortestline_trgeometry_geo_rev(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;

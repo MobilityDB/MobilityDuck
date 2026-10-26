@@ -113,10 +113,11 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
  ****************************************************/
 
 void StboxFunctions::Geo_to_stbox_common(Vector &source, Vector &result, idx_t count) {
+    // the box of a geometry carries the SRID its type states (GeometryCrsSrid)
+    const int32 srid = GeometryCrsSrid(source.GetType());
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
         source, result, count,
         [&](string_t geometry_blob, ValidityMask &mask, idx_t idx) -> string_t {
-            int32 srid = 0;
             GSERIALIZED *gs = GeometryToGSerialized(geometry_blob, srid);
             if (!gs) {
                 throw InvalidInputException("Invalid geometry format: " + geometry_blob.GetString());

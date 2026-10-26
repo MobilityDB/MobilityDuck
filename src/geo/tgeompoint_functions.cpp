@@ -62,6 +62,8 @@ static void spatialarr_wkt_array(DataChunk &args, ExpressionState &state, Vector
 	in_child.Flatten(list_child_size);
 	auto in_child_data = FlatVector::GetData<string_t>(in_child);
 	auto &in_child_validity = FlatVector::Validity(in_child);
+	// a geometry of the list carries the SRID its type states (GeometryCrsSrid)
+	const int32_t crs = GeometryCrsSrid(list_vec.GetType());
 
 	auto &list_validity = FlatVector::Validity(list_vec);
 
@@ -117,7 +119,7 @@ static void spatialarr_wkt_array(DataChunk &args, ExpressionState &state, Vector
 				wkt = extended ? tspatial_as_ewkt(temp, maxdd) : tspatial_as_text(temp, maxdd);
 				free(data_copy);
 			} else {
-				GSERIALIZED *gs = GeometryToGSerialized(blob, 0);
+				GSERIALIZED *gs = GeometryToGSerialized(blob, crs);
 				wkt = extended ? geo_as_ewkt(gs, maxdd) : geo_as_text(gs, maxdd);
 				free(gs);
 			}
