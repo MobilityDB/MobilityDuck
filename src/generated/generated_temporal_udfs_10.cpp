@@ -1584,21 +1584,33 @@ static void Gen_tjson_array_length(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_tjson_extract_path(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    nullHandleType c2 = (nullHandleType) 0;
-    { auto &cv = args.data[2]; cv.Flatten(rc); Value v = cv.GetValue(0); if (!v.IsNull()) c2 = null_handle_type_from_string(v.ToString().c_str()); }
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[3];
+    for (idx_t c = 0; c < 3; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[3];
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            nullHandleType c2 = null_handle_type_from_string(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]].GetString().c_str());
             Temporal *r = tjson_extract_path(t, elems, n, c2);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjson_strip_nulls(DataChunk &args, ExpressionState &, Vector &result) {
@@ -1692,19 +1704,32 @@ static void Gen_tjsonb_delete(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_tjsonb_delete_array(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
             Temporal *r = tjsonb_delete_array(t, elems, n);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjsonb_delete_index(DataChunk &args, ExpressionState &, Vector &result) {
@@ -1720,19 +1745,32 @@ static void Gen_tjsonb_delete_index(DataChunk &args, ExpressionState &, Vector &
 
 static void Gen_tjsonb_delete_path(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
             Temporal *r = tjsonb_delete_path(t, elems, n);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjsonb_exists(DataChunk &args, ExpressionState &, Vector &result) {
@@ -1749,96 +1787,156 @@ static void Gen_tjsonb_exists(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_tjsonb_exists_all(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
             Temporal *r = tjsonb_exists_all(t, elems, n);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjsonb_exists_any(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
             Temporal *r = tjsonb_exists_any(t, elems, n);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjsonb_extract_path(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    nullHandleType c2 = (nullHandleType) 0;
-    { auto &cv = args.data[2]; cv.Flatten(rc); Value v = cv.GetValue(0); if (!v.IsNull()) c2 = null_handle_type_from_string(v.ToString().c_str()); }
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[3];
+    for (idx_t c = 0; c < 3; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[3];
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            nullHandleType c2 = null_handle_type_from_string(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]].GetString().c_str());
             Temporal *r = tjsonb_extract_path(t, elems, n, c2);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjsonb_extract_path_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    nullHandleType c2 = (nullHandleType) 0;
-    { auto &cv = args.data[2]; cv.Flatten(rc); Value v = cv.GetValue(0); if (!v.IsNull()) c2 = null_handle_type_from_string(v.ToString().c_str()); }
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[3];
+    for (idx_t c = 0; c < 3; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[3];
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            nullHandleType c2 = null_handle_type_from_string(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]].GetString().c_str());
             Temporal *r = tjsonb_extract_path_text(t, elems, n, c2);
             free(t); FreeTextArr(elems, n);
             return TemporalToBlobN(result, r, mask, idx);
-        });
+        }();
+    }
 }
 
 static void Gen_tjsonb_insert(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    auto &lst = args.data[1]; lst.Flatten(rc);
+    auto &lst = args.data[1]; lst.Flatten(args.size());
     auto &child = ListVector::GetEntry(lst);
     child.Flatten(ListVector::GetListSize(lst));
-    Jsonb *c2 = NULL;
-    { auto &cv = args.data[2]; cv.Flatten(rc); Value v = cv.GetValue(0); if (!v.IsNull()) c2 = BlobToJsonb(string_t(StringValue::Get(v))); }
-    bool c3 = (bool) 0;
-    { auto &cv = args.data[3]; cv.Flatten(rc); Value v = cv.GetValue(0); if (!v.IsNull()) c3 = v.GetValue<bool>(); }
-    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>(args.data[0], lst, result, rc,
-        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[4];
+    for (idx_t c = 0; c < 4; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[4];
+        bool valid = true;
+        for (idx_t c = 0; c < 4; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             int n = 0;
-            text **elems = ListToTextArr(child, le, &n);
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            Jsonb *c2 = BlobToJsonb(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]]);
+            bool c3 = UnifiedVectorFormat::GetData<bool>(u[3])[ri[3]];
             Temporal *r = tjsonb_insert(t, elems, n, c2, c3);
-            free(t); FreeTextArr(elems, n);
+            free(t); FreeTextArr(elems, n); free(c2);
             return TemporalToBlobN(result, r, mask, idx);
-        });
-    free(c2);
+        }();
+    }
 }
 
 static void Gen_tjsonb_pretty(DataChunk &args, ExpressionState &, Vector &result) {
@@ -4944,16 +5042,30 @@ static void Gen_tbool_value(DataChunk &args, ExpressionState &, Vector &result) 
 
 static void Gen_tbool_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, bool>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> bool {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> bool {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             bool o = (bool) 0;
             bool ok = tbool_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return bool(); }
             return (bool) o;
-        });
+        }();
+    }
 }
 
 static void Gen_tbool_value_n(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5358,16 +5470,30 @@ static void Gen_tfloat_value(DataChunk &args, ExpressionState &, Vector &result)
 
 static void Gen_tfloat_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, double>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> double {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<double>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> double {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             double o = (double) 0;
             bool ok = tfloat_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return double(); }
             return (double) o;
-        });
+        }();
+    }
 }
 
 static void Gen_tfloat_value_n(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5506,30 +5632,58 @@ static void Gen_tbigint_value(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_tbigint_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, int64_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> int64_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> int64_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             int64_t o = (int64_t) 0;
             bool ok = tbigint_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return int64_t(); }
             return (int64_t) o;
-        });
+        }();
+    }
 }
 
 static void Gen_tint_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, int32_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> int32_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<int32_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> int32_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             int o = (int) 0;
             bool ok = tint_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return int32_t(); }
             return (int32_t) o;
-        });
+        }();
+    }
 }
 
 static void Gen_tint_value_n(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5650,16 +5804,30 @@ static void Gen_ttext_value(DataChunk &args, ExpressionState &, Vector &result) 
 
 static void Gen_ttext_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             text * o = (text *) 0;
             bool ok = ttext_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return string_t(); }
             return TakeText(result, o);
-        });
+        }();
+    }
 }
 
 static void Gen_ttext_value_n(DataChunk &args, ExpressionState &, Vector &result) {

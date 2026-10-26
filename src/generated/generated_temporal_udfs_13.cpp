@@ -1394,16 +1394,30 @@ static void Gen_th3index_value_n(DataChunk &args, ExpressionState &, Vector &res
 
 static void Gen_th3index_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, int64_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> int64_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> int64_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             uint64_t o = (uint64_t) 0;
             bool ok = th3index_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return int64_t(); }
             return (int64_t) o;
-        });
+        }();
+    }
 }
 
 
@@ -1487,30 +1501,58 @@ static void Gen_tpcpoint_value(DataChunk &args, ExpressionState &, Vector &resul
 
 static void Gen_tpcpoint_value_n(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            int32_t a2 = UnifiedVectorFormat::GetData<int32_t>(u[1])[ri[1]];
             Pcpoint *o = NULL;
             bool ok = tpcpoint_value_n(t, a2, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return string_t(); }
             return PcpointToBlob(result, o);
-        });
+        }();
+    }
 }
 
 static void Gen_tpcpoint_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             Pcpoint *o = NULL;
             bool ok = tpcpoint_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return string_t(); }
             return PcpointToBlob(result, o);
-        });
+        }();
+    }
 }
 
 static void Gen_tpcpoint_pcid(DataChunk &args, ExpressionState &, Vector &result) {
@@ -1559,30 +1601,58 @@ static void Gen_tpcpatch_value(DataChunk &args, ExpressionState &, Vector &resul
 
 static void Gen_tpcpatch_value_n(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            int32_t a2 = UnifiedVectorFormat::GetData<int32_t>(u[1])[ri[1]];
             Pcpatch *o = NULL;
             bool ok = tpcpatch_value_n(t, a2, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return string_t(); }
             return PcpatchToBlob(result, o);
-        });
+        }();
+    }
 }
 
 static void Gen_tpcpatch_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    auto rc = args.size();
-    BinaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, rc,
-        [&](string_t in, timestamp_tz_t a2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             Pcpatch *o = NULL;
             bool ok = tpcpatch_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
             if (! ok) { mask.SetInvalid(idx); return string_t(); }
             return PcpatchToBlob(result, o);
-        });
+        }();
+    }
 }
 
 static void Gen_tpcpatch_pcid(DataChunk &args, ExpressionState &, Vector &result) {

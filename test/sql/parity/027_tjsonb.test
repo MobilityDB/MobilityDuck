@@ -226,6 +226,24 @@ SELECT tjsonbInsert(TJSONB('"{\"a\":[1,2]}"@2000-01-01'), ['a','1'], '9'::jsonb,
 ----
 "{\"a\": [1, 9, 2]}"@2000-01-01 00:00:00+01	"{\"a\": [1, 2, 9]}"@2000-01-01 00:00:00+01
 
+# The value and the flag are columns like the operands: each row inserts its own value on
+# its own side, and a row whose value is NULL answers NULL, as the STRICT tjsonbInsert does.
+query II
+SELECT i, tjsonbInsert(TJSONB('"{\"a\":[1,2]}"@2000-01-01'), ['a','1'], v::jsonb, after)::VARCHAR
+FROM (VALUES (1, '7', false), (2, '8', true), (3, NULL, false)) t(i, v, after) ORDER BY i;
+----
+1	"{\"a\": [1, 7, 2]}"@2000-01-01 00:00:00+01
+2	"{\"a\": [1, 2, 8]}"@2000-01-01 00:00:00+01
+3	NULL
+
+# A NULL value in the first row answers NULL there and leaves the next row its own value.
+query II
+SELECT i, tjsonbInsert(TJSONB('"{\"a\":[1,2]}"@2000-01-01'), ['a','1'], v::jsonb, false)::VARCHAR
+FROM (VALUES (1, NULL), (2, '8')) t(i, v) ORDER BY i;
+----
+1	NULL
+2	"{\"a\": [1, 8, 2]}"@2000-01-01 00:00:00+01
+
 # The value accessors are generated from the out-parameter shape, so they answer the
 # jsonb the catalog declares and a miss is SQL NULL rather than an error.
 query III

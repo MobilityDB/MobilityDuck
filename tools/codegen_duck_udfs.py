@@ -2200,21 +2200,22 @@ def emit_body_ternary(f, kind, arg2, arg3):
 # A MEOS function whose C signature is WIDER than the SQL surface: the PG wrapper binds some
 # parameters to literals (`shape.boundArgs`, e.g. `tjsonbObjectField` binds `astext` to false and
 # `tjsonbObjectFieldText` binds it to true over the same kernel), and any parameter the SQL surface
-# DOES expose past the first two is a per-call setting. DuckDB has no quaternary executor, so a
-# setting is read once outside the executor — the `tsequence_make` idiom — and a BinaryExecutor runs
-# over the two arguments that vary per row.
+# DOES expose past the first two is a further argument. Each one is a column like the operands, so
+# it is read on every row — DuckDB has no quaternary executor, so the body walks the rows over the
+# unified format of every column (#_row_frame_open), as #emit_row_out does — and a row where any
+# argument is NULL answers NULL, as the STRICT functions MobilityDB declares do.
 VARY_ARG = {   # second column: (duck_type, cpp_local, "expr from the local", "cleanup or ''")
     "text":   ("LogicalType::VARCHAR", "string_t", "MakeText(%s)", "free"),
     "int":    ("LogicalType::INTEGER", "int32_t",  "%s", ""),
     "double": ("LogicalType::DOUBLE",  "double",   "%s", ""),
     "bool":   ("LogicalType::BOOLEAN", "bool",     "%s", ""),
 }
-SETTING_ARG = {  # trailing column: (duck_type, cpp_type, "expr from a duckdb::Value named v")
-    "bool":           ("LogicalType::BOOLEAN", "bool",     "v.GetValue<bool>()"),
-    "int":            ("LogicalType::INTEGER", "int32_t",  "v.GetValue<int32_t>()"),
-    "double":         ("LogicalType::DOUBLE",  "double",   "v.GetValue<double>()"),
-    "nullHandleType": ("LogicalType::VARCHAR", "nullHandleType",
-                       "null_handle_type_from_string(v.ToString().c_str())"),
+SETTING_ARG = {  # trailing column: (duck_type, cpp_type, vector type, "expr from the vector value")
+    "bool":           ("LogicalType::BOOLEAN", "bool",     "bool",     "%s"),
+    "int":            ("LogicalType::INTEGER", "int32_t",  "int32_t",  "%s"),
+    "double":         ("LogicalType::DOUBLE",  "double",   "double",   "%s"),
+    "nullHandleType": ("LogicalType::VARCHAR", "nullHandleType", "string_t",
+                       "null_handle_type_from_string(%s.GetString().c_str())"),
 }
 def _vary(p):
     b = base(p["canonical"]); n = norm(p["canonical"])
@@ -2233,9 +2234,7 @@ def _vary(p):
         return (dt, cpp, expr.replace("a2", "%s"), "")
     return None
 
-# A per-call setting that is a POINTER: read once outside the executor and freed after it. The
-# catalog marks the nullable ones (`shape.nullable`) and MobilityDB gives them a SQL default, so
-# an omitted or NULL argument reaches MEOS as NULL rather than a fabricated value.
+# A further argument that is a POINTER: read on its row and freed after the call.
 def _const_ptr(p):
     b = base(p["canonical"]); n = norm(p["canonical"])
     if b in PTR_IN and n.endswith("*") and n.count("*") == 1:
@@ -2269,34 +2268,56 @@ def _tail_sig(tail):
     """The DuckDB types the tail exposes — a bound literal is emitted, never exposed."""
     return [st[0] for k, st in tail if k in ("col", "ptr")]
 
-def _emit_tail_consts(L, tail, col=2):
-    """Append the per-call reads for `tail` to `L`; answer (call arguments, pointers to free).
-    A setting is read ONCE outside the executor, which is what lets a BinaryExecutor run over
-    the operands that vary — DuckDB has no wider executor."""
+def _row_get(cpp, col):
+    """The value of column `col` on the current row, read from its unified format."""
+    return f"UnifiedVectorFormat::GetData<{cpp}>(u[{col}])[ri[{col}]]"
+
+def _emit_tail_rows(L, tail, col=2):
+    """Append the reads of `tail` on the current row to `L`; answer (call arguments, pointers
+    to free after the call). A further argument is a column like the operands, so it is read on
+    every row rather than once for the chunk."""
     call, frees = [], []
     for kindi, payload in tail:
         if kindi == "lit":
             call.append(payload); continue
         if kindi == "ptr":
             _d, cbase_, marshal = payload
-            L.append(f"    {cbase_} *c{col} = NULL;")
-            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
-                     " if (!v.IsNull()) c%d = %s; }" % (col, marshal % "string_t(StringValue::Get(v))"))
+            L.append(f"            {cbase_} *c{col} = {marshal % _row_get('string_t', col)};")
             frees.append(f"c{col}")
         else:
-            _d, ctype, cexpr = payload
-            L.append(f"    {ctype} c{col} = ({ctype}) 0;")
-            L.append(f"    {{ auto &cv = args.data[{col}]; cv.Flatten(rc); Value v = cv.GetValue(0);"
-                     f" if (!v.IsNull()) c{col} = {cexpr}; }}")
+            _d, ctype, cpp, cexpr = payload
+            L.append(f"            {ctype} c{col} = {cexpr % _row_get(cpp, col)};")
         call.append(f"c{col}")
         col += 1
     return call, frees
 
-def _close_body(L, frees):
-    """Release the pointer settings, then close the function."""
-    L += ["    free(%s);" % fr for fr in frees]
-    L += ["}", ""]
+def _row_frame_open(L, k, rett):
+    """Open the walk over the rows of a body with `k` argument columns, as #emit_row_out walks
+    them: a row where any argument is NULL answers NULL, and the lines that follow, up to
+    #_close_body, compute the value of one row and `return` it, writing `mask` and `idx`."""
+    L += [f"    const idx_t rows = args.size();",
+          f"    UnifiedVectorFormat u[{k}];",
+          f"    for (idx_t c = 0; c < {k}; c++) args.data[c].ToUnifiedFormat(rows, u[c]);",
+          "    result.SetVectorType(VectorType::FLAT_VECTOR);",
+          f"    auto out = FlatVector::GetData<{rett}>(result);",
+          "    auto &mask = FlatVector::Validity(result);",
+          "    for (idx_t idx = 0; idx < rows; idx++) {",
+          f"        idx_t ri[{k}];",
+          "        bool valid = true;",
+          f"        for (idx_t c = 0; c < {k}; c++) {{",
+          "            ri[c] = u[c].sel->get_index(idx);",
+          "            valid = valid && u[c].validity.RowIsValid(ri[c]);",
+          "        }",
+          "        if (!valid) { mask.SetInvalid(idx); continue; }",
+          f"        out[idx] = [&]() -> {rett} {{"]
+
+def _close_body(L):
+    """Close the walk over the rows, then the function."""
+    L += ["        }();", "    }", "}", ""]
     return "\n".join(L)
+
+def _frees(frees):
+    return "".join(f" free({x});" for x in frees)
 
 def shape_bound_tail(f):
     """(Temporal *, varying, <bound literals and per-call settings...>) -> Temporal *.
@@ -2327,25 +2348,22 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
     name = f["name"]
     _dt, cpp2, expr2, cleanup = vary
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
-         "    EnsureMeosThreadInitialized();",
-         "    auto rc = args.size();"]
-    call, frees = _emit_tail_consts(L, tail)
+         "    EnsureMeosThreadInitialized();"]
+    _row_frame_open(L, len(sig) + 1, "string_t")
+    L += [f"            Temporal *t = BlobToTemporal({_row_get('string_t', 0)});",
+          f"            {cpp2} a2 = {_row_get(cpp2, 1)};"]
+    call, frees = _emit_tail_rows(L, tail)
     tailargs = "".join(", " + a for a in call)
     lead = expr2 % "a2"
-    L += [f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, string_t>("
-          "args.data[0], args.data[1], result, rc,",
-          f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> string_t {{",
-          "            Temporal *t = BlobToTemporal(in);"]
     if cleanup:
         L += [f"            auto p2 = {lead};",
               f"            Temporal *r = {name}(t, p2{tailargs});",
-              f"            free(t); {cleanup}(p2);"]
+              f"            free(t); {cleanup}(p2);{_frees(frees)}"]
     else:
         L += [f"            Temporal *r = {name}(t, {lead}{tailargs});",
-              "            free(t);"]
-    L += ["            return TemporalToBlobN(result, r, mask, idx);",
-          "        });"]
-    return _close_body(L, frees)
+              f"            free(t);{_frees(frees)}"]
+    L += ["            return TemporalToBlobN(result, r, mask, idx);"]
+    return _close_body(L)
 
 def shape_text_array(f):
     """(Temporal *, text **elems, int count, <bound literals and settings...>) -> Temporal *.
@@ -2400,27 +2418,23 @@ def emit_body_text_array(f, kind, tail, sig):
     name = f["name"]
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
-         "    auto rc = args.size();",
-         "    auto &lst = args.data[1]; lst.Flatten(rc);",
+         "    auto &lst = args.data[1]; lst.Flatten(args.size());",
          "    auto &child = ListVector::GetEntry(lst);",
          "    child.Flatten(ListVector::GetListSize(lst));"]
-    call, frees = _emit_tail_consts(L, tail)
-    tailargs = "".join(", " + a for a in call)
     # The operand and result marshal through the family the shape resolved: a set reads with
     # BlobToSet and answers through SetToBlobN, a temporal with BlobToTemporal/TemporalToBlobN.
     ctype, blob_in, blob_out = (("Set", "BlobToSet", "SetToBlobN") if kind == "set"
                                 else ("Temporal", "BlobToTemporal", "TemporalToBlobN"))
-    L += ["    BinaryExecutor::ExecuteWithNulls<string_t, list_entry_t, string_t>("
-          "args.data[0], lst, result, rc,",
-          "        [&](string_t in, list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {",
-          f"            {ctype} *t = {blob_in}(in);",
+    _row_frame_open(L, len(sig) + 1, "string_t")
+    L += [f"            {ctype} *t = {blob_in}({_row_get('string_t', 0)});",
           "            int n = 0;",
-          "            text **elems = ListToTextArr(child, le, &n);",
-          f"            {ctype} *r = {name}(t, elems, n{tailargs});",
-          "            free(t); FreeTextArr(elems, n);",
-          f"            return {blob_out}(result, r, mask, idx);",
-          "        });"]
-    return _close_body(L, frees)
+          f"            text **elems = ListToTextArr(child, {_row_get('list_entry_t', 1)}, &n);"]
+    call, frees = _emit_tail_rows(L, tail)
+    tailargs = "".join(", " + a for a in call)
+    L += [f"            {ctype} *r = {name}(t, elems, n{tailargs});",
+          f"            free(t); FreeTextArr(elems, n);{_frees(frees)}",
+          f"            return {blob_out}(result, r, mask, idx);"]
+    return _close_body(L)
 
 def shape_outparam(f):
     """(Temporal *, [varying], <settings...>) with a trailing out-parameter -> that value.
@@ -2535,10 +2549,7 @@ def emit_cont_outparam(f, tail, cloc, cpp, out):
 def emit_body_outparam(f, dret, kind, vary, tail, sig, out_canon):
     name = f["name"]
     L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
-         "    EnsureMeosThreadInitialized();",
-         "    auto rc = args.size();"]
-    call, frees = _emit_tail_consts(L, tail, col=(2 if vary else 1))
-    tailargs = "".join(", " + a for a in call)
+         "    EnsureMeosThreadInitialized();"]
     if kind == "outptr":
         ob = base(out_canon) if base(out_canon) in PTR_RET else outptr_base(out_canon)
         decl, rett = f"{ob} *o = NULL;", "string_t"
@@ -2548,28 +2559,29 @@ def emit_body_outparam(f, dret, kind, vary, tail, sig, out_canon):
         decl, rett = f"{cloc} o = ({cloc}) 0;", cpp
         give = "return %s;" % (OUTPARAM_TAKE.get(norm(out_canon), f"({cpp}) %s") % "o")
         empty = f"return {cpp}();"
+    _row_frame_open(L, len(sig) + 1, rett)
+    L += [f"            Temporal *t = BlobToTemporal({_row_get('string_t', 0)});"]
     if vary:
         _dt, cpp2, expr2, cleanup = vary
         lead = expr2 % "a2"
-        L += [f"    BinaryExecutor::ExecuteWithNulls<string_t, {cpp2}, {rett}>("
-              "args.data[0], args.data[1], result, rc,",
-              f"        [&](string_t in, {cpp2} a2, ValidityMask &mask, idx_t idx) -> {rett} {{"]
+        L += [f"            {cpp2} a2 = {_row_get(cpp2, 1)};"]
     else:
         lead, cleanup = None, ""
-        L += [f"    UnaryExecutor::ExecuteWithNulls<string_t, {rett}>(args.data[0], result, rc,",
-              f"        [&](string_t in, ValidityMask &mask, idx_t idx) -> {rett} {{"]
-    L += ["            Temporal *t = BlobToTemporal(in);", f"            {decl}"]
+    call, frees = _emit_tail_rows(L, tail, col=(2 if vary else 1))
+    tailargs = "".join(", " + a for a in call)
+    L += [f"            {decl}"]
     if vary and cleanup:
         L += [f"            auto p2 = {lead};",
               f"            bool ok = {name}(t, p2{tailargs}, &o);",
-              f"            free(t); {cleanup}(p2);"]
+              f"            free(t); {cleanup}(p2);{_frees(frees)}"]
     elif vary:
-        L += [f"            bool ok = {name}(t, {lead}{tailargs}, &o);", "            free(t);"]
+        L += [f"            bool ok = {name}(t, {lead}{tailargs}, &o);",
+              f"            free(t);{_frees(frees)}"]
     else:
-        L += [f"            bool ok = {name}(t{tailargs}, &o);", "            free(t);"]
+        L += [f"            bool ok = {name}(t{tailargs}, &o);", f"            free(t);{_frees(frees)}"]
     L += [f"            if (! ok) {{ mask.SetInvalid(idx); {empty} }}",
-          f"            {give}", "        });"]
-    return _close_body(L, frees)
+          f"            {give}"]
+    return _close_body(L)
 
 def shape_binary_tt(f):
     """Binary Temporal + Temporal (both via BlobToTemporal) — the big 2-arg shape
