@@ -7040,6 +7040,24 @@ def struct_row(sql):
         '{"%s", LogicalType(%s)}' % (fl["name"], STRUCT_FIELD[fl["cType"]][0]) for fl in flds)
     return rb, dt, [(fl["name"], STRUCT_FIELD[fl["cType"]][1]) for fl in flds]
 
+def struct_row_lines(sr, src, idx):
+    """(its count fields, the lines writing the empty row, the lines writing the fields of the
+    structure `src` points to) at row `idx` of the STRUCT vector whose children are `cols`, for a
+    row of #struct_row `sr`, each field written into its child as #emit_row_out writes a column.
+    A structure that counts nothing states no statistic: its row is the one MobilityDB's
+    bandstats_record writes for it, as PostGIS's ST_SummaryStats answers a band whose every pixel
+    is nodata, its count fields 0 and its other fields NULL."""
+    rb, _dt, flds = sr
+    ctype = {x["name"]: x["cType"] for x in STRUCTS[rb]["fields"]}
+    counts = [(j, fl) for j, (fl, _cpp) in enumerate(flds) if ctype[fl] == "uint32_t"]
+    empty = (["for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], %s, true);"
+              % idx] +
+             ["FlatVector::Validity(*cols[%d]).SetValid(%s);" % (j, idx) for j, _fl in counts] +
+             ["FlatVector::GetData<int64_t>(*cols[%d])[%s] = 0;" % (j, idx) for j, _fl in counts])
+    writes = ["FlatVector::GetData<%s>(*cols[%d])[%s] = %s->%s;" % (cpp, j, idx, src, fl)
+              for j, (fl, cpp) in enumerate(flds)]
+    return [fl for _j, fl in counts], empty, writes
+
 def sig_call_rows(f, s, outs):
     """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
     expressions) for a set-returning signature whose `columns` read fields of the structures of
@@ -7189,22 +7207,15 @@ def sig_call_ret(f, s, outs, cexpr=None):
         return None
     sr = struct_row(sqlr) if rn.count("*") == 1 and "const" not in rc else None
     if sr and sr[0] == rb:
-        # the row of the fields of the structure MEOS answers (#struct_row), each field written
-        # into its child as #emit_row_out writes a column, the structure freed after. Where MEOS
-        # answers none, having raised no error, it counts nothing (raster_summary_stats over a
-        # band whose every pixel is nodata), and the row is the one MobilityDB's bandstats_record
-        # writes for it, as PostGIS's ST_SummaryStats answers it: its count 0, its other fields
-        # NULL
-        counts = [j for j, (fl, _cpp) in enumerate(sr[2])
-                  if dict((x["name"], x["cType"]) for x in STRUCTS[rb]["fields"])[fl] == "uint32_t"]
-        empty = (["for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);"] +
-                 ["FlatVector::Validity(*cols[%d]).SetValid(i);" % j for j in counts] +
-                 ["FlatVector::GetData<int64_t>(*cols[%d])[i] = 0;" % j for j in counts])
+        # the row of the fields of the structure MEOS answers (#struct_row_lines), the structure
+        # freed after. Where MEOS answers none, having raised no error, it counts nothing
+        # (raster_summary_stats over a band whose every pixel is nodata), and the row is the
+        # empty one
+        _counts, empty, writes = struct_row_lines(sr, "r", "i")
         return (sr[1], None, ["%s *r = CALL;" % rb],
                 ["auto &cols = StructVector::GetEntries(result);",
                  "if (!r) {"] + ["    " + x for x in empty] + ["    continue;", "}"] +
-                ["FlatVector::GetData<%s>(*cols[%d])[i] = r->%s;" % (cpp, j, fl)
-                 for j, (fl, cpp) in enumerate(sr[2])] + ["free(r);"], {})
+                writes + ["free(r);"], {})
     if rn.endswith("*") and "const" not in rc:
         if rb in TEMPORAL_PTR_RET:
             acc = SIG_TEMPORAL_ACC.get(sqlr)
@@ -9703,8 +9714,8 @@ def gen_index_search_ops(catalog, out_path):
 # and an aggregate of one name in one catalog slot, and under its own name otherwise.
 
 # The DuckDB type of each SQL type an aggregate takes or answers. A SQL type absent from it is one
-# the binding registers no type for (raster, geography, summarystats), and an aggregate over it is
-# left out.
+# the binding registers no type for (geography), and an aggregate over it is left out, but for a
+# result carried as the row of the fields of a structure (#struct_row, summarystats).
 AGG_SQL_TYPE = {**SIG_TEMPORAL_ACC, **SET_SIG_ACC, **SQL_CONTAINER_ACC, **SQL_BASE_TO_DUCK, **CELL_SQL,
                 **{b: acc for b, acc in BASE_LOGICAL.items() if not acc.startswith("LogicalType::")},
                 "geometry": "MobilityDuckGeometryType()",
@@ -9775,8 +9786,9 @@ def _agg_ops(n, a, fns_by_name):
     args, ret, stype = a.get("args") or [], a["ret"], a["stype"]
     if not args:
         return None, "no argument"
+    sr = None if ret in AGG_SQL_TYPE else struct_row(ret)
     for t in args + [ret]:
-        if t not in AGG_SQL_TYPE:
+        if t not in AGG_SQL_TYPE and not (t == ret and sr):
             return None, "type %s" % t
     if any(r and r not in fns_by_name for r in roles.values()):
         return None, "role not in the catalog"
@@ -9847,7 +9859,7 @@ def _agg_ops(n, a, fns_by_name):
     ff = fns_by_name.get(roles["final"]) if roles["final"] else None
     keeps = bool(ff and ff.get("params") and norm(ff["params"][0]["canonical"]).startswith("const "))
     res_c = base((ff or tf)["returnType"]["canonical"])
-    if res_c not in AGG_WRITE:
+    if (sr[0] != res_c) if sr else (res_c not in AGG_WRITE):
         return None, "result %s" % res_c
     cast = lambda fn, i: "static_cast<%s>" % norm(fn["params"][i]["canonical"])  # noqa: E731
     name = "AggOps_%d" % n
@@ -9871,20 +9883,42 @@ def _agg_ops(n, a, fns_by_name):
               "        return %s(%s(a), %s(b));" % (cf["name"], cast(cf, 0), cast(cf, 1)), "    }"]
     else:
         L += ["    static void *Combine(void *, void *) {", "        return nullptr;", "    }"]
-    if ff:
+    # A structure carried as a row (#struct_row_lines): where the final answers none over a state,
+    # having raised no error, the rows read counted nothing (raster_summary_stats_finalfn), and the
+    # answer is the empty row MobilityDB's final writes, a structure counting nothing standing for
+    # it until Write; no row read leaves no state, and the answer NULL
+    counts, empty, writes = struct_row_lines(sr, "x", "i") if sr else ([], [], [])
+    if ff and counts:
+        L += ["    static void *Final(void *s) {",
+              "        %s *r = %s(%s(s));" % (res_c, ff["name"], cast(ff, 0)),
+              "        return r ? r : calloc(1, sizeof(%s));" % res_c, "    }"]
+    elif ff:
         L += ["    static void *Final(void *s) {",
               "        return %s(%s(s));" % (ff["name"], cast(ff, 0)), "    }"]
     else:
         L += ["    static void *Final(void *s) {", "        return s;", "    }"]
-    L += ["    static void Write(Vector &result, idx_t i, void *r) {",
-          "        FlatVector::GetData<string_t>(result)[i] = %s;"
-          % (AGG_WRITE[res_c] % ("static_cast<%s *>(r)" % res_c)), "    }",
+    if sr:
+        L += ["    static void Write(Vector &result, idx_t i, void *r) {",
+              "        auto *x = static_cast<%s *>(r);" % res_c,
+              "        auto &cols = StructVector::GetEntries(result);"]
+        if counts:
+            L += ["        if (%s) {" % " && ".join("x->%s == 0" % fl for fl in counts),
+                  *("            %s" % w for w in empty),
+                  "        } else {", *("            %s" % w for w in writes), "        }"]
+        else:
+            L += ["        %s" % w for w in writes]
+        L += ["        free(x);", "    }"]
+    else:
+        L += ["    static void Write(Vector &result, idx_t i, void *r) {",
+              "        FlatVector::GetData<string_t>(result)[i] = %s;"
+              % (AGG_WRITE[res_c] % ("static_cast<%s *>(r)" % res_c)), "    }"]
+    L += [
           "    static TimestampTz Order(const Row &row) {",
           ("        return %s(row.a0);" % AGG_ORDER_KEY) if gathers else
           "        (void) row;\n        return 0;", "    }",
           "};", ""]
     reg = "MeosAggregate<%s>::Function({%s}, %s)" % (
-        name, ", ".join(AGG_SQL_TYPE[t] for t in args), AGG_SQL_TYPE[ret])
+        name, ", ".join(AGG_SQL_TYPE[t] for t in args), sr[1] if sr else AGG_SQL_TYPE[ret])
     return ("\n".join(L), reg, state_c), None
 
 
