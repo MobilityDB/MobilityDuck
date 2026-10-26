@@ -5836,7 +5836,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # trajectory, over the signatures MobilityDB declares for raquet
                   "meos_raster", "meos_raster_base_accessor", "meos_raster_base_constructor",
                   "meos_raster_base_inout", "meos_raster_base_comp",
-                  "meos_raster_base_conversion"}
+                  "meos_raster_base_conversion", "meos_raster_base_transf"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -5862,7 +5862,12 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # summaryStats and the summarystats accessors (summarystatsCount, summarystatsSum,
 # summarystatsMean, summarystatsStddev, summarystatsMin, summarystatsMax) answer or take
 # summarystats, a structure no DuckDB type of this surface carries yet; valueCount answers rows of
-# a ValueCount, which no shape returns; no hand registration answers them either.
+# a ValueCount, dumpAsPolygons rows of a GeomVal, pixelAsPoints rows of a Pixel and dumpValues an
+# array of values with an array of nodata flags, which no shape returns; no hand registration
+# answers them either.
+# setValues reads its values as a two-dimensional array whose dimensions give the width and height
+# of the block, which no SQL argument of its signature fills, so the catalog places none of
+# raster_set_values's C parameters width, height and noset; the JVM surfaces leave it out too.
 # tjsonbSet and tjsonbSetLax register nothing: tjsonb_set reads its keys as a text ** and a count
 # no marshalling fills from a text[], and tjsonbSet binds no literal for handle_null.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
@@ -5870,7 +5875,8 @@ RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "pointCloudSchemaRegister",
                        "summaryStats", "summarystatsCount", "summarystatsSum",
                        "summarystatsMean", "summarystatsStddev", "summarystatsMin",
-                       "summarystatsMax", "valueCount"}
+                       "summarystatsMax", "valueCount", "dumpAsPolygons", "pixelAsPoints",
+                       "dumpValues", "setValues"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -6847,6 +6853,12 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
         return dict(kind="ptr", dt=acc, cpp="string_t",
                     pre=["%s *p%d = %s;" % (b, k, PTR_IN[b][1] % v)], post=["free(p%d);" % k],
                     cexpr={p["name"]: "p%d" % k})
+    if b == "GSERIALIZED" and n.count("*") == 1 and t == "geometry":
+        # a DuckDB geometry, read with the SRID of the value the call reads it against, which
+        # #shape_sig_call puts in place of SRID (#SIG_SRID_OF)
+        return dict(kind="geo", dt="MobilityDuckGeometryType()", cpp="string_t",
+                    pre=["GSERIALIZED *p%d = GeometryToGSerialized(%s, SRID);" % (k, v)],
+                    post=["free(p%d);" % k], cexpr={p["name"]: "p%d" % k})
     if b == "char" and n.count("*") == 1 and t == "text":
         return dict(kind="cstr", dt="LogicalType::VARCHAR", cpp="string_t",
                     pre=["std::string s%d = %s.GetString();" % (k, v)], post=[],
@@ -6868,6 +6880,9 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
         return dict(kind="byval", dt=dt, cpp=cpp, pre=[], post=[],
                     cexpr={p["name"]: ex.replace("a2", v)})
     return None
+
+# The SRID of a value a #shape_sig_call geometry argument is read against, by its C base type
+SIG_SRID_OF = {"Raster": "raster_srid(p%d)"}
 
 def sig_call_literal(p, raw):
     """The C argument SQL literal `raw` stands for in C parameter `p` (#forward_literal, and a C
@@ -7009,8 +7024,11 @@ def shape_sig_call(f):
         if len(order) != len(s["args"]) or any(nm not in byname for nm in order):
             continue
         bound = {}
-        for p in facing:
-            if p["name"] in order or p["name"] in flags:
+        # the length of an array the signature binds takes its literal too (clip(rast, geom)
+        # binds bands NULL and nbands 0); the length of an array an argument fills comes with it
+        for p in ps:
+            if (p["name"] in outn or p["name"] in order or p["name"] in flags
+                    or (p["name"] in lenof and lenof[p["name"]] in order)):
                 continue
             lit = (s.get("boundArgs") or {}).get(p["name"])
             lit = sig_call_literal(p, lit) if lit is not None else None
@@ -7026,6 +7044,23 @@ def shape_sig_call(f):
             args.append(sig_call_arg(f, byname[nm], t, k, arrays, lenp))
         if any(a is None for a in args):
             continue
+        # GeometryToGSerialized reads the WKB of a DuckDB geometry, which carries no SRID, so a
+        # geometry argument takes the SRID of the one value of the call that states one, read
+        # before it, as the geo shapes take the SRID of the temporal value (#shape_geo_temporal):
+        # clip(rast, geom) reads geom in the SRID of rast, the SRID PostGIS's ST_Clip requires of
+        # it. The CRS a typed GEOMETRY('EPSG:n') states is not read, as at every geometry argument.
+        srcs = [k for k, (nm, a) in enumerate(zip(order, args))
+                if a["kind"] == "ptr" and base(byname[nm]["canonical"]) in SIG_SRID_OF]
+        for k, a in enumerate(args):
+            if a["kind"] != "geo":
+                continue
+            if len(srcs) != 1 or srcs[0] > k:
+                args = None
+                break
+            src = SIG_SRID_OF[base(byname[order[srcs[0]]]["canonical"])] % srcs[0]
+            args[k] = dict(a, pre=[x.replace("SRID", src) for x in a["pre"]])
+        if args is None:
+            continue
         for k, binds in present.items():
             lits = {cn: sig_call_literal(byname[cn], lit) for cn, lit in binds.items()
                     if cn in byname}
@@ -7035,10 +7070,20 @@ def shape_sig_call(f):
             args[k] = dict(args[k], cexpr={**args[k]["cexpr"], **lits})
         if args is None:
             continue
-        # the value a NULL argument binds, for a by-value argument
+        # the value a NULL argument binds: a literal for a by-value argument, a NULL pointer for a
+        # pointer or a text the wrapper passes as NULL (customextent and pixeltype of mapAlgebra),
+        # whose decoding the NULL row then skips
         nb = {}
         for kk, binds in (s.get("nullDefaultBinds") or {}).items():
             k = int(kk)
+            if (k < len(args) and args[k]["kind"] in ("ptr", "cstr") and len(args[k]["pre"]) == 1
+                    and set(binds) == set(args[k]["cexpr"])
+                    and all(str(lit).strip().upper() == "NULL" for lit in binds.values())):
+                lhs, rhs = args[k]["pre"][0].rstrip(";").split(" = ", 1)
+                empty = "nullptr" if args[k]["kind"] == "ptr" else "std::string()"
+                args[k] = dict(args[k], pre=["%s = n%d ? %s : %s;" % (lhs, k, empty, rhs)])
+                nb[k] = {cn: "nullptr" for cn in binds}
+                continue
             if k >= len(args) or args[k]["kind"] != "byval":
                 nb = None
                 break
