@@ -1974,6 +1974,36 @@ static void Gen_jsonb_array_length(DataChunk &args, ExpressionState &, Vector &r
         });
 }
 
+static void Gen_jsonb_extract_path(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lst = args.data[1]; lst.Flatten(args.size());
+    auto &child = ListVector::GetEntry(lst);
+    child.Flatten(ListVector::GetListSize(lst));
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Jsonb *t = BlobToJsonb(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            int n = 0;
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            Jsonb *r = jsonb_extract_path(t, elems, n);
+            free(t); FreeTextArr(elems, n);
+            return JsonbToBlobN(result, r, mask, idx);
+        }();
+    }
+}
+
 static void Gen_jsonb_hash(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, uint32_t>(args.data[0], result, args.size(),
@@ -4882,6 +4912,7 @@ void RegisterGenerated_meos_h3_vertex(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_json_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbArrayLength", {TJsonbTypes::jsonb()}, LogicalType::INTEGER, Gen_jsonb_array_length));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbExtractPath", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, TJsonbTypes::jsonb(), Gen_jsonb_extract_path));
     RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {TJsonbTypes::jsonb()}, LogicalType::UINTEGER, Gen_jsonb_hash));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbContained", {TJsonbTypes::jsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_jsonb_contained));
     RegisterSerializedScalarFunction(loader, ScalarFunction("jsonbContains", {TJsonbTypes::jsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_jsonb_contains));
