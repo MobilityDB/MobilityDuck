@@ -26,6 +26,7 @@
 #include "s2cell/ts2cell.hpp"
 #include "raster/raquet.hpp"
 #include "raster/raster.hpp"
+#include "raster/raster_boundary.hpp"
 #include "h3/th3index.hpp"
 #include "cbuffer/tcbuffer.hpp"
 #include "json/tjsonb.hpp"
@@ -440,6 +441,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// function surface is generated.
 	RasterTypes::RegisterTypes(loader);
 	RasterTypes::RegisterCastFunctions(loader);
+	// The boundary to DuckDB's raster extension (duckdb-raster): a raster from
+	// a tile, the datacube and the metadata of a raster, the statistics.
+	RasterBoundary::Register(loader);
 
 	// H3 cell index types (h3index/th3index). Type registration + casts are the
 	// hand layer; the H3 function surface is generated (no RegisterScalarFunctions).
