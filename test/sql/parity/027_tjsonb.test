@@ -236,6 +236,32 @@ FROM (VALUES (1, '7', false), (2, '8', true), (3, NULL, false)) t(i, v, after) O
 2	"{\"a\": [1, 2, 8]}"@2000-01-01 00:00:00+01
 3	NULL
 
+# The path functions of a plain jsonb take the path as a list of text, as their temporal
+# twins do, and answer a jsonb: set and insert into an array, delete a key by its path and a
+# list of keys, and extract the value at a path, NULL where the path names nothing.
+query IIIII
+SELECT jsonbSet(jsonb '{"a":[1,2]}', ['a','0'], jsonb '9', true)::VARCHAR,
+       jsonbInsert(jsonb '{"a":[1,2]}', ['a','1'], jsonb '9', false)::VARCHAR,
+       jsonbDeletePath(jsonb '{"a":{"b":1,"c":2}}', ['a','b'])::VARCHAR,
+       jsonbDeleteArray(jsonb '{"a":1,"b":2,"c":3}', ['a','c'])::VARCHAR,
+       jsonbExtractPath(jsonb '{"a":{"b":[1,2]}}', ['a','b'])::VARCHAR;
+----
+{"a": [9, 2]}	{"a": [1, 9, 2]}	{"a": {"c": 2}}	{"b": 2}	[1, 2]
+
+query I
+SELECT jsonbExtractPath(jsonb '{"a":1}', ['b']) IS NULL;
+----
+true
+
+# Each row sets its own value, and a row whose value is NULL answers NULL.
+query II
+SELECT i, jsonbSet(jsonb '{"a":1}', ['a'], v::jsonb, true)::VARCHAR
+FROM (VALUES (1, NULL), (2, '7'), (3, '8')) t(i, v) ORDER BY i;
+----
+1	NULL
+2	{"a": 7}
+3	{"a": 8}
+
 # A NULL value in the first row answers NULL there and leaves the next row its own value.
 query II
 SELECT i, tjsonbInsert(TJSONB('"{\"a\":[1,2]}"@2000-01-01'), ['a','1'], v::jsonb, false)::VARCHAR

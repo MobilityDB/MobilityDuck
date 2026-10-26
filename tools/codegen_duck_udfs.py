@@ -2366,21 +2366,26 @@ def emit_body_bound_tail(f, kind, vary, tail, sig):
     return _close_body(L)
 
 def shape_text_array(f):
-    """(Temporal *, text **elems, int count, <bound literals and settings...>) -> Temporal *.
+    """(Temporal *, text **elems, int count, <bound literals and settings...>) -> Temporal *,
+    and the same over a set or a base value (Set *, Jsonb *).
 
     A `text **` and the `int` that follows it are ONE SQL argument — MobilityDB declares
     `text[]` (`sqlSignatures.args`), so DuckDB registers LIST(VARCHAR) and the count is
     supplied by the list's own length rather than exposed."""
     ins, out = classify(f)
     if out is not None or len(ins) < 3: return None
-    # The path array reads the same over a SET as over a temporal — MobilityDB declares
-    # `jsonbsetExtractPath(jsonbset, text[], text)` beside `tjsonbExtractPath(tjsonb, ...)` —
+    # The path array reads the same over a SET and a base value as over a temporal —
+    # MobilityDB declares `jsonbsetExtractPath(jsonbset, text[], text)` and
+    # `jsonbSet(jsonb, text[], jsonb, boolean)` beside `tjsonbExtractPath(tjsonb, ...)` —
     # so the operand family is what varies, not the shape. A set scopes through
     # set_reg_scope (`jsonbset_*` -> SetTypes::jsonbset()), which is a different map from the
     # temporal reg_scope: reg_scope answers None for EVERY `jsonbset_*` name, including the
     # ones the set shapes already emit, so reading it for a set operand rejects the family.
+    # A base value scopes to its own type (PTR_IN), as #shape_baseval_scalar registers it.
     ob = base(ins[0]["canonical"])
-    if ob not in ("Temporal", "Set") or not norm(ins[0]["canonical"]).endswith("*"):
+    if ob not in ("Temporal", "Set") and ob not in BASEVAL_PTR_IN:
+        return None
+    if not norm(ins[0]["canonical"]).endswith("*"):
         return None
     # `base()` answers the sentinel for a double pointer, so the test reads the normalised
     # spelling: a `text **` is the path/keys array MobilityDB declares as `text[]`.
@@ -2401,13 +2406,19 @@ def shape_text_array(f):
     bound = ((f.get("shape") or {}).get("boundArgs") or {})
     tail = _build_tail(ins[3:], bound)
     if tail is None: return None
-    if (set_reg_scope if ob == "Set" else reg_scope)(f["name"]) is None: return None
+    if ob in ("Temporal", "Set") and \
+            (set_reg_scope if ob == "Set" else reg_scope)(f["name"]) is None:
+        return None
     rb = base(f["returnType"]["canonical"]); rn = norm(f["returnType"]["canonical"])
     # The operand family and the result family are the same one: a set path operation answers a
-    # set (`jsonbset_extract_path` -> `Set *`), a temporal one a temporal. Accepting a crossed
-    # pair would emit a body marshalling the result through the wrong `*ToBlobN`.
+    # set (`jsonbset_extract_path` -> `Set *`), a temporal one a temporal, a base value its own
+    # type (`jsonb_set` -> `Jsonb *`). Accepting a crossed pair would emit a body marshalling the
+    # result through the wrong `*ToBlobN`.
     if not (rb == ob and rn.endswith("*")): return None
+    if ob in BASEVAL_PTR_IN and ob not in PTR_RET: return None
     sig = ["LogicalType::LIST(LogicalType::VARCHAR)"] + _tail_sig(tail)
+    if ob in BASEVAL_PTR_IN:
+        return ("base:" + ob, PTR_RET[ob][0], tail, sig)
     # `MD_SET` is the set counterpart of the `MD_TEMPORAL` sentinel: the registration resolves it
     # per registered accessor, so the result reads as `jsonbset` rather than the raw BLOB the
     # value travels in. Registering the storage type instead builds green and passes the suite
@@ -2422,9 +2433,15 @@ def emit_body_text_array(f, kind, tail, sig):
          "    auto &child = ListVector::GetEntry(lst);",
          "    child.Flatten(ListVector::GetListSize(lst));"]
     # The operand and result marshal through the family the shape resolved: a set reads with
-    # BlobToSet and answers through SetToBlobN, a temporal with BlobToTemporal/TemporalToBlobN.
-    ctype, blob_in, blob_out = (("Set", "BlobToSet", "SetToBlobN") if kind == "set"
-                                else ("Temporal", "BlobToTemporal", "TemporalToBlobN"))
+    # BlobToSet and answers through SetToBlobN, a temporal with BlobToTemporal/TemporalToBlobN,
+    # a base value with its own PTR_IN reader and {Base}ToBlobN (BlobToJsonb/JsonbToBlobN).
+    if kind.startswith("base:"):
+        ctype = kind.split(":", 1)[1]
+        blob_in = PTR_IN[ctype][1].split("(", 1)[0]
+        blob_out = PTR_RET[ctype][1].split("(", 1)[0] + "N"
+    else:
+        ctype, blob_in, blob_out = (("Set", "BlobToSet", "SetToBlobN") if kind == "set"
+                                    else ("Temporal", "BlobToTemporal", "TemporalToBlobN"))
     _row_frame_open(L, len(sig) + 1, "string_t")
     L += [f"            {ctype} *t = {blob_in}({_row_get('string_t', 0)});",
           "            int n = 0;",
@@ -7774,8 +7791,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # `scope, accs` above reads reg_scope, which resolves TEMPORAL scope and answers
             # None for every set name; the set operand takes the set map the shape already
             # cleared it on, the way the set emit paths below read set_reg_scope.
+            # A base value registers over its own type alone.
             if kind == "set":
                 scope, accs = set_reg_scope(fn)
+            elif kind.startswith("base:"):
+                scope, accs = "types", [PTR_IN[kind.split(":", 1)[1]][0]]
             bodies.append(emit_body_text_array(f, kind, tail, sig))
             _rest = "".join(", %s" % x for x in sig[1:])
             argsig = "{type, %s%s}" % (sig[0], _rest)
