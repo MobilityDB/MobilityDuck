@@ -4527,120 +4527,6 @@ static void Gen_trgeometry_space_time_boxes_s2_a4(DataChunk &args, ExpressionSta
     }
 }
 
-static void Gen_trgeometry_time_boxes(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    auto &in_vec = args.data[0];
-    idx_t row_count = args.size();
-    in_vec.Flatten(row_count);
-    auto &n_vec = args.data[1];
-    n_vec.Flatten(row_count);
-    auto &n2_vec = args.data[2];
-    n2_vec.Flatten(row_count);
-    auto &n3_vec = args.data[3];
-    n3_vec.Flatten(row_count);
-    auto &n4_vec = args.data[4];
-    n4_vec.Flatten(row_count);
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull() || n3_vec.GetValue(i).IsNull() || n4_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
-        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        Temporal *in = BlobToTemporal(blob);
-        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
-        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
-        bool n3_arg = FlatVector::GetData<bool>(n3_vec)[i];
-        bool n4_arg = FlatVector::GetData<bool>(n4_vec)[i];
-        int count = 0;
-        STBox * arr = trgeometry_time_boxes(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, n3_arg, n4_arg, &count);
-        free(in);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        if (arr) free(arr);
-        result_validity.SetValid(i);
-    }
-}
-
-static void Gen_trgeometry_time_boxes_bitmatrix_border_inc(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    auto &in_vec = args.data[0];
-    idx_t row_count = args.size();
-    in_vec.Flatten(row_count);
-    auto &n_vec = args.data[1];
-    n_vec.Flatten(row_count);
-    auto &n2_vec = args.data[2];
-    n2_vec.Flatten(row_count);
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull() || n2_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
-        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        Temporal *in = BlobToTemporal(blob);
-        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
-        timestamp_tz_t n2_arg = FlatVector::GetData<timestamp_tz_t>(n2_vec)[i];
-        int count = 0;
-        STBox * arr = trgeometry_time_boxes_bitmatrix_border_inc(in, MeosIntervalArg(n_arg), DuckDBToMeosTimestamp(n2_arg).value, &count);
-        free(in);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        if (arr) free(arr);
-        result_validity.SetValid(i);
-    }
-}
-
-static void Gen_trgeometry_time_boxes_bitmatrix_border_inc_torigin(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    auto &in_vec = args.data[0];
-    idx_t row_count = args.size();
-    in_vec.Flatten(row_count);
-    auto &n_vec = args.data[1];
-    n_vec.Flatten(row_count);
-    auto &result_validity = FlatVector::Validity(result);
-    auto list_entries = FlatVector::GetData<list_entry_t>(result);
-    idx_t off = 0;
-    for (idx_t i = 0; i < row_count; ++i) {
-        if (in_vec.GetValue(i).IsNull() || n_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
-        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
-        Temporal *in = BlobToTemporal(blob);
-        interval_t n_arg = FlatVector::GetData<interval_t>(n_vec)[i];
-        int count = 0;
-        STBox * arr = trgeometry_time_boxes_bitmatrix_border_inc_torigin(in, MeosIntervalArg(n_arg), &count);
-        free(in);
-        int n = (arr && count > 0) ? count : 0;
-        ListVector::Reserve(result, off + n);
-        ListVector::SetListSize(result, off + n);
-        list_entries[i] = list_entry_t{off, (uint64_t) n};
-        if (n > 0) {
-            auto &child_vector = ListVector::GetEntry(result);
-            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<string_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
-            off += n;
-        }
-        if (arr) free(arr);
-        result_validity.SetValid(i);
-    }
-}
-
 
 // ===== @ingroup meos_s2cell =====
 static void Gen_s2cell_is_valid_cell(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5086,9 +4972,6 @@ void RegisterGenerated_meos_rgeo_tile(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceTimeBoxes", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType(), LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_trgeometry_space_time_boxes_s2_a6));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceTimeBoxes", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL, MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_trgeometry_space_time_boxes_s2_a5));
     RegisterSerializedScalarFunction(loader, ScalarFunction("spaceTimeBoxes", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_trgeometry_space_time_boxes_s2_a4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN, LogicalType::BOOLEAN}, LogicalType::LIST(StboxType::stbox()), Gen_trgeometry_time_boxes));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, LogicalType::LIST(StboxType::stbox()), Gen_trgeometry_time_boxes_bitmatrix_border_inc));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("timeBoxes", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, LogicalType::LIST(StboxType::stbox()), Gen_trgeometry_time_boxes_bitmatrix_border_inc_torigin));
 }
 
 void RegisterGenerated_meos_s2cell(ExtensionLoader &loader) {
