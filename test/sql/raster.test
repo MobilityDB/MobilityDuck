@@ -94,3 +94,56 @@ SELECT numBands(addBand(r, r)), numBands(addBand(addBand(r, r), r, 1, 1)),
 FROM depth;
 ----
 2	3	true	float32
+
+# ── processing ───────────────────────────────────────────────────────────────
+
+# The depth clipped to the polygon over its upper-left four pixels, as
+# MobilityDB answers clip(r, g) in its raster regression test: {{10,20},{40,50}}.
+# The geometry is read in the SRID of the raster.
+query III
+SELECT width(c), height(c), pixels(c, 1) = from_hex('000020410000A0410000204200004842')
+FROM (SELECT clip(r, 'POLYGON((0 1,2 1,2 3,0 3,0 1))'::GEOMETRY) AS c FROM depth);
+----
+2	2	true
+
+# Not cropped, the clipped raster keeps the extent of the depth.
+query II
+SELECT width(c), height(c)
+FROM (SELECT clip(r, 'POLYGON((0 1,2 1,2 3,0 3,0 1))'::GEOMETRY, false) AS c FROM depth);
+----
+3	3
+
+# The pixels whose centre the triangle covers, or every pixel it touches, as
+# MobilityDB answers them: {{10,NULL,NULL},...} and {{10,20,NULL},{40,NULL,NULL},...}.
+# A pixel left out holds the smallest float32, the band stating no nodata value.
+query II
+SELECT pixels(clip(r, g, false), 1) = from_hex('00002041' || repeat('FFFF7FFF', 8)),
+  pixels(clip(r, g, false, true), 1) =
+    from_hex('000020410000A041FFFF7FFF00002042' || repeat('FFFF7FFF', 5))
+FROM depth, (SELECT 'POLYGON((0 3,1.8 3,0 1.2,0 3))'::GEOMETRY AS g);
+----
+true	true
+
+# The 4x4 elevation model of MobilityDB's raster regression test, nodata -9999.
+statement ok
+CREATE TABLE dem AS
+SELECT raster(from_hex('000020410000A0410000F04100002042000070410000C841003C1CC6000034420000A0410000F04100002042000048420000C84100000C420000344200005C42'),
+  4, 4, 0.0, 4.0, 1.0, -1.0, 0.0, 0.0, 3857, '32BF', -9999.0) AS r;
+
+# The sums over the 3x3 window of the pixels of a custom extent, as MobilityDB
+# answers them: {{190,280},{235,325}}.
+query IIII
+SELECT width(m), height(m), upperLeftX(m),
+  pixels(m, 1) = from_hex('0000000000C0674000000000008071400000000000606D400000000000507440')
+FROM (SELECT mapAlgebra(r, 1, 'SUM', '64BF', 'CUSTOM',
+  makeEmptyRaster(2, 2, 1.0, 3.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, 1) AS m FROM dem);
+----
+2	2	1.0	true
+
+# A NULL custom extent and a NULL pixel type are left out, the pixel type then
+# that of the band.
+query III
+SELECT width(m), height(m), bandPixelType(mapAlgebra(r, 1, 'MEAN'), 1)
+FROM (SELECT r, mapAlgebra(r, 1, 'MEAN', NULL, 'UNION', NULL, 1, 1) AS m FROM dem);
+----
+4	4	float32

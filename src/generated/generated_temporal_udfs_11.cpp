@@ -1024,8 +1024,17 @@ inline char * poseset_out_maxdd(const Set * p0) {
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
 }
+inline GeomVal * raster_dump_as_polygons_band_exclude_nodata(const Raster * p0, int * p1) {
+    return ::raster_dump_as_polygons(p0, 1, true, p1);
+}
+inline Pixel * raster_pixel_as_points_band_exclude_nodata(const Raster * p0, int * p1) {
+    return ::raster_pixel_as_points(p0, 1, true, p1);
+}
 inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
     return ::raster_summary_stats(p0, 1, true);
+}
+inline Raster * raster_map_algebra_distancex_distancey(const Raster * p0, int p1, const char * p2, const char * p3, const char * p4, const Raster * p5) {
+    return ::raster_map_algebra(p0, p1, p2, p3, p4, p5, 0, 0);
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
     return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
