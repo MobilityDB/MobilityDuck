@@ -5859,11 +5859,6 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # rows of its tables pointcloud_schemas and pointcloud_dimensions, so the catalog states no
 # signature for meos_pc_schema_register_dims, whose dimensions are an array of PCDimensionSpec
 # with its count; src/pointcloud/pcschema.cpp keeps it.
-# The raster constructor raster(bytea, integer, integer, float, float, float, float, float, float,
-# integer, text, float): raster_make takes `has_nodata`, which its wrapper sets from whether the
-# nodata argument is NULL, a presence flag no shape reads; no hand registration answers it. The
-# raquet constructor raquet(bytea, integer, integer, quadbin, text, float) takes the same flag, its
-# name being answered by raquet(text), and src/raster/raquet.cpp keeps it.
 # summaryStats and the summarystats accessors (summarystatsCount, summarystatsSum,
 # summarystatsMean, summarystatsStddev, summarystatsMin, summarystatsMax) answer or take
 # summarystats, a structure no DuckDB type of this surface carries yet; valueCount answers rows of
@@ -5873,7 +5868,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
-                       "raster", "summaryStats", "summarystatsCount", "summarystatsSum",
+                       "summaryStats", "summarystatsCount", "summarystatsSum",
                        "summarystatsMean", "summarystatsStddev", "summarystatsMin",
                        "summarystatsMax", "valueCount"}
 def retired(f):
@@ -7000,13 +6995,22 @@ def shape_sig_call(f):
         # the C parameters in order, but for those the signature binds to a literal (tz of
         # tjsonbPathExists and tjsonbPathExistsTz, one C function under two SQL names)
         sbound = s.get("boundArgs") or {}
+        # A wrapper may read an argument declared DEFAULT NULL as two C parameters, its value and
+        # a flag stating whether it is given: the flag takes `presentBinds` when the argument is
+        # given and `nullDefaultBinds` when it is NULL or left out, as JMEOS reads them
+        # (#signatures in tools/codegen_jvm.py). addBand(rast, index, pixeltype, initialvalue,
+        # nodataval) passes its nodata value and has_nodata true, and the call leaving the nodata
+        # value out passes 0.0 and false.
+        present = {int(kk): b for kk, b in (s.get("presentBinds") or {}).items()}
+        flags = {cn for b in present.values() for cn in b}
         order = (s.get("sqlArgParams") or shape.get("sqlArgParams")
-                 or [p["name"] for p in facing if p["name"] not in sbound])
+                 or [p["name"] for p in facing
+                     if p["name"] not in sbound and p["name"] not in flags])
         if len(order) != len(s["args"]) or any(nm not in byname for nm in order):
             continue
         bound = {}
         for p in facing:
-            if p["name"] in order:
+            if p["name"] in order or p["name"] in flags:
                 continue
             lit = (s.get("boundArgs") or {}).get(p["name"])
             lit = sig_call_literal(p, lit) if lit is not None else None
@@ -7021,6 +7025,15 @@ def shape_sig_call(f):
             lenp = byname.get((arrays.get(nm) or {}).get("lengthFrom", {}).get("name", ""))
             args.append(sig_call_arg(f, byname[nm], t, k, arrays, lenp))
         if any(a is None for a in args):
+            continue
+        for k, binds in present.items():
+            lits = {cn: sig_call_literal(byname[cn], lit) for cn, lit in binds.items()
+                    if cn in byname}
+            if k >= len(args) or len(lits) != len(binds) or None in lits.values():
+                args = None
+                break
+            args[k] = dict(args[k], cexpr={**args[k]["cexpr"], **lits})
+        if args is None:
             continue
         # the value a NULL argument binds, for a by-value argument
         nb = {}

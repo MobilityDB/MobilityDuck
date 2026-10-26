@@ -67,17 +67,6 @@ inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
     return out;
 }
 
-/* Pixel type names, as in the MobilityDB raster SQL surface. The name table is
- * MEOS's (raquet_pixtype_from_string), so a new pixel type reaches every binding
- * at once instead of being re-tabulated here. An unknown name raises a MEOS
- * error, which MobilityduckMeosErrorHandler turns into an InvalidInputException.
- * The band's own dimensions and length are validated by the MEOS entry points
- * that receive them, so this file carries no copy of those checks. */
-MeosPixType NameToPixType(string_t name) {
-    std::string s(name.GetData(), name.GetSize());   /* string_t is not NUL-terminated */
-    return raquet_pixtype_from_string(s.c_str());
-}
-
 } // namespace
 
 /* =====================================================================
@@ -119,57 +108,6 @@ bool RaquetFunctions::Raquet_out_cast(
 }
 
 /* =====================================================================
- * Constructor
- * ===================================================================== */
-
-/* raquet(pixels, width, height, cell, pixtype[, nodata]): the six-argument
- * form enables nodata filtering with the given sentinel, the five-argument
- * form leaves the tile without one. raquet_make takes whether the tile has a
- * nodata value as a parameter of its own, which its PostgreSQL wrapper sets
- * from whether the nodata argument is NULL and the catalog binds to no SQL
- * argument, so this constructor is not generated. */
-void RaquetFunctions::Raquet_constructor(
-    DataChunk &args, ExpressionState &state, Vector &result)
-{
-    const idx_t row_count = args.size();
-    const bool has_nodata_arg = args.ColumnCount() > 5;
-    for (idx_t c = 0; c < args.ColumnCount(); c++) args.data[c].Flatten(row_count);
-
-    auto pixels  = FlatVector::GetData<string_t>(args.data[0]);
-    auto width   = FlatVector::GetData<int32_t>(args.data[1]);
-    auto height  = FlatVector::GetData<int32_t>(args.data[2]);
-    auto cell    = FlatVector::GetData<int64_t>(args.data[3]);
-    auto pixtype = FlatVector::GetData<string_t>(args.data[4]);
-    auto out     = FlatVector::GetData<string_t>(result);
-    auto &out_validity = FlatVector::Validity(result);
-
-    for (idx_t row = 0; row < row_count; row++) {
-        bool any_null = false;
-        for (idx_t c = 0; c < args.ColumnCount(); c++) {
-            if (c == 5) continue;   /* nodata NULL means "no nodata value" */
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(row)) any_null = true;
-        }
-        if (any_null) { out_validity.SetInvalid(row); continue; }
-
-        bool has_nodata = has_nodata_arg &&
-            FlatVector::Validity(args.data[5]).RowIsValid(row);
-        double nodata = has_nodata
-            ? FlatVector::GetData<double>(args.data[5])[row] : 0.0;
-
-        MeosPixType pt = NameToPixType(pixtype[row]);
-
-        Raquet *rq = raquet_make(
-            static_cast<uint64_t>(cell[row]), width[row], height[row],
-            pt, nodata, has_nodata,
-            reinterpret_cast<const uint8_t *>(pixels[row].GetData()),
-            static_cast<size_t>(pixels[row].GetSize()));
-        if (!rq) { out_validity.SetInvalid(row); continue; }
-        out[row] = RaquetToBlob(result, rq);
-    }
-    if (row_count == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
-/* =====================================================================
  * Registration
  * ===================================================================== */
 
@@ -178,26 +116,6 @@ void RaquetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         RaquetFunctions::Raquet_in_cast);
     RegisterMeosCastFunction(loader, raquet(), LogicalType::VARCHAR,
         RaquetFunctions::Raquet_out_cast);
-}
-
-void RaquetTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-    const auto RQ  = raquet();
-    const auto QB  = QuadbinTypes::quadbin();
-    const auto BLB = LogicalType::BLOB;
-    const auto I32 = LogicalType::INTEGER;
-    const auto D   = LogicalType::DOUBLE;
-    const auto V   = LogicalType::VARCHAR;
-
-    duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
-        "raquet", {BLB, I32, I32, QB, V}, RQ,
-        RaquetFunctions::Raquet_constructor));
-    /* A NULL nodata value states that the tile has none, so the constructor
-     * reads its NULL arguments itself rather than the call answering NULL */
-    ScalarFunction raquet_with_nodata(
-        "raquet", {BLB, I32, I32, QB, V, D}, RQ,
-        RaquetFunctions::Raquet_constructor);
-    raquet_with_nodata.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
-    duckdb::RegisterSerializedScalarFunction(loader, raquet_with_nodata);
 }
 
 } // namespace duckdb

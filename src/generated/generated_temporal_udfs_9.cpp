@@ -2107,6 +2107,56 @@ static void Gen_quadbinset_make(DataChunk &args, ExpressionState &, Vector &resu
 
 
 // ===== @ingroup meos_raster_base_constructor =====
+static void Gen_raquet_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int64_t>(args.data[3]);
+    auto in4 = FlatVector::GetData<string_t>(args.data[4]);
+    auto in5 = FlatVector::GetData<double>(args.data[5]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n5 = !FlatVector::Validity(args.data[5]).RowIsValid(i);
+        Raquet *r = raquet_make(static_cast<uint64_t>(in3[i]), in1[i], in2[i], raquet_pixtype_from_string(in4[i].GetString().c_str()), (n5 ? 0.0 : in5[i]), (n5 ? false : true), (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_make_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int64_t>(args.data[3]);
+    auto in4 = FlatVector::GetData<string_t>(args.data[4]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *r = raquet_make(static_cast<uint64_t>(in3[i]), in1[i], in2[i], raquet_pixtype_from_string(in4[i].GetString().c_str()), 0.0, false, (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raquet_read(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2177,6 +2227,82 @@ static void Gen_raquet_read_bytes_v1(DataChunk &args, ExpressionState &, Vector 
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raster_make(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 12; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto in4 = FlatVector::GetData<double>(args.data[4]);
+    auto in5 = FlatVector::GetData<double>(args.data[5]);
+    auto in6 = FlatVector::GetData<double>(args.data[6]);
+    auto in7 = FlatVector::GetData<double>(args.data[7]);
+    auto in8 = FlatVector::GetData<double>(args.data[8]);
+    auto in9 = FlatVector::GetData<int32_t>(args.data[9]);
+    auto in10 = FlatVector::GetData<string_t>(args.data[10]);
+    auto in11 = FlatVector::GetData<double>(args.data[11]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[8]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[9]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[10]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n11 = !FlatVector::Validity(args.data[11]).RowIsValid(i);
+        std::string s10 = in10[i].GetString();
+        Raster *r = raster_make(in1[i], in2[i], in3[i], in4[i], in5[i], in6[i], in7[i], in8[i], in9[i], s10.c_str(), (n11 ? 0.0 : in11[i]), (n11 ? false : true), (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_make_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 11; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto in4 = FlatVector::GetData<double>(args.data[4]);
+    auto in5 = FlatVector::GetData<double>(args.data[5]);
+    auto in6 = FlatVector::GetData<double>(args.data[6]);
+    auto in7 = FlatVector::GetData<double>(args.data[7]);
+    auto in8 = FlatVector::GetData<double>(args.data[8]);
+    auto in9 = FlatVector::GetData<int32_t>(args.data[9]);
+    auto in10 = FlatVector::GetData<string_t>(args.data[10]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[8]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[9]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[10]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s10 = in10[i].GetString();
+        Raster *r = raster_make(in1[i], in2[i], in3[i], in4[i], in5[i], in6[i], in7[i], in8[i], in9[i], s10.c_str(), 0.0, false, (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_make_empty(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2233,6 +2359,81 @@ static void Gen_raster_make_empty_v1(DataChunk &args, ExpressionState &, Vector 
         if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *r = raster_make_empty(in0[i], in1[i], in2[i], in3[i], in4[i], in5[i], in6[i], in7[i], 0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_add_band(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto in4 = FlatVector::GetData<double>(args.data[4]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n4 = !FlatVector::Validity(args.data[4]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        std::string s2 = in2[i].GetString();
+        Raster *r = raster_add_band(p0, in1[i], s2.c_str(), in3[i], (n4 ? 0.0 : in4[i]), (n4 ? false : true));
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_add_band_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        std::string s2 = in2[i].GetString();
+        Raster *r = raster_add_band(p0, in1[i], s2.c_str(), in3[i], 0.0, false);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_add_band_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        std::string s2 = in2[i].GetString();
+        Raster *r = raster_add_band(p0, in1[i], s2.c_str(), 0, 0.0, false);
+        free(p0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = RasterToBlob(result, r);
     }
@@ -3387,12 +3588,19 @@ void RegisterGenerated_meos_quadbin_set_constructor(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_raster_base_constructor(ExtensionLoader &loader) {
+    { ScalarFunction sf = ScalarFunction("raquet", {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, QuadbinTypes::quadbin(), LogicalType::VARCHAR, LogicalType::DOUBLE}, RaquetTypes::raquet(), Gen_raquet_make); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raquet", {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, QuadbinTypes::quadbin(), LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_make_v1));
     { ScalarFunction sf = ScalarFunction("raquetRead", {LogicalType::VARCHAR, QuadbinTypes::quadbin()}, RaquetTypes::raquet(), Gen_raquet_read); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
     RegisterSerializedScalarFunction(loader, ScalarFunction("raquetRead", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_read_v1));
     { ScalarFunction sf = ScalarFunction("raquetRead", {LogicalType::BLOB, QuadbinTypes::quadbin()}, RaquetTypes::raquet(), Gen_raquet_read_bytes); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
     RegisterSerializedScalarFunction(loader, ScalarFunction("raquetRead", {LogicalType::BLOB}, RaquetTypes::raquet(), Gen_raquet_read_bytes_v1));
+    { ScalarFunction sf = ScalarFunction("raster", {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_make); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("raster", {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_make_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("makeEmptyRaster", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_make_empty));
     RegisterSerializedScalarFunction(loader, ScalarFunction("makeEmptyRaster", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_make_empty_v1));
+    { ScalarFunction sf = ScalarFunction("addBand", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_add_band); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("addBand", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_add_band_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("addBand", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_add_band_v2));
     { ScalarFunction sf = ScalarFunction("addBand", {RasterTypes::raster(), RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_add_band_raster); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
     RegisterSerializedScalarFunction(loader, ScalarFunction("addBand", {RasterTypes::raster(), RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_add_band_raster_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("addBand", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_add_band_raster_v2));
