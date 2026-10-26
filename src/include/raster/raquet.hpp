@@ -20,16 +20,12 @@ struct RaquetTypes {
 
     static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
-    static void RegisterScalarFunctions(ExtensionLoader &loader);
 };
 
 struct RaquetFunctions {
     /* In/out */
     static bool Raquet_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Raquet_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* Constructor */
-    static void Raquet_constructor(DataChunk &args, ExpressionState &state, Vector &result);
 };
 
 } // namespace duckdb

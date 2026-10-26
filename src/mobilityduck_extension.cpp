@@ -435,7 +435,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// tgeompoint and stbox types its surface refers to.
 	RaquetTypes::RegisterTypes(loader);
 	RaquetTypes::RegisterCastFunctions(loader);
-	RaquetTypes::RegisterScalarFunctions(loader);
 
 	// MEOS's raster: type registration and text casts are the hand layer, its
 	// function surface is generated.
