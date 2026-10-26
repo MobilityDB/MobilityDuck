@@ -24,6 +24,13 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 # platform: both are read from the freshly-built duckdb binary (authoritative
 # for whatever is being tested), and DUCKDB_VERSION_TAG and the uname map are
 # used only when that binary gives no answer.
+#
+# The staged file is shared by every build of the same DuckDB version on the
+# machine, and a running suite has it mapped. It is therefore written beside the
+# target and renamed over it, so a process that has it open keeps reading the
+# file it opened; copying over it in place truncates and rewrites that file, and
+# the running process then faults on its pages (SIGBUS) or executes the new
+# content at the old offsets (SIGSEGV).
 DUCKDB_VERSION_TAG := v1.5.5
 
 define stage_icu
@@ -42,7 +49,9 @@ define stage_icu
 	    esac; \
 	  fi; \
 	  target=$$HOME/.duckdb/extensions/$$version_tag/$$platform; \
-	  mkdir -p "$$target" && cp -f ./build/$(1)/extension/icu/icu.duckdb_extension "$$target/" && \
+	  mkdir -p "$$target" && \
+	  cp -f ./build/$(1)/extension/icu/icu.duckdb_extension "$$target/icu.duckdb_extension.$$$$" && \
+	  mv -f "$$target/icu.duckdb_extension.$$$$" "$$target/icu.duckdb_extension" && \
 	  echo "Staged icu.duckdb_extension at $$target/ (duckdb $$version_tag / $$platform)"; \
 	fi
 endef
