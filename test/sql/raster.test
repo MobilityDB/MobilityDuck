@@ -297,3 +297,51 @@ statement error
 SELECT summaryStats(r, 2) FROM stats;
 ----
 The raster has no band 2, it has 1
+
+# The statistics of the pixels of many rasters, the two tiles of MobilityDB's
+# raster regression test for summaryStatsAgg, 2x2 bands of 1 and of 3, nodata
+# -9999, as MobilityDB answers them.
+statement ok
+CREATE TABLE stat_tiles AS
+SELECT 1 AS id, addBand(makeEmptyRaster(2, 2, 0.0, 2.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '32BF', 1.0, -9999.0) AS r
+UNION ALL
+SELECT 2, addBand(makeEmptyRaster(2, 2, 1.0, 1.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '32BF', 3.0, -9999.0);
+
+query IRRRRR
+SELECT s.count, s.sum, s.mean, s.stddev, s.min, s.max
+FROM (SELECT summaryStatsAgg(r, 1, true) AS s FROM stat_tiles);
+----
+8	16.0	2.0	1.0	1.0	3.0
+
+# The form leaving the band out reads band 1, each tile alone answers what
+# summaryStats answers for it, and a NULL raster is skipped.
+query I
+SELECT summaryStatsAgg(r, false) = summaryStatsAgg(r, 1, false) FROM stat_tiles;
+----
+true
+
+query IT
+SELECT id, summaryStatsAgg(r, 1, true) = any_value(summaryStats(r, 1, true))
+FROM stat_tiles GROUP BY id ORDER BY id;
+----
+1	true
+2	true
+
+query I
+SELECT summaryStatsAgg(r, 1, true) = (SELECT summaryStatsAgg(r, 1, true) FROM stat_tiles)
+FROM (SELECT r FROM stat_tiles UNION ALL SELECT NULL);
+----
+true
+
+# No raster read answers NULL; rasters whose every pixel is nodata count no
+# pixel and answer the row MobilityDB answers, (0,,,,,).
+query I
+SELECT summaryStatsAgg(r, 1, true) IS NULL FROM stat_tiles WHERE false;
+----
+true
+
+query IIIIII
+SELECT s.count, s.sum IS NULL, s.mean IS NULL, s.stddev IS NULL, s.min IS NULL, s.max IS NULL
+FROM (SELECT summaryStatsAgg(e, 1, true) AS s FROM stats);
+----
+0	true	true	true	true	true
