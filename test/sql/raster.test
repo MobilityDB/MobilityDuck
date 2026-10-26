@@ -1,0 +1,70 @@
+# name: test/sql/raster.test
+# description: MEOS's raster: its type, its text, its accessors, its constructors
+#              and the value of a raster along a tgeompoint trajectory.
+# group: [sql]
+
+require mobilityduck
+
+# The instants of the trajectory are read and written in UTC.
+statement ok
+SET TimeZone = 'UTC';
+
+# ── a raster from its text ───────────────────────────────────────────────────
+
+# A 3x3 32BF depth raster in SRID 4326 holding 10, 20, 30 / 40, 50, 60 /
+# 70, 80, 90 over unit pixels from (0, 3), as PostGIS's ST_AsHexWKB writes it.
+statement ok
+CREATE TABLE depth AS
+SELECT rasterFromHexWKB('0100000100000000000000F03F000000000000F0BF0000000000000000000000000000084000000000000000000000000000000000E6100000030003000A00000000000020410000A0410000F04100002042000048420000704200008C420000A0420000B442') AS r;
+
+query IIIIIIIII
+SELECT numBands(r), width(r), height(r), upperLeftX(r), upperLeftY(r), scaleX(r),
+  scaleY(r), SRID(r), bandPixelType(r, 1)
+FROM depth;
+----
+1	3	3	0.0	3.0	1.0	-1.0	4326	float32
+
+# The text of a raster is its little-endian hex-encoded WKB, and the raster
+# round-trips through it.
+query II
+SELECT r::VARCHAR = '0100000100000000000000F03F000000000000F0BF0000000000000000000000000000084000000000000000000000000000000000E6100000030003000A00000000000020410000A0410000F04100002042000048420000704200008C420000A0420000B442',
+  r::VARCHAR::RASTER = r
+FROM depth;
+----
+true	true
+
+# The pixels of the band, row by row and little-endian.
+query I
+SELECT pixels(r, 1) = from_hex('000020410000A0410000F041000020420000484200007042' || '00008C420000A0420000B442')
+FROM depth;
+----
+true
+
+# ── the value of a raster along a trajectory ─────────────────────────────────
+
+# The clearance of a vessel of draught 8.5, as MobilityDB answers
+# rasterValue(trip, depth - 8.5) in its raster regression test, the draught
+# taken as a raster of the grid of the depth whose every pixel is 8.5.
+query I
+SELECT asText(rasterValue(tgeompoint 'SRID=4326;[POINT(0.5 2.5)@2001-01-01, POINT(2.5 2.5)@2001-01-02, POINT(0.5 0.5)@2001-01-03]',
+  rasterSub(r, rasterFromHexWKB('0100000100000000000000F03F000000000000F0BF0000000000000000000000000000084000000000000000000000000000000000E6100000030003000A00000000000008410000084100000841000008410000084100000841000008410000084100000841'))))
+FROM depth;
+----
+Interp=Step;[1.5@2001-01-01 00:00:00+00, 11.5@2001-01-01 06:00:00+00, 21.5@2001-01-01 18:00:00+00, 41.5@2001-01-02 06:00:00+00, 61.5@2001-01-02 18:00:00+00, 61.5@2001-01-03 00:00:00+00]
+
+# ── constructors ─────────────────────────────────────────────────────────────
+
+# An empty raster holds no band.
+query IIII
+SELECT numBands(e), width(e), height(e), SRID(e)
+FROM (SELECT makeEmptyRaster(2, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 3857) AS e);
+----
+0	2	3	3857
+
+# The band of another raster is appended, or added at a position.
+query IIII
+SELECT numBands(addBand(r, r)), numBands(addBand(addBand(r, r), r, 1, 1)),
+  pixels(addBand(r, r), 2) = pixels(r, 1), bandPixelType(addBand(r, r), 2)
+FROM depth;
+----
+2	3	true	float32

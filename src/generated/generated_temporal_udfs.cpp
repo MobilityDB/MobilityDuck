@@ -27,6 +27,7 @@
 #include "rgeo/trgeometry.hpp"
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
+#include "raster/raster.hpp"
 #include "spatial/spatial_types.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
@@ -248,6 +249,7 @@ void RegisterGenerated_meos_raster_base_comp(ExtensionLoader &loader);
 void RegisterGenerated_meos_raster_base_constructor(ExtensionLoader &loader);
 void RegisterGenerated_meos_raster_base_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_raster_base_inout(ExtensionLoader &loader);
+void RegisterGenerated_meos_raster_base_math(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_bbox_split(ExtensionLoader &loader);
 void RegisterGenerated_meos_rgeo_comp_ever(ExtensionLoader &loader);
@@ -516,6 +518,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_raster_base_constructor(loader);
     RegisterGenerated_meos_raster_base_conversion(loader);
     RegisterGenerated_meos_raster_base_inout(loader);
+    RegisterGenerated_meos_raster_base_math(loader);
     RegisterGenerated_meos_rgeo_accessor(loader);
     RegisterGenerated_meos_rgeo_bbox_split(loader);
     RegisterGenerated_meos_rgeo_comp_ever(loader);

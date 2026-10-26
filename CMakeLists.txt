@@ -163,6 +163,7 @@ set(EXTENSION_SOURCES
     src/quadbin/tquadbin.cpp
     src/s2cell/ts2cell.cpp
     src/raster/raquet.cpp
+    src/raster/raster.cpp
     src/temporal/temporal_blob.cpp
     src/json/tjsonb.cpp
     src/json/tjsonb_in_out.cpp

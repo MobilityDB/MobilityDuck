@@ -45,13 +45,17 @@ true
 # whenTrue
 # ---------------------------------------------------------------------------
 
+# The trip leaves the disc of radius sqrt(2) at Point(2 2), on 2001-01-02, and
+# enters it again there, on 2001-01-06. MEOS dates the instant of a crossing by
+# truncating the duration times the fraction of the segment, which places the
+# second one at 2001-01-05 23:59:59.999999.
 query II
 SELECT
   asText(whenTrue(tGreaterThan(tfloat '[1@2001-01-01, 4@2001-01-04, 1@2001-01-07]', 2.0)))
     = asText(tstzspanset '{(2001-01-02, 2001-01-06)}'),
   asText(whenTrue(tDwithin(tgeompoint '[Point(1 1)@2001-01-01, Point(4 4)@2001-01-04,
       Point(1 1)@2001-01-07]', geometry 'Point(1 1)', sqrt(2))))
-    = asText(tstzspanset '{[2001-01-01, 2001-01-02], [2001-01-06, 2001-01-07]}');
+    = asText(tstzspanset '{[2001-01-01, 2001-01-02], [2001-01-05 23:59:59.999999, 2001-01-07]}');
 ----
 true	true
 
