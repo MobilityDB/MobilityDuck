@@ -5906,9 +5906,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # with its count; src/pointcloud/pcschema.cpp keeps it.
 # summaryStats and the summarystats accessors (summarystatsCount, summarystatsSum,
 # summarystatsMean, summarystatsStddev, summarystatsMin, summarystatsMax) answer or take
-# summarystats, a structure no DuckDB type of this surface carries yet; valueCount answers rows of
-# a ValueCount, dumpAsPolygons rows of a GeomVal, pixelAsPoints rows of a Pixel and dumpValues an
-# array of values with an array of nodata flags, which no shape returns; no hand registration
+# summarystats, a structure no DuckDB type of this surface carries yet; no hand registration
 # answers them either.
 # setValues reads its values as a two-dimensional array whose dimensions give the width and height
 # of the block, which no SQL argument of its signature fills, so the catalog places none of
@@ -5920,8 +5918,8 @@ RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "pointCloudSchemaRegister",
                        "summaryStats", "summarystatsCount", "summarystatsSum",
                        "summarystatsMean", "summarystatsStddev", "summarystatsMin",
-                       "summarystatsMax", "valueCount", "dumpAsPolygons", "pixelAsPoints",
-                       "dumpValues", "setValues"}
+                       "summarystatsMax",
+                       "setValues"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -6890,6 +6888,26 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
                         post=["for (auto *e : v%d) free(e);" % k],
                         cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
                                lenp["name"]: "(%s) v%d.size()" % (ln, k)})
+        # a list of numbers or booleans, the SQL type of its elements the one BOUND_TAIL_SQL
+        # names for the C element; a NULL element raises PostgreSQL's message for it, as
+        # deconstruct_array raises it where datumarr_extract asks no NULL flags, and as
+        # #emit_value_array_make raises it
+        if (eb in SCALAR_ARG and "*" not in elem and t.endswith("[]")
+                and BOUND_TAIL_SQL.get(eb) == t[:-2]):
+            dt, cpp, _ = SCALAR_ARG[eb]
+            pre = ["const list_entry_t le%d = %s;" % (k, v),
+                   "vector<%s> v%d;" % (cpp, k),
+                   "v%d.reserve(le%d.length + 1);" % (k, k),
+                   "for (idx_t j = 0; j < le%d.length; j++) {" % k,
+                   "    if (!ch%dv.RowIsValid(le%d.offset + j))" % (k, k),
+                   "        throw InvalidInputException(\"null array element not allowed in "
+                   "this context\");",
+                   "    v%d.push_back(ch%dd[le%d.offset + j]);" % (k, k, k),
+                   "}"]
+            return dict(kind="list", dt="LogicalType::LIST(%s)" % dt, cpp="list_entry_t",
+                        elem_cpp=cpp, pre=pre, post=[],
+                        cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
+                               lenp["name"]: "(%s) v%d.size()" % (ln, k)})
         return None
     if n.count("*") == 1 and b in TEMPORAL_CBASES:
         acc = SIG_TEMPORAL_ACC.get(t)
@@ -6954,10 +6972,130 @@ def sig_call_literal(p, raw):
         return None if lit.upper() == "NULL" else "static_cast<uint64_t>(%s)" % lit
     return forward_literal(p, raw)
 
-def sig_call_ret(f, s, outs):
+# The DuckDB type and the C++ type of its vector of a column of rows a set-returning signature
+# states (#sig_call_rows), by the SQL type of the column; a field is assigned to its column as
+# #emit_path_table assigns one, the C++ type of the column converting it
+ROW_COLUMN = {"double precision": ("LogicalType::DOUBLE", "double"),
+              "float": ("LogicalType::DOUBLE", "double"),
+              "integer": ("LogicalType::INTEGER", "int32_t"),
+              "bigint": ("LogicalType::BIGINT", "int64_t"),
+              "boolean": ("LogicalType::BOOLEAN", "bool")}
+
+def sig_call_rows(f, s, outs):
+    """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
+    expressions) for a set-returning signature whose `columns` read fields of the structures of
+    the C array the function returns, its length written through the out-parameter
+    `arrayReturn.lengthFrom` names: a LIST(STRUCT(columns)) a query UNNESTs into the rows, as the
+    *Pairs scalars answer theirs (#emit_pairs_scalar). Each field is read by its name from the
+    structure the MEOS header declares, as #emit_path_table reads the fields of a Match; a
+    geometry is written into its column as #emit_body writes one; the array is freed by the
+    `<structure>_arr_free` MEOS publishes for it, which frees what its fields hold
+    (geomval_arr_free, pixel_arr_free), else by free. A NULL array answers no row, as the
+    set-returning wrapper returns none. None when a column reads no field of the returned
+    structures or a type no column reader takes."""
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    rb = base(f["returnType"]["canonical"])
+    if not lf or [p["name"] for p in outs] != [lf] or not norm(f["returnType"]["canonical"]).endswith("*"):
+        return None
+    members, writes = [], []
+    for c, col in enumerate(s.get("columns") or []):
+        fld, t = col.get("field"), col.get("type")
+        if col.get("from") != "return" or not fld:
+            return None
+        if t == "geometry":
+            members.append('{"%s", MobilityDuckGeometryType()}' % col["name"])
+            writes.append("FlatVector::GetData<string_t>(*ents[%d])[off + j] = "
+                          "GSerializedToGeometry(r[j].%s, state, *ents[%d]);" % (c, fld, c))
+        elif t in ROW_COLUMN:
+            dt, cpp = ROW_COLUMN[t]
+            # a LogicalType built from the id: the pair of a member binds a reference to what it
+            # is given, and bound to the static constexpr LogicalType::DOUBLE it asks for a
+            # definition of the constant beside the one libduckdb links, which the MinGW linker
+            # refuses
+            members.append('{"%s", LogicalType(%s)}' % (col["name"], dt))
+            writes.append("FlatVector::GetData<%s>(*ents[%d])[off + j] = r[j].%s;"
+                          % (cpp, c, fld))
+        else:
+            return None
+    if not members:
+        return None
+    fr = "%s_arr_free" % rb.lower()
+    release = ("%s(r, cnt);" % fr if (FN_BY_NAME.get(fr) or {}).get("api") == "public"
+               else "free(r);")
+    rwrite = (["const idx_t off = ListVector::GetListSize(result);",
+               "if (!r) cnt = 0;",
+               "ListVector::Reserve(result, off + cnt);",
+               "auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));",
+               "for (int j = 0; j < cnt; j++) {"] + ["    " + w for w in writes] +
+              ["}",
+               "ListVector::SetListSize(result, off + cnt);",
+               "out[i] = list_entry_t{off, idx_t(cnt)};",
+               "if (r) %s" % release])
+    return ("LogicalType::LIST(LogicalType::STRUCT({%s}))" % ", ".join(members), "list_entry_t",
+            ["int cnt = 0;", "%s *r = CALL;" % rb], rwrite, {lf: "&cnt"})
+
+def sig_call_shaped(f, s, outs, cexpr):
+    """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
+    expressions) for a signature returning a SQL array of numbers its `arrayShape` lays out from
+    the C array the function returns, the sibling of #sig_call_rows for an array of rows, each list
+    built as #emit_array builds one: rows of the length `rowLength` calls for (raster_width of the
+    raster, read before the operands are freed), each a LIST(DOUBLE) of a LIST, an element NULL
+    where the output array `nulls` names is true. dumpValues(raster, integer, boolean) answers the
+    values of a band as its rows, as raster_values_array lays them out for PostgreSQL. A NULL array
+    answers NULL. None when the shape names a call on a parameter no argument fills, or another
+    layout."""
+    shp = s.get("arrayShape") or {}
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    rl = shp.get("rowLength") or {}
+    elem = norm((ar.get("element") or {}).get("canonical") or "")
+    if (not lf or elem != "double" or s.get("ret") != "double precision[]" or not rl.get("call")
+            or any(a not in cexpr for a in rl.get("args") or [])):
+        return None
+    nulls = shp.get("nulls")
+    names = {p["name"] for p in outs}
+    if names != {lf} | ({nulls} if nulls else set()):
+        return None
+    call = "%s(%s)" % (rl["call"], ", ".join(cexpr[a] for a in rl["args"]))
+    rcall = ["int cnt = 0;"] + (["bool *nul = NULL;"] if nulls else []) + \
+            ["double *r = CALL;", "const int w = r ? %s : 0;" % call]
+    rwrite = ["if (!r) { outv.SetInvalid(i); continue; }",
+              "const int nrows = w > 0 ? cnt / w : 0;",
+              "const idx_t off = ListVector::GetListSize(result);",
+              "ListVector::Reserve(result, off + nrows);",
+              "auto &inner = ListVector::GetEntry(result);",
+              "const idx_t ioff = ListVector::GetListSize(inner);",
+              "ListVector::Reserve(inner, ioff + cnt);",
+              "auto ient = FlatVector::GetData<list_entry_t>(inner);",
+              "auto &vals = ListVector::GetEntry(inner);",
+              "auto vdat = FlatVector::GetData<double>(vals);",
+              "auto &vval = FlatVector::Validity(vals);",
+              "for (int k = 0; k < nrows; k++)",
+              "    ient[off + k] = list_entry_t{ioff + idx_t(k) * idx_t(w), idx_t(w)};",
+              "for (int j = 0; j < cnt; j++) {",
+              "    vdat[ioff + j] = r[j];"] + \
+             (["    if (nul && nul[j]) vval.SetInvalid(ioff + j);"] if nulls else []) + \
+             ["}",
+              "ListVector::SetListSize(inner, ioff + cnt);",
+              "ListVector::SetListSize(result, off + nrows);",
+              "out[i] = list_entry_t{off, idx_t(nrows)};",
+              "free(r);"] + (["free(nul);"] if nulls else [])
+    outx = {lf: "&cnt"}
+    if nulls:
+        outx[nulls] = "&nul"
+    return ("LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE))", "list_entry_t",
+            rcall, rwrite, outx)
+
+def sig_call_ret(f, s, outs, cexpr=None):
     """(DuckDB type, C++ type of the result vector, the call and result lines, where `CALL` stands
     for the call) for the result of `f` declared as `s["ret"]`, its out-parameters `outs` read back;
-    None if no marshalling reaches it."""
+    None if no marshalling reaches it. `cexpr` maps each C parameter an argument fills to its C
+    expression, for a result whose shape calls on one (#sig_call_shaped)."""
+    if s.get("retSet") and s.get("columns"):
+        return sig_call_rows(f, s, outs)
+    if s.get("arrayShape"):
+        return sig_call_shaped(f, s, outs, cexpr or {})
     rc = f["returnType"]["canonical"]
     rb, rn, sqlr = base(rc), norm(rc), s.get("ret")
     sizes = [p for p in outs if norm(p["canonical"]) == "size_t *"]
@@ -7047,6 +7185,9 @@ def shape_sig_call(f):
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
     if re.search(r'_(out|in|send|recv)$', f["sqlfn"]) or unregistered_family_ref(f["name"]):
+        return None
+    # the rows of a *Path function are the TABLE function #emit_path_table registers
+    if shape_path(f):
         return None
     shape = f.get("shape") or {}
     ps = f.get("params") or []
@@ -7142,6 +7283,22 @@ def shape_sig_call(f):
                 args[k] = dict(args[k], pre=["%s = n%d ? %s : %s;" % (lhs, k, empty, rhs)])
                 nb[k] = {cn: "nullptr" for cn in binds}
                 continue
+            # a list the wrapper passes as its array and its length when the argument is NULL
+            # (valueCount's searchvalues NULL and nsearch 0): a NULL row reads no element, its
+            # vector staying declared for the call and the release
+            if (k < len(args) and args[k]["kind"] == "list"
+                    and set(binds) == set(args[k]["cexpr"])):
+                lits = {cn: sig_call_literal(byname[cn], lit) for cn, lit in binds.items()
+                        if cn in byname}
+                if len(lits) != len(binds) or None in lits.values():
+                    nb = None
+                    break
+                decl = [x for x in args[k]["pre"] if x.startswith("vector<")]
+                body = [x for x in args[k]["pre"] if not x.startswith("vector<")]
+                args[k] = dict(args[k], pre=decl + ["if (!n%d) {" % k] +
+                               ["    " + x for x in body] + ["}"])
+                nb[k] = lits
+                continue
             if k >= len(args) or args[k]["kind"] != "byval":
                 nb = None
                 break
@@ -7152,7 +7309,7 @@ def shape_sig_call(f):
             nb[k] = lits
         if nb is None:
             continue
-        ret = sig_call_ret(f, s, outs)
+        ret = sig_call_ret(f, s, outs, {cn: e for a in args for cn, e in a["cexpr"].items()})
         if ret is None:
             continue
         plans.append((s, order, args, bound, nb, ret))
@@ -7192,7 +7349,9 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
     name = f["name"]
     args = args[:nargs]
     dt, rcpp, rcall, rwrite, outx = ret
-    L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{",
+    # the state a geometry written into a column of rows reads (#sig_call_rows)
+    state = "state" if any("GSerializedToGeometry(" in x for x in rwrite) else ""
+    L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &{state}, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    const idx_t rows = args.size();",
          f"    for (idx_t c = 0; c < {nargs}; c++) args.data[c].Flatten(rows);"]
@@ -7201,7 +7360,7 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
             L += [f"    auto in{k} = ListVector::GetData(args.data[{k}]);",
                   f"    auto &ch{k} = ListVector::GetEntry(args.data[{k}]);",
                   f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));",
-                  f"    auto ch{k}d = FlatVector::GetData<string_t>(ch{k});",
+                  f"    auto ch{k}d = FlatVector::GetData<{a.get('elem_cpp', 'string_t')}>(ch{k});",
                   f"    auto &ch{k}v = FlatVector::Validity(ch{k});"]
         else:
             L.append(f"    auto in{k} = FlatVector::GetData<{a['cpp']}>(args.data[{k}]);")

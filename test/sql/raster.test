@@ -147,3 +147,100 @@ SELECT width(m), height(m), bandPixelType(mapAlgebra(r, 1, 'MEAN'), 1)
 FROM (SELECT r, mapAlgebra(r, 1, 'MEAN', NULL, 'UNION', NULL, 1, 1) AS m FROM dem);
 ----
 4	4	float32
+
+# ── rows ─────────────────────────────────────────────────────────────────────
+
+# A set-returning function answers a list of its rows, which UNNEST spreads.
+# The 3x3 raster of MobilityDB's raster regression test for valueCount, nodata
+# -9999: 1.24, 1.26, -9999 / 2, 2, 2 / 3, 1.24, 2.
+statement ok
+CREATE TABLE counts AS
+SELECT raster(from_hex('52B89E3FAE47A13F003C1CC60000004000000040000000400000404052B89E3F00000040'),
+  3, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 4326, '32BF', -9999.0) AS r;
+
+# The rows MobilityDB answers for its four forms.
+query TRI
+SELECT 'all' AS form, round(v.value, 6) AS value, v.count FROM counts, unnest(valueCount(r)) t(v)
+UNION ALL SELECT 'nodata kept', round(v.value, 6), v.count
+  FROM counts, unnest(valueCount(r, 1, false)) t(v)
+UNION ALL SELECT 'tenths', round(v.value, 6), v.count
+  FROM counts, unnest(valueCount(r, 1, true, NULL, 0.1)) t(v)
+UNION ALL SELECT 'searched', round(v.value, 6), v.count
+  FROM counts, unnest(valueCount(r, [2.0, 7.0])) t(v)
+ORDER BY 1, 2;
+----
+all	1.24	2
+all	1.26	1
+all	2.0	4
+all	3.0	1
+nodata kept	-9999.0	1
+nodata kept	1.24	2
+nodata kept	1.26	1
+nodata kept	2.0	4
+nodata kept	3.0	1
+searched	2.0	4
+searched	7.0	0
+tenths	1.2	2
+tenths	1.3	1
+tenths	2.0	4
+tenths	3.0	1
+
+query RR
+SELECT round(v.value, 6), round(v.percent, 6) FROM counts, unnest(valuePercent(r)) t(v) ORDER BY 1;
+----
+1.24	0.25
+1.26	0.125
+2.0	0.5
+3.0	0.125
+
+statement error
+SELECT valueCount(r, [2.0, NULL]) FROM counts;
+----
+null array element not allowed in this context
+
+# The regions of equal value of MobilityDB's dumpAsPolygons case, 1, 1, 2 /
+# 1, 2, 2 / 3, 3, -9999: their values and areas, and four regions with the
+# nodata pixel kept.
+statement ok
+CREATE TABLE regions AS
+SELECT raster(from_hex('0000803F0000803F000000400000803F00000040000000400000404000004040003C1CC6'),
+  3, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 4326, '32BF', -9999.0) AS r;
+
+query RR
+SELECT d.val, ST_Area(d.geom) FROM regions, unnest(dumpAsPolygons(r)) t(d) ORDER BY 1;
+----
+1.0	3.0
+2.0	3.0
+3.0	2.0
+
+query I
+SELECT len(dumpAsPolygons(r, 1, false)) FROM regions;
+----
+4
+
+# The pixels of MobilityDB's tbl_pixels band, 1.5, -9999, 3 / 4, 5, 6: their
+# points, values and positions, and the values as rows of the band.
+statement ok
+CREATE TABLE pixel_band AS
+SELECT raster(from_hex('0000C03F003C1CC600004040000080400000A0400000C040'),
+  3, 2, 10.0, 20.0, 2.0, -1.0, 0.0, 0.0, 3857, '32BF', -9999.0) AS r;
+
+query TRII
+SELECT ST_AsText(p.geom), p.val, p.x, p.y FROM pixel_band, unnest(pixelAsPoints(r)) t(p)
+ORDER BY p.y, p.x;
+----
+POINT (10 20)	1.5	1	1
+POINT (14 20)	3.0	3	1
+POINT (10 19)	4.0	1	2
+POINT (12 19)	5.0	2	2
+POINT (14 19)	6.0	3	2
+
+query TT
+SELECT dumpValues(r, 1)::VARCHAR, dumpValues(r, 1, false)::VARCHAR FROM pixel_band;
+----
+[[1.5, NULL, 3.0], [4.0, 5.0, 6.0]]	[[1.5, -9999.0, 3.0], [4.0, 5.0, 6.0]]
+
+statement error
+SELECT dumpAsPolygons(r, 2) FROM pixel_band;
+----
+The raster has no band 2, it has 1
