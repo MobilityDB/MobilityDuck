@@ -244,3 +244,56 @@ statement error
 SELECT dumpAsPolygons(r, 2) FROM pixel_band;
 ----
 The raster has no band 2, it has 1
+
+# ── summary statistics ───────────────────────────────────────────────────────
+
+# The raster of MobilityDB's raster regression test for summaryStats, nodata
+# -9999: 10, 20, 30 / 40, -9999, 60 / 70, 80, 90, and a band whose every pixel
+# is nodata.
+statement ok
+CREATE TABLE stats AS
+SELECT raster(from_hex('000020410000A0410000F04100002042003C1CC60000704200008C420000A0420000B442'),
+  3, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 4326, '32BF', -9999.0) AS r,
+  raster(from_hex(repeat('003C1CC6', 9)),
+  3, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 4326, '32BF', -9999.0) AS e;
+
+# The row of the statistics, as MobilityDB answers it: the nodata pixel left
+# out, or counted as the value it holds.
+query IRRRRRII
+SELECT s.count, s.sum, s.mean, round(s.stddev, 6), s.min, s.max,
+  summaryStats(r, 1, false).count, summaryStats(r, 1, false).sum = 400 - 9999
+FROM (SELECT r, summaryStats(r) AS s FROM stats);
+----
+8	400.0	50.0	27.386128	10.0	90.0	9	true
+
+# The accessors read the fields of the row, each answering the field it names.
+query IRRRRRI
+SELECT summarystatsCount(s), summarystatsSum(s), summarystatsMean(s),
+  round(summarystatsStddev(s), 6), summarystatsMin(s), summarystatsMax(s),
+  summarystatsCount(s) = s.count AND summarystatsSum(s) = s.sum AND
+    summarystatsMean(s) = s.mean AND summarystatsStddev(s) = s.stddev AND
+    summarystatsMin(s) = s.min AND summarystatsMax(s) = s.max
+FROM (SELECT summaryStats(r) AS s FROM stats);
+----
+8	400.0	50.0	27.386128	10.0	90.0	true
+
+# A band whose every pixel is nodata counts no pixel and states no statistic,
+# the row MobilityDB and PostGIS answer, (0,,,,,), and the accessors answer 0
+# and NULL.
+query IIIIII
+SELECT s.count, s.sum IS NULL, s.mean IS NULL, s.stddev IS NULL, s.min IS NULL, s.max IS NULL
+FROM (SELECT summaryStats(e) AS s FROM stats);
+----
+0	true	true	true	true	true
+
+query IRRRRR
+SELECT summarystatsCount(s), summarystatsSum(s), summarystatsMean(s),
+  summarystatsStddev(s), summarystatsMin(s), summarystatsMax(s)
+FROM (SELECT summaryStats(e) AS s FROM stats);
+----
+0	NULL	NULL	NULL	NULL	NULL
+
+statement error
+SELECT summaryStats(r, 2) FROM stats;
+----
+The raster has no band 2, it has 1

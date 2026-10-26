@@ -5921,10 +5921,6 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # rows of its tables pointcloud_schemas and pointcloud_dimensions, so the catalog states no
 # signature for meos_pc_schema_register_dims, whose dimensions are an array of PCDimensionSpec
 # with its count; src/pointcloud/pcschema.cpp keeps it.
-# summaryStats and the summarystats accessors (summarystatsCount, summarystatsSum,
-# summarystatsMean, summarystatsStddev, summarystatsMin, summarystatsMax) answer or take
-# summarystats, a structure no DuckDB type of this surface carries yet; no hand registration
-# answers them either.
 # setValues reads its values as a two-dimensional array whose dimensions give the width and height
 # of the block, which no SQL argument of its signature fills, so the catalog places none of
 # raster_set_values's C parameters width, height and noset; the JVM surfaces leave it out too.
@@ -5933,9 +5929,6 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
-                       "summaryStats", "summarystatsCount", "summarystatsSum",
-                       "summarystatsMean", "summarystatsStddev", "summarystatsMin",
-                       "summarystatsMax",
                        "setValues"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
@@ -6958,6 +6951,15 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
         return dict(kind="ptr", dt="LogicalType::VARCHAR", cpp="string_t",
                     pre=["text *p%d = MakeText(%s);" % (k, v)], post=["free(p%d);" % k],
                     cexpr={p["name"]: "p%d" % k})
+    sr = struct_row(t) if n.count("*") == 1 else None
+    if sr and sr[0] == b:
+        # a row of the fields of a structure (#struct_row) read into one on the stack, a NULL
+        # field reading as 0, as MobilityDB's record_bandstats reads a summarystats record
+        pre = ["%s s%d{};" % (b, k)] + [
+            "if (sf%d_%dv.RowIsValid(i)) s%d.%s = sf%d_%d[i];" % (k, j, k, fl, k, j)
+            for j, (fl, _cpp) in enumerate(sr[2])]
+        return dict(kind="struct", dt=sr[1], cpp=None, fields=sr[2], pre=pre, post=[],
+                    cexpr={p["name"]: "&s%d" % k})
     if "*" in n:
         return None
     if b in CELL_UINT and t in CELL_SQL:
@@ -6997,6 +6999,46 @@ ROW_COLUMN = {"double precision": ("LogicalType::DOUBLE", "double"),
               "integer": ("LogicalType::INTEGER", "int32_t"),
               "bigint": ("LogicalType::BIGINT", "int64_t"),
               "boolean": ("LogicalType::BOOLEAN", "bool")}
+
+# The DuckDB type and the C++ type of its vector of a field of a structure carried as a row
+# (#struct_row), by the C type of the field; a uint32_t count is a BIGINT, as PostgreSQL keeps it
+STRUCT_FIELD = {"uint32_t": ("LogicalType::BIGINT", "int64_t"),
+                "int": ("LogicalType::INTEGER", "int32_t"),
+                "double": ("LogicalType::DOUBLE", "double"),
+                "bool": ("LogicalType::BOOLEAN", "bool")}
+# The structure each SQL type carried as a row stands for, {SQL type: structure}, filled on first
+# use from FN_BY_NAME (#struct_row)
+STRUCT_ROWS = {}
+
+def struct_row(sql):
+    """(structure, DuckDB STRUCT type, [(field, C++ type of its vector)]) of SQL type `sql` when it
+    stands for a structure of the catalog's structs whose fields are all scalars, the SQL result of
+    a public function answering a pointer to it and a type no other marshalling reads, as JMEOS
+    carries such a type as the row of its fields (#_struct_rows in tools/codegen_jvm.py): PostGIS's
+    summarystats is the row of the BandStats raster_summary_stats answers. None otherwise. Filled
+    as #sig_claims fills SIG_CLAIMS."""
+    if not STRUCT_ROWS:
+        known = set(BASE_LOGICAL) | set(SQL_BASE_TO_DUCK) | set(SET_SIG_ACC) | set(SIG_TEMPORAL_ACC)
+        for g in FN_BY_NAME.values():
+            rb, rn = base(g["returnType"]["canonical"]), norm(g["returnType"]["canonical"])
+            flds = (STRUCTS.get(rb) or {}).get("fields")
+            if (g.get("api") != "public" or rn.count("*") != 1 or not flds
+                    or any(fl["cType"] not in STRUCT_FIELD for fl in flds)):
+                continue
+            for t in g.get("sqlSignatures") or []:
+                if t.get("ret") and t["ret"] not in known and not t.get("retSet"):
+                    STRUCT_ROWS.setdefault(t["ret"], rb)
+        STRUCT_ROWS.setdefault("", None)
+    rb = STRUCT_ROWS.get(sql)
+    if not rb:
+        return None
+    flds = STRUCTS[rb]["fields"]
+    # each field type a LogicalType built from its id: the pair of a member binds a reference to
+    # what it is given, and bound to the static constexpr LogicalType::BIGINT it asks for a
+    # definition of the constant beside the one libduckdb links, which the linker refuses
+    dt = "LogicalType::STRUCT({%s})" % ", ".join(
+        '{"%s", LogicalType(%s)}' % (fl["name"], STRUCT_FIELD[fl["cType"]][0]) for fl in flds)
+    return rb, dt, [(fl["name"], STRUCT_FIELD[fl["cType"]][1]) for fl in flds]
 
 def sig_call_rows(f, s, outs):
     """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
@@ -7145,6 +7187,24 @@ def sig_call_ret(f, s, outs, cexpr=None):
                     ["if (!r) { %s }" % null, "out[i] = StringVector::AddString(result, r);",
                      "free(r);"], size)
         return None
+    sr = struct_row(sqlr) if rn.count("*") == 1 and "const" not in rc else None
+    if sr and sr[0] == rb:
+        # the row of the fields of the structure MEOS answers (#struct_row), each field written
+        # into its child as #emit_row_out writes a column, the structure freed after. Where MEOS
+        # answers none, having raised no error, it counts nothing (raster_summary_stats over a
+        # band whose every pixel is nodata), and the row is the one MobilityDB's bandstats_record
+        # writes for it, as PostGIS's ST_SummaryStats answers it: its count 0, its other fields
+        # NULL
+        counts = [j for j, (fl, _cpp) in enumerate(sr[2])
+                  if dict((x["name"], x["cType"]) for x in STRUCTS[rb]["fields"])[fl] == "uint32_t"]
+        empty = (["for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);"] +
+                 ["FlatVector::Validity(*cols[%d]).SetValid(i);" % j for j in counts] +
+                 ["FlatVector::GetData<int64_t>(*cols[%d])[i] = 0;" % j for j in counts])
+        return (sr[1], None, ["%s *r = CALL;" % rb],
+                ["auto &cols = StructVector::GetEntries(result);",
+                 "if (!r) {"] + ["    " + x for x in empty] + ["    continue;", "}"] +
+                ["FlatVector::GetData<%s>(*cols[%d])[i] = r->%s;" % (cpp, j, fl)
+                 for j, (fl, cpp) in enumerate(sr[2])] + ["free(r);"], {})
     if rn.endswith("*") and "const" not in rc:
         if rb in TEMPORAL_PTR_RET:
             acc = SIG_TEMPORAL_ACC.get(sqlr)
@@ -7379,18 +7439,28 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
                   f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));",
                   f"    auto ch{k}d = FlatVector::GetData<{a.get('elem_cpp', 'string_t')}>(ch{k});",
                   f"    auto &ch{k}v = FlatVector::Validity(ch{k});"]
+        elif a["kind"] == "struct":
+            # the children of a row of the fields of a structure (#struct_row)
+            L.append(f"    auto &se{k} = StructVector::GetEntries(args.data[{k}]);")
+            for j, (_fl, cpp) in enumerate(a["fields"]):
+                L += [f"    auto sf{k}_{j} = FlatVector::GetData<{cpp}>(*se{k}[{j}]);",
+                      f"    auto &sf{k}_{j}v = FlatVector::Validity(*se{k}[{j}]);"]
         else:
             L.append(f"    auto in{k} = FlatVector::GetData<{a['cpp']}>(args.data[{k}]);")
         if a["kind"] == "geo":
             L.append(f"    const int32_t crs{k} = GeometryCrsSrid(args.data[{k}].GetType());")
-    L += [f"    auto out = FlatVector::GetData<{rcpp}>(result);",
-          "    auto &outv = FlatVector::Validity(result);",
-          "    for (idx_t i = 0; i < rows; i++) {"]
+    # a row of a structure has no vector of its own to write (#sig_call_ret), and a NULL row
+    # takes its fields with it
+    if rcpp:
+        L += [f"    auto out = FlatVector::GetData<{rcpp}>(result);",
+              "    auto &outv = FlatVector::Validity(result);"]
+    null = "outv.SetInvalid(i)" if rcpp else "FlatVector::SetNull(result, i, true)"
+    L.append("    for (idx_t i = 0; i < rows; i++) {")
     for k in range(nargs):
         if k in nb:
             L.append(f"        const bool n{k} = !FlatVector::Validity(args.data[{k}]).RowIsValid(i);")
         else:
-            L.append(f"        if (!FlatVector::Validity(args.data[{k}]).RowIsValid(i)) {{ outv.SetInvalid(i); continue; }}")
+            L.append(f"        if (!FlatVector::Validity(args.data[{k}]).RowIsValid(i)) {{ {null}; continue; }}")
     cexpr = dict(bound)
     cexpr.update(omitted)
     pre, post = [], []

@@ -3201,6 +3201,310 @@ static void Gen_raster_band_pixels_v1(DataChunk &args, ExpressionState &, Vector
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_bandstats_count(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto &se0 = StructVector::GetEntries(args.data[0]);
+    auto sf0_0 = FlatVector::GetData<int64_t>(*se0[0]);
+    auto &sf0_0v = FlatVector::Validity(*se0[0]);
+    auto sf0_1 = FlatVector::GetData<double>(*se0[1]);
+    auto &sf0_1v = FlatVector::Validity(*se0[1]);
+    auto sf0_2 = FlatVector::GetData<double>(*se0[2]);
+    auto &sf0_2v = FlatVector::Validity(*se0[2]);
+    auto sf0_3 = FlatVector::GetData<double>(*se0[3]);
+    auto &sf0_3v = FlatVector::Validity(*se0[3]);
+    auto sf0_4 = FlatVector::GetData<double>(*se0[4]);
+    auto &sf0_4v = FlatVector::Validity(*se0[4]);
+    auto sf0_5 = FlatVector::GetData<double>(*se0[5]);
+    auto &sf0_5v = FlatVector::Validity(*se0[5]);
+    auto out = FlatVector::GetData<int64_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        BandStats s0{};
+        if (sf0_0v.RowIsValid(i)) s0.count = sf0_0[i];
+        if (sf0_1v.RowIsValid(i)) s0.sum = sf0_1[i];
+        if (sf0_2v.RowIsValid(i)) s0.mean = sf0_2[i];
+        if (sf0_3v.RowIsValid(i)) s0.stddev = sf0_3[i];
+        if (sf0_4v.RowIsValid(i)) s0.min = sf0_4[i];
+        if (sf0_5v.RowIsValid(i)) s0.max = sf0_5[i];
+        int64_t r = bandstats_count(&s0);
+        out[i] = (int64_t) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_bandstats_sum(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto &se0 = StructVector::GetEntries(args.data[0]);
+    auto sf0_0 = FlatVector::GetData<int64_t>(*se0[0]);
+    auto &sf0_0v = FlatVector::Validity(*se0[0]);
+    auto sf0_1 = FlatVector::GetData<double>(*se0[1]);
+    auto &sf0_1v = FlatVector::Validity(*se0[1]);
+    auto sf0_2 = FlatVector::GetData<double>(*se0[2]);
+    auto &sf0_2v = FlatVector::Validity(*se0[2]);
+    auto sf0_3 = FlatVector::GetData<double>(*se0[3]);
+    auto &sf0_3v = FlatVector::Validity(*se0[3]);
+    auto sf0_4 = FlatVector::GetData<double>(*se0[4]);
+    auto &sf0_4v = FlatVector::Validity(*se0[4]);
+    auto sf0_5 = FlatVector::GetData<double>(*se0[5]);
+    auto &sf0_5v = FlatVector::Validity(*se0[5]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        BandStats s0{};
+        if (sf0_0v.RowIsValid(i)) s0.count = sf0_0[i];
+        if (sf0_1v.RowIsValid(i)) s0.sum = sf0_1[i];
+        if (sf0_2v.RowIsValid(i)) s0.mean = sf0_2[i];
+        if (sf0_3v.RowIsValid(i)) s0.stddev = sf0_3[i];
+        if (sf0_4v.RowIsValid(i)) s0.min = sf0_4[i];
+        if (sf0_5v.RowIsValid(i)) s0.max = sf0_5[i];
+        double v{};
+        bool found = bandstats_sum(&s0, &v);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_bandstats_mean(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto &se0 = StructVector::GetEntries(args.data[0]);
+    auto sf0_0 = FlatVector::GetData<int64_t>(*se0[0]);
+    auto &sf0_0v = FlatVector::Validity(*se0[0]);
+    auto sf0_1 = FlatVector::GetData<double>(*se0[1]);
+    auto &sf0_1v = FlatVector::Validity(*se0[1]);
+    auto sf0_2 = FlatVector::GetData<double>(*se0[2]);
+    auto &sf0_2v = FlatVector::Validity(*se0[2]);
+    auto sf0_3 = FlatVector::GetData<double>(*se0[3]);
+    auto &sf0_3v = FlatVector::Validity(*se0[3]);
+    auto sf0_4 = FlatVector::GetData<double>(*se0[4]);
+    auto &sf0_4v = FlatVector::Validity(*se0[4]);
+    auto sf0_5 = FlatVector::GetData<double>(*se0[5]);
+    auto &sf0_5v = FlatVector::Validity(*se0[5]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        BandStats s0{};
+        if (sf0_0v.RowIsValid(i)) s0.count = sf0_0[i];
+        if (sf0_1v.RowIsValid(i)) s0.sum = sf0_1[i];
+        if (sf0_2v.RowIsValid(i)) s0.mean = sf0_2[i];
+        if (sf0_3v.RowIsValid(i)) s0.stddev = sf0_3[i];
+        if (sf0_4v.RowIsValid(i)) s0.min = sf0_4[i];
+        if (sf0_5v.RowIsValid(i)) s0.max = sf0_5[i];
+        double v{};
+        bool found = bandstats_mean(&s0, &v);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_bandstats_stddev(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto &se0 = StructVector::GetEntries(args.data[0]);
+    auto sf0_0 = FlatVector::GetData<int64_t>(*se0[0]);
+    auto &sf0_0v = FlatVector::Validity(*se0[0]);
+    auto sf0_1 = FlatVector::GetData<double>(*se0[1]);
+    auto &sf0_1v = FlatVector::Validity(*se0[1]);
+    auto sf0_2 = FlatVector::GetData<double>(*se0[2]);
+    auto &sf0_2v = FlatVector::Validity(*se0[2]);
+    auto sf0_3 = FlatVector::GetData<double>(*se0[3]);
+    auto &sf0_3v = FlatVector::Validity(*se0[3]);
+    auto sf0_4 = FlatVector::GetData<double>(*se0[4]);
+    auto &sf0_4v = FlatVector::Validity(*se0[4]);
+    auto sf0_5 = FlatVector::GetData<double>(*se0[5]);
+    auto &sf0_5v = FlatVector::Validity(*se0[5]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        BandStats s0{};
+        if (sf0_0v.RowIsValid(i)) s0.count = sf0_0[i];
+        if (sf0_1v.RowIsValid(i)) s0.sum = sf0_1[i];
+        if (sf0_2v.RowIsValid(i)) s0.mean = sf0_2[i];
+        if (sf0_3v.RowIsValid(i)) s0.stddev = sf0_3[i];
+        if (sf0_4v.RowIsValid(i)) s0.min = sf0_4[i];
+        if (sf0_5v.RowIsValid(i)) s0.max = sf0_5[i];
+        double v{};
+        bool found = bandstats_stddev(&s0, &v);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_bandstats_min(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto &se0 = StructVector::GetEntries(args.data[0]);
+    auto sf0_0 = FlatVector::GetData<int64_t>(*se0[0]);
+    auto &sf0_0v = FlatVector::Validity(*se0[0]);
+    auto sf0_1 = FlatVector::GetData<double>(*se0[1]);
+    auto &sf0_1v = FlatVector::Validity(*se0[1]);
+    auto sf0_2 = FlatVector::GetData<double>(*se0[2]);
+    auto &sf0_2v = FlatVector::Validity(*se0[2]);
+    auto sf0_3 = FlatVector::GetData<double>(*se0[3]);
+    auto &sf0_3v = FlatVector::Validity(*se0[3]);
+    auto sf0_4 = FlatVector::GetData<double>(*se0[4]);
+    auto &sf0_4v = FlatVector::Validity(*se0[4]);
+    auto sf0_5 = FlatVector::GetData<double>(*se0[5]);
+    auto &sf0_5v = FlatVector::Validity(*se0[5]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        BandStats s0{};
+        if (sf0_0v.RowIsValid(i)) s0.count = sf0_0[i];
+        if (sf0_1v.RowIsValid(i)) s0.sum = sf0_1[i];
+        if (sf0_2v.RowIsValid(i)) s0.mean = sf0_2[i];
+        if (sf0_3v.RowIsValid(i)) s0.stddev = sf0_3[i];
+        if (sf0_4v.RowIsValid(i)) s0.min = sf0_4[i];
+        if (sf0_5v.RowIsValid(i)) s0.max = sf0_5[i];
+        double v{};
+        bool found = bandstats_min(&s0, &v);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_bandstats_max(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto &se0 = StructVector::GetEntries(args.data[0]);
+    auto sf0_0 = FlatVector::GetData<int64_t>(*se0[0]);
+    auto &sf0_0v = FlatVector::Validity(*se0[0]);
+    auto sf0_1 = FlatVector::GetData<double>(*se0[1]);
+    auto &sf0_1v = FlatVector::Validity(*se0[1]);
+    auto sf0_2 = FlatVector::GetData<double>(*se0[2]);
+    auto &sf0_2v = FlatVector::Validity(*se0[2]);
+    auto sf0_3 = FlatVector::GetData<double>(*se0[3]);
+    auto &sf0_3v = FlatVector::Validity(*se0[3]);
+    auto sf0_4 = FlatVector::GetData<double>(*se0[4]);
+    auto &sf0_4v = FlatVector::Validity(*se0[4]);
+    auto sf0_5 = FlatVector::GetData<double>(*se0[5]);
+    auto &sf0_5v = FlatVector::Validity(*se0[5]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        BandStats s0{};
+        if (sf0_0v.RowIsValid(i)) s0.count = sf0_0[i];
+        if (sf0_1v.RowIsValid(i)) s0.sum = sf0_1[i];
+        if (sf0_2v.RowIsValid(i)) s0.mean = sf0_2[i];
+        if (sf0_3v.RowIsValid(i)) s0.stddev = sf0_3[i];
+        if (sf0_4v.RowIsValid(i)) s0.min = sf0_4[i];
+        if (sf0_5v.RowIsValid(i)) s0.max = sf0_5[i];
+        double v{};
+        bool found = bandstats_max(&s0, &v);
+        if (!found) { outv.SetInvalid(i); continue; }
+        out[i] = (double) v;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_summary_stats(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { FlatVector::SetNull(result, i, true); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { FlatVector::SetNull(result, i, true); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { FlatVector::SetNull(result, i, true); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        BandStats *r = raster_summary_stats(p0, in1[i], in2[i]);
+        free(p0);
+        auto &cols = StructVector::GetEntries(result);
+        if (!r) {
+            for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);
+            FlatVector::Validity(*cols[0]).SetValid(i);
+            FlatVector::GetData<int64_t>(*cols[0])[i] = 0;
+            continue;
+        }
+        FlatVector::GetData<int64_t>(*cols[0])[i] = r->count;
+        FlatVector::GetData<double>(*cols[1])[i] = r->sum;
+        FlatVector::GetData<double>(*cols[2])[i] = r->mean;
+        FlatVector::GetData<double>(*cols[3])[i] = r->stddev;
+        FlatVector::GetData<double>(*cols[4])[i] = r->min;
+        FlatVector::GetData<double>(*cols[5])[i] = r->max;
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_summary_stats_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { FlatVector::SetNull(result, i, true); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { FlatVector::SetNull(result, i, true); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        BandStats *r = raster_summary_stats(p0, in1[i], true);
+        free(p0);
+        auto &cols = StructVector::GetEntries(result);
+        if (!r) {
+            for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);
+            FlatVector::Validity(*cols[0]).SetValid(i);
+            FlatVector::GetData<int64_t>(*cols[0])[i] = 0;
+            continue;
+        }
+        FlatVector::GetData<int64_t>(*cols[0])[i] = r->count;
+        FlatVector::GetData<double>(*cols[1])[i] = r->sum;
+        FlatVector::GetData<double>(*cols[2])[i] = r->mean;
+        FlatVector::GetData<double>(*cols[3])[i] = r->stddev;
+        FlatVector::GetData<double>(*cols[4])[i] = r->min;
+        FlatVector::GetData<double>(*cols[5])[i] = r->max;
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_summary_stats_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { FlatVector::SetNull(result, i, true); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        BandStats *r = raster_summary_stats(p0, 1, true);
+        free(p0);
+        auto &cols = StructVector::GetEntries(result);
+        if (!r) {
+            for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);
+            FlatVector::Validity(*cols[0]).SetValid(i);
+            FlatVector::GetData<int64_t>(*cols[0])[i] = 0;
+            continue;
+        }
+        FlatVector::GetData<int64_t>(*cols[0])[i] = r->count;
+        FlatVector::GetData<double>(*cols[1])[i] = r->sum;
+        FlatVector::GetData<double>(*cols[2])[i] = r->mean;
+        FlatVector::GetData<double>(*cols[3])[i] = r->stddev;
+        FlatVector::GetData<double>(*cols[4])[i] = r->min;
+        FlatVector::GetData<double>(*cols[5])[i] = r->max;
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_value_count(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -5765,6 +6069,15 @@ void RegisterGenerated_meos_raster_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandNoDataValue", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_band_nodata_value_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::BLOB, Gen_raster_band_pixels));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_band_pixels_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summarystatsCount", {LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})}, LogicalType::BIGINT, Gen_bandstats_count));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summarystatsSum", {LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})}, LogicalType::DOUBLE, Gen_bandstats_sum));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summarystatsMean", {LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})}, LogicalType::DOUBLE, Gen_bandstats_mean));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summarystatsStddev", {LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})}, LogicalType::DOUBLE, Gen_bandstats_stddev));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summarystatsMin", {LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})}, LogicalType::DOUBLE, Gen_bandstats_min));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summarystatsMax", {LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})}, LogicalType::DOUBLE, Gen_bandstats_max));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summaryStats", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}}), Gen_raster_summary_stats));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summaryStats", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}}), Gen_raster_summary_stats_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("summaryStats", {RasterTypes::raster()}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}}), Gen_raster_summary_stats_v2));
     { ScalarFunction sf = ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
     { ScalarFunction sf = ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
     RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v2));
