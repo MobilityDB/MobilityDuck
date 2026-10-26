@@ -27,6 +27,11 @@ DuckDB Spatial `GEOMETRY`. The design — closed-algebra inside MEOS, thin
 boundary layer in the binding, and TemporalParquet round-trip preservation of
 the geodetic flag — is documented in [`doc/geography-boundary.md`](doc/geography-boundary.md).
 
+MEOS's `raster` converts to and from the raster values of DuckDB's raster
+extension (`duckdb-raster`, whose names all carry the prefix `RT_`): a raster
+from a tile of `RT_Read`, the datacube and the metadata of a raster, and the
+statistics, as documented in [`doc/raster-boundary.md`](doc/raster-boundary.md).
+
 ---
 ## 1. Requirements
 MobilityDuck needs some dependencies(including MEOS) which can be installed through VCPKG. Run the following to enable it: 

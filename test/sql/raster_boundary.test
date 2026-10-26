@@ -1,0 +1,713 @@
+# name: test/sql/raster_boundary.test
+# description: The boundary between MEOS's raster and DuckDB's raster extension (duckdb-raster):
+#              a raster from a tile, the metadata of a raster, and the datacube
+#              codec over untrusted input. The casts to RT_DATACUBE and RT_STATS,
+#              whose names exist once duckdb-raster is loaded, are
+#              raster_boundary_rt.test.
+# group: [sql]
+
+require mobilityduck
+
+# ── the fixtures ─────────────────────────────────────────────────────────────
+
+# Every datacube below was written by the published duckdb-raster 1.6.1 (the
+# community binary for DuckDB v1.5.5). A typed cube packs 12 values, 2 bands of
+# 3 columns and 2 rows, of one DuckDB type with RT_Array2Cube; COPY ... TO
+# '<type>.tif' (FORMAT RASTER, DRIVER 'GTiff', SRS 'EPSG:4326') writes it over
+# the footprint POLYGON((10 46, 16 46, 16 50, 10 50, 10 46)); and
+# RT_Read('<type>.tif', datacube := true, blocksize_x := 3, blocksize_y := 2,
+# data_format := '<format>') reads it back. The hex is hex(datacube::BLOB) and
+# the metadata is RT_Read's metadata column, verbatim.
+statement ok
+CREATE TABLE cube(type VARCHAR, format VARCHAR, cube BLOB);
+
+statement ok
+INSERT INTO cube VALUES
+  ('UINT8', 'RAW', from_hex('535200000200000003000000020000000000000000E06F400001027F80FF0A141E28323C')),
+  ('UINT8', 'SNAPPY', from_hex('535201000200000003000000020000000000000000E06F400C2C0001027F80FF0A141E28323C')),
+  ('UINT8', 'GZIP', from_hex('535202000200000003000000020000000000000000E06F401F8B08000000000000FF010C00F3FF0001027F80FF0A141E28323C5A07C5200C000000')),
+  ('UINT8', 'ZSTD', from_hex('535203000200000003000000020000000000000000E06F4028B52FFD200C6100000001027F80FF0A141E28323C')),
+  ('UINT8', 'LZ4', from_hex('535204000200000003000000020000000000000000E06F400C000000C00001027F80FF0A141E28323C')),
+  ('INT8', 'RAW', from_hex('53520001020000000300000002000000000000000000F0FF80FF0001027FFBFCFD030405')),
+  ('INT8', 'SNAPPY', from_hex('53520101020000000300000002000000000000000000F0FF0C2C80FF0001027FFBFCFD030405')),
+  ('INT8', 'GZIP', from_hex('53520201020000000300000002000000000000000000F0FF1F8B08000000000000FF010C00F3FF80FF0001027FFBFCFD030405F79C8ADE0C000000')),
+  ('INT8', 'ZSTD', from_hex('53520301020000000300000002000000000000000000F0FF28B52FFD200C61000080FF0001027FFBFCFD030405')),
+  ('INT8', 'LZ4', from_hex('53520401020000000300000002000000000000000000F0FF0C000000C080FF0001027FFBFCFD030405')),
+  ('UINT16', 'RAW', from_hex('53520002020000000300000002000000000000000000F0FF000001000001E803FEFFFFFF0700080009000A000B000C00')),
+  ('UINT16', 'SNAPPY', from_hex('53520102020000000300000002000000000000000000F0FF185C000001000001E803FEFFFFFF0700080009000A000B000C00')),
+  ('UINT16', 'GZIP', from_hex('53520202020000000300000002000000000000000000F0FF1F8B08000000000000FF011800E7FF000001000001E803FEFFFFFF0700080009000A000B000C00E189637118000000')),
+  ('UINT16', 'ZSTD', from_hex('53520302020000000300000002000000000000000000F0FF28B52FFD2018C10000000001000001E803FEFFFFFF0700080009000A000B000C00')),
+  ('UINT16', 'LZ4', from_hex('53520402020000000300000002000000000000000000F0FF18000000F009000001000001E803FEFFFFFF0700080009000A000B000C00')),
+  ('INT16', 'RAW', from_hex('53520003020000000300000002000000000000008087C3C00080F1D8000001002C01FF7FFEFFFFFF0200040006000800')),
+  ('INT16', 'SNAPPY', from_hex('53520103020000000300000002000000000000008087C3C0185C0080F1D8000001002C01FF7FFEFFFFFF0200040006000800')),
+  ('INT16', 'GZIP', from_hex('53520203020000000300000002000000000000008087C3C01F8B08000000000000FF011800E7FF0080F1D8000001002C01FF7FFEFFFFFF0200040006000800DE8CC3DC18000000')),
+  ('INT16', 'ZSTD', from_hex('53520303020000000300000002000000000000008087C3C028B52FFD2018C100000080F1D8000001002C01FF7FFEFFFFFF0200040006000800')),
+  ('INT16', 'LZ4', from_hex('53520403020000000300000002000000000000008087C3C018000000F0090080F1D8000001002C01FF7FFEFFFFFF0200040006000800')),
+  ('UINT32', 'RAW', from_hex('53520004020000000300000002000000000000000000F0FF00000000010000000000010000000001FEFFFFFFFFFFFFFF0D0000000E0000000F000000100000001100000012000000')),
+  ('UINT32', 'SNAPPY', from_hex('53520104020000000300000002000000000000000000F0FF30100000000001010509060801FEFF09015C0D0000000E0000000F000000100000001100000012000000')),
+  ('UINT32', 'GZIP', from_hex('53520204020000000300000002000000000000000000F0FF1F8B08000000000000FF35C7890900300CC3406580BEFBCFDA46106238830002FAE3FDDA30A696B68EAE12CE695FE030000000')),
+  ('UINT32', 'ZSTD', from_hex('53520304020000000300000002000000000000000000F0FF28B52FFD2030650100140200000000010001FEFF0D0000000E0000000F0000001000000011000000120000000300B8999403162802')),
+  ('UINT32', 'LZ4', from_hex('53520404020000000300000002000000000000000000F0FF3000000050000000000105000206003201FEFF0100F0090D0000000E0000000F000000100000001100000012000000')),
+  ('INT32', 'RAW', from_hex('53520005020000000300000002000000000000008087C3C000000080F1D8FFFF000000000100000070110100FFFFFF7FF9FFFFFF07000000F8FFFFFF08000000F7FFFFFF09000000')),
+  ('INT32', 'SNAPPY', from_hex('53520105020000000300000002000000000000008087C3C030BC00000080F1D8FFFF000000000100000070110100FFFFFF7FF9FFFFFF07000000F8FFFFFF08000000F7FFFFFF09000000')),
+  ('INT32', 'GZIP', from_hex('53520205020000000300000002000000000000008087C3C01F8B08000000000000FF0DC7B10D0020104251AE524B3775031DD335ACD48AFB24F082A475B62D1274F490EDF999C27F58F162C304253AAA7430000000')),
+  ('INT32', 'ZSTD', from_hex('53520305020000000300000002000000000000008087C3C028B52FFD203081010000000080F1D8FFFF000000000100000070110100FFFFFF7FF9FFFFFF07000000F8FFFFFF08000000F7FFFFFF09000000')),
+  ('INT32', 'LZ4', from_hex('53520405020000000300000002000000000000008087C3C030000000F02100000080F1D8FFFF000000000100000070110100FFFFFF7FF9FFFFFF07000000F8FFFFFF08000000F7FFFFFF09000000')),
+  ('UINT64', 'RAW', from_hex('53520006020000000300000002000000000000000000F0FF00000000000000000100000000000000020000000000000003000000000000000400000000000000000000000000000006000000000000000700000000000000080000000000000009000000000000000A000000000000000B00000000000000')),
+  ('UINT64', 'SNAPPY', from_hex('53520106020000000300000002000000000000000000F0FF6000000D0100010D0800020D0800030D0800040D08110100060D0900070D0800080D0800090D083C0A000000000000000B00000000000000')),
+  ('UINT64', 'GZIP', from_hex('53520206020000000300000002000000000000000000F0FF1F8B08000000000000FF55C5B71100300804C1971909D37FBF045CC2262BB5C59B0F5F4D8F3F1B3B072717DF0129C360000000')),
+  ('UINT64', 'ZSTD', from_hex('53520306020000000300000002000000000000000000F0FF28B52FFD2060450100E00000010002000300040006000700080009000A000B000000000000000A500200638C31483CC610')),
+  ('UINT64', 'LZ4', from_hex('53520406020000000300000002000000000000000000F0FF60000000130001001301080013020800130308001304080004020013060900130708001308080013090800130A0800800B00000000000000')),
+  ('INT64', 'RAW', from_hex('53520007020000000300000002000000000000000000F0FF0000000000000080FFFFFFFFFFFFFFFF000000000000000001000000000000000200000000000000FFFFFFFFFFFFFF7F06000000000000000700000000000000080000000000000009000000000000000A000000000000000B00000000000000')),
+  ('INT64', 'SNAPPY', from_hex('53520107020000000300000002000000000000000000F0FF60000009010480FF0D01090F080000010D0900020D080D1F047F060D1000070D0800080D0800090D083C0A000000000000000B00000000000000')),
+  ('INT64', 'GZIP', from_hex('53520207020000000300000002000000000000000000F0FF1F8B08000000000000FF2DC9C90900201004C1D58767D09AB9C252FD298689C8EE53A8B0D27D9ADD3938B9B8F901F9F077F760000000')),
+  ('INT64', 'ZSTD', from_hex('53520307020000000300000002000000000000000000F0FF28B52FFD20607D0100E8000080FF0001000200FF7F06000700080009000A000B000000000000000B1000030F3CF0C063C61D786066D9DA36')),
+  ('INT64', 'LZ4', from_hex('53520407020000000300000002000000000000000000F0FF60000000120001002380FF0100020F00300000010500410000000206002300001F00207F060D0041000000070600300000080500410000000906003000000A0500B00000000B00000000000000')),
+  ('FLOAT', 'RAW', from_hex('53520008020000000300000002000000000000008087C3C00000C03F000010C000000000003C1CC60000003FE6B1617F6042A20D0000004000008040000000410000804100000042')),
+  ('FLOAT', 'SNAPPY', from_hex('53520108020000000300000002000000000000008087C3C030200000C03F000010C0000101883C1CC60000003FE6B1617F6042A20D0000004000008040000000410000804100000042')),
+  ('FLOAT', 'GZIP', from_hex('53520208020000000300000002000000000000008087C3C01F8B08000000000000FF013000CFFF0000C03F000010C000000000003C1CC60000003FE6B1617F6042A20D0000004000008040000000410000804100000042ECF7E26230000000')),
+  ('FLOAT', 'ZSTD', from_hex('53520308020000000300000002000000000000008087C3C028B52FFD20308101000000C03F000010C000000000003C1CC60000003FE6B1617F6042A20D0000004000008040000000410000804100000042')),
+  ('FLOAT', 'LZ4', from_hex('53520408020000000300000002000000000000008087C3C030000000900000C03F000010C0000100F0143C1CC60000003FE6B1617F6042A20D0000004000008040000000410000804100000042')),
+  ('DOUBLE', 'RAW', from_hex('53520009020000000300000002000000000000000000F0FF000000000000F83F00000000000002C000000000000000009A9999999999B93F9C7500883CE4377E59F3F8C21F6EA581182D4454FB21094000000000000000400000000000001040000000000000204000000000000030400000000000004040')),
+  ('DOUBLE', 'SNAPPY', from_hex('53520109020000000300000002000000000000000000F0FF600000050104F83F0507080002C009080C00009A99010168B93F9C7500883CE4377E59F3F8C21F6EA581182D4454FB2109400009010D0800100D0800200D082430400000000000004040')),
+  ('DOUBLE', 'GZIP', from_hex('53520209020000000300000002000000000000000000F0FF1F8B08000000000000FF2DCAA10D80301445D1171C0E89030620C16148FA05236058028725C1B10204CB10B8A6B374839A26354D9B77CD311748799541A1C19E3BF5AB77C735D9F1589D37CDF69D753F2FA12B851BAD684B072A1201A1C9CCB860000000')),
+  ('DOUBLE', 'ZSTD', from_hex('53520309020000000300000002000000000000000000F0FF28B52FFD2060050200A4020000F83F0002C0009A99B93F9C7500883CE4377E59F3F8C21F6EA581182D4454FB2109400010203040400900200BC80732AF643B98014203E940BB15B401')),
+  ('DOUBLE', 'LZ4', from_hex('53520409020000000300000002000000000000000000F0FF600000001100010021F83F0700320002C008004000009A990100F00BB93F9C7500883CE4377E59F3F8C21F6EA581182D4454FB21094024003300000008001310080013200800A030400000000000004040'));
+
+# RT_Read's metadata of the UINT16 cube, whose bands state no nodata value and
+# which RT_Read writes as -inf, a number JSON does not have; and of the INT16
+# cube, whose bands state -9999. A macro keeps each a string literal, which
+# binds to the JSON metadata argument.
+statement ok
+CREATE MACRO meta_none() AS '{"file_format": "raster", "version": "0.1.0", "data_format": "RAW", "datacube": true, "crs": "EPSG:4326", "transform": [10.000000, 2.000000, 0.000000, 50.000000, 0.000000, -2.000000], "bounds": [10.000000, 46.000000, 16.000000, 50.000000], "geometry": "POLYGON((10.000000 50.000000, 16.000000 50.000000, 16.000000 46.000000, 10.000000 46.000000, 10.000000 50.000000))", "width": 3, "height": 2, "blocksize_x": 3, "blocksize_y": 2, "band_count": 2, "bands": [{"name": "databand_1", "description": "", "type_name": "UInt16", "data_type": 2, "data_size": 2, "width": 3, "height": 2, "colorinterp": 1, "nodata": -inf, "scale": null, "offset": null, "unit": ""}, {"name": "databand_2", "description": "", "type_name": "UInt16", "data_type": 2, "data_size": 2, "width": 3, "height": 2, "colorinterp": 0, "nodata": -inf, "scale": null, "offset": null, "unit": ""}]}';
+
+statement ok
+CREATE MACRO meta_nodata() AS '{"file_format": "raster", "version": "0.1.0", "data_format": "RAW", "datacube": true, "crs": "EPSG:4326", "transform": [10.000000, 2.000000, 0.000000, 50.000000, 0.000000, -2.000000], "bounds": [10.000000, 46.000000, 16.000000, 50.000000], "geometry": "POLYGON((10.000000 50.000000, 16.000000 50.000000, 16.000000 46.000000, 10.000000 46.000000, 10.000000 50.000000))", "width": 3, "height": 2, "blocksize_x": 3, "blocksize_y": 2, "band_count": 2, "bands": [{"name": "databand_1", "description": "", "type_name": "Int16", "data_type": 3, "data_size": 2, "width": 3, "height": 2, "colorinterp": 1, "nodata": -9999.000000, "scale": null, "offset": null, "unit": ""}, {"name": "databand_2", "description": "", "type_name": "Int16", "data_type": 3, "data_size": 2, "width": 3, "height": 2, "colorinterp": 0, "nodata": -9999.000000, "scale": null, "offset": null, "unit": ""}]}';
+
+# The MEOS raster of the values of each cube, built from their little-endian
+# bytes as two bands of 3 x 2 pixels georeferenced as RT_Read reads the file:
+# upper left (10, 50), pixels of 2 x -2, EPSG:4326, and the nodata value the
+# cube states.
+statement ok
+CREATE TABLE expected(type VARCHAR, r raster);
+
+statement ok
+INSERT INTO expected VALUES
+  ('UINT8', addBand(raster(from_hex('0001027F80FF'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BUI', 255.0),
+    raster(from_hex('0A141E28323C'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BUI', 255.0))),
+  ('INT8', addBand(raster(from_hex('80FF0001027F'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BSI'),
+    raster(from_hex('FBFCFD030405'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BSI'))),
+  ('UINT16', addBand(raster(from_hex('000001000001E803FEFFFFFF'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '16BUI'),
+    raster(from_hex('0700080009000A000B000C00'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '16BUI'))),
+  ('INT16', addBand(raster(from_hex('0080F1D8000001002C01FF7F'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '16BSI', -9999.0),
+    raster(from_hex('FEFFFFFF0200040006000800'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '16BSI', -9999.0))),
+  ('UINT32', addBand(raster(from_hex('00000000010000000000010000000001FEFFFFFFFFFFFFFF'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '32BUI'),
+    raster(from_hex('0D0000000E0000000F000000100000001100000012000000'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '32BUI'))),
+  ('INT32', addBand(raster(from_hex('00000080F1D8FFFF000000000100000070110100FFFFFF7F'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '32BSI', -9999.0),
+    raster(from_hex('F9FFFFFF07000000F8FFFFFF08000000F7FFFFFF09000000'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '32BSI', -9999.0))),
+  ('FLOAT', addBand(raster(from_hex('0000C03F000010C000000000003C1CC60000003FE6B1617F'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '32BF', -9999.0),
+    raster(from_hex('6042A20D0000004000008040000000410000804100000042'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '32BF', -9999.0))),
+  ('DOUBLE', addBand(raster(from_hex('000000000000F83F00000000000002C000000000000000009A9999999999B93F9C7500883CE4377E59F3F8C21F6EA581'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '64BF'),
+    raster(from_hex('182D4454FB21094000000000000000400000000000001040000000000000204000000000000030400000000000004040'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '64BF')));
+
+# ── a raster from a tile ─────────────────────────────────────────────────────
+
+# Every cube of a MEOS pixel type, in each of the five data formats, is the
+# MEOS raster of its values.
+query TTT
+SELECT c.type, c.format, raster(c.cube, 0, 0, meta_none()) = e.r
+FROM cube c JOIN expected e USING (type)
+ORDER BY c.type, c.format;
+----
+DOUBLE	GZIP	true
+DOUBLE	LZ4	true
+DOUBLE	RAW	true
+DOUBLE	SNAPPY	true
+DOUBLE	ZSTD	true
+FLOAT	GZIP	true
+FLOAT	LZ4	true
+FLOAT	RAW	true
+FLOAT	SNAPPY	true
+FLOAT	ZSTD	true
+INT16	GZIP	true
+INT16	LZ4	true
+INT16	RAW	true
+INT16	SNAPPY	true
+INT16	ZSTD	true
+INT32	GZIP	true
+INT32	LZ4	true
+INT32	RAW	true
+INT32	SNAPPY	true
+INT32	ZSTD	true
+INT8	GZIP	true
+INT8	LZ4	true
+INT8	RAW	true
+INT8	SNAPPY	true
+INT8	ZSTD	true
+UINT16	GZIP	true
+UINT16	LZ4	true
+UINT16	RAW	true
+UINT16	SNAPPY	true
+UINT16	ZSTD	true
+UINT32	GZIP	true
+UINT32	LZ4	true
+UINT32	RAW	true
+UINT32	SNAPPY	true
+UINT32	ZSTD	true
+UINT8	GZIP	true
+UINT8	LZ4	true
+UINT8	RAW	true
+UINT8	SNAPPY	true
+UINT8	ZSTD	true
+
+# The values of the bands, read back as doubles, are the ones the cube was
+# packed from, nodata included.
+query TTT
+SELECT c.type, dumpValues(raster(c.cube, 0, 0, meta_nodata()), 1, false)::VARCHAR,
+  dumpValues(raster(c.cube, 0, 0, meta_nodata()), 2, false)::VARCHAR
+FROM cube c WHERE c.format = 'ZSTD' AND c.type NOT IN ('UINT64', 'INT64', 'FLOAT', 'DOUBLE')
+ORDER BY c.type;
+----
+INT16	[[-32768.0, -9999.0, 0.0], [1.0, 300.0, 32767.0]]	[[-2.0, -1.0, 2.0], [4.0, 6.0, 8.0]]
+INT32	[[-2147483648.0, -9999.0, 0.0], [1.0, 70000.0, 2147483647.0]]	[[-7.0, 7.0, -8.0], [8.0, -9.0, 9.0]]
+INT8	[[-128.0, -1.0, 0.0], [1.0, 2.0, 127.0]]	[[-5.0, -4.0, -3.0], [3.0, 4.0, 5.0]]
+UINT16	[[0.0, 1.0, 256.0], [1000.0, 65534.0, 65535.0]]	[[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]]
+UINT32	[[0.0, 1.0, 65536.0], [16777216.0, 4294967294.0, 4294967295.0]]	[[13.0, 14.0, 15.0], [16.0, 17.0, 18.0]]
+UINT8	[[0.0, 1.0, 2.0], [127.0, 128.0, 255.0]]	[[10.0, 20.0, 30.0], [40.0, 50.0, 60.0]]
+
+# Of the floating-point cubes, every value is the one it was packed from, read
+# into its type, bit for bit.
+query TII
+SELECT c.type,
+  dumpValues(raster(c.cube, 0, 0, meta_nodata()), 1, false) = CASE c.type WHEN 'FLOAT' THEN [[1.5, -2.25, 0.0], [-9999.0, 0.5, 3e+38]]::FLOAT[][]::DOUBLE[][] ELSE [[1.5, -2.25, 0.0], [0.1, 1e+300, -1e-300]]::DOUBLE[][]::DOUBLE[][] END,
+  dumpValues(raster(c.cube, 0, 0, meta_nodata()), 2, false) = CASE c.type WHEN 'FLOAT' THEN [[1e-30, 2.0, 4.0], [8.0, 16.0, 32.0]]::FLOAT[][]::DOUBLE[][] ELSE [[3.141592653589793, 2.0, 4.0], [8.0, 16.0, 32.0]]::DOUBLE[][]::DOUBLE[][] END
+FROM cube c WHERE c.format = 'ZSTD' AND c.type IN ('FLOAT', 'DOUBLE')
+ORDER BY c.type;
+----
+DOUBLE	true	true
+FLOAT	true	true
+
+# The pixel type of each band is the one of the data type, as PostGIS maps its
+# pixel types to GDAL's, and the nodata value the one of the cube.
+query TTTTT
+SELECT c.type, bandPixelType(r, 1), bandPixelType(r, 2), bandNoDataValue(r, 1), bandNoDataValue(r, 2)
+FROM (SELECT type, raster(cube, 0, 0, meta_none()) AS r FROM cube
+      WHERE format = 'GZIP' AND type NOT IN ('UINT64', 'INT64')) c
+ORDER BY c.type;
+----
+DOUBLE	float64	float64	NULL	NULL
+FLOAT	float32	float32	-9999.0	-9999.0
+INT16	int16	int16	-9999.0	-9999.0
+INT32	int32	int32	-9999.0	-9999.0
+INT8	int8	int8	NULL	NULL
+UINT16	uint16	uint16	NULL	NULL
+UINT32	uint32	uint32	NULL	NULL
+UINT8	uint8	uint8	255.0	255.0
+
+# The georeferencing of a raster is the one of its tile: a tile sits at the
+# pixel offset (tile_x * blocksize_x, tile_y * blocksize_y) of the raster the
+# six GDAL coefficients of the metadata georeference. The tiles below were
+# read by RT_Read('tiled.tif', blocksize_x := 2, blocksize_y := 2) from one
+# UINT16 band of 5 x 3 pixels holding 1 to 15 row by row, written as above
+# with SRS 'EPSG:3857' over POLYGON((100 -20, 105 -20, 105 -17, 100 -17,
+# 100 -20)), nodata 0; the edge tiles are narrower.
+statement ok
+CREATE TABLE tile(tile_x INTEGER, tile_y INTEGER, cube BLOB);
+
+statement ok
+INSERT INTO tile VALUES
+  (0, 0, from_hex('5352000201000000020000000200000000000000000000000100020006000700')),
+  (1, 0, from_hex('5352000201000000020000000200000000000000000000000300040008000900')),
+  (2, 0, from_hex('53520002010000000100000002000000000000000000000005000A00')),
+  (0, 1, from_hex('5352000201000000020000000100000000000000000000000B000C00')),
+  (1, 1, from_hex('5352000201000000020000000100000000000000000000000D000E00')),
+  (2, 1, from_hex('5352000201000000010000000100000000000000000000000F00'));
+
+statement ok
+CREATE MACRO meta_tiled() AS '{"file_format": "raster", "version": "0.1.0", "data_format": "RAW", "datacube": false, "crs": "EPSG:3857", "transform": [100.000000, 1.000000, 0.000000, -17.000000, 0.000000, -1.000000], "bounds": [100.000000, -20.000000, 105.000000, -17.000000], "geometry": "POLYGON((100.000000 -17.000000, 105.000000 -17.000000, 105.000000 -20.000000, 100.000000 -20.000000, 100.000000 -17.000000))", "width": 5, "height": 3, "blocksize_x": 2, "blocksize_y": 2, "band_count": 1, "bands": [{"name": "databand_1", "description": "", "type_name": "UInt16", "data_type": 2, "data_size": 2, "width": 2, "height": 2, "colorinterp": 1, "nodata": 0.000000, "scale": null, "offset": null, "unit": ""}]}';
+
+query IIIIIIIIIIT
+SELECT tile_x, tile_y, width(r), height(r), upperLeftX(r), upperLeftY(r), scaleX(r), scaleY(r),
+  SRID(r), bandNoDataValue(r), dumpValues(r, 1, false)::VARCHAR
+FROM (SELECT tile_x, tile_y, raster(cube, tile_x, tile_y, meta_tiled()) AS r FROM tile)
+ORDER BY tile_y, tile_x;
+----
+0	0	2	2	100.0	-17.0	1.0	-1.0	3857	0.0	[[1.0, 2.0], [6.0, 7.0]]
+1	0	2	2	102.0	-17.0	1.0	-1.0	3857	0.0	[[3.0, 4.0], [8.0, 9.0]]
+2	0	1	2	104.0	-17.0	1.0	-1.0	3857	0.0	[[5.0], [10.0]]
+0	1	2	1	100.0	-19.0	1.0	-1.0	3857	0.0	[[11.0, 12.0]]
+1	1	2	1	102.0	-19.0	1.0	-1.0	3857	0.0	[[13.0, 14.0]]
+2	1	1	1	104.0	-19.0	1.0	-1.0	3857	0.0	[[15.0]]
+
+# Under a rotated grid, the upper left of tile (1, 2) of 3 x 2 pixels, at the
+# pixel offset (3, 4), is x = 10 + 2 * 3 + 0.5 * 4 = 18 and
+# y = 50 + 0.25 * 3 - 2 * 4 = 42.75, as duckdb-raster computes a world
+# coordinate.
+query IIIIII
+SELECT upperLeftX(r), upperLeftY(r), scaleX(r), scaleY(r), skewX(r), skewY(r)
+FROM (SELECT raster(cube, 1, 2, '{"crs": "EPSG:4326", "transform": [10, 2, 0.5, 50, 0.25, -2],
+  "blocksize_x": 3, "blocksize_y": 2}') AS r FROM cube WHERE type = 'UINT8' AND format = 'RAW');
+----
+18.0	42.75	2.0	-2.0	0.5	0.25
+
+# A reference system RT_Read writes empty, for a file without one, is the SRID
+# 0 of no system.
+query I
+SELECT SRID(raster(cube, 0, 0, '{"crs": "", "transform": [10, 2, 0, 50, 0, -2],
+  "blocksize_x": 3, "blocksize_y": 2}')) FROM cube WHERE type = 'UINT8' AND format = 'RAW';
+----
+0
+
+# A NULL argument answers NULL.
+query IIII
+SELECT raster(NULL::BLOB, 0, 0, meta_none()) IS NULL, raster(cube, NULL, 0, meta_none()) IS NULL,
+  raster(cube, 0, NULL, meta_none()) IS NULL, raster(cube, 0, 0, NULL) IS NULL
+FROM cube WHERE type = 'UINT8' AND format = 'RAW';
+----
+true	true	true	true
+
+# ── a raster and its datacube ────────────────────────────────────────────────
+
+# A raster of two bands of each PostGIS pixel type, under a rotated grid in
+# EPSG:3857, with and without a nodata value; head is the header of its
+# datacube as the datacube format states it (magic 0x5253, RAW, the data type,
+# 2 bands of 3 x 2 pixels, the nodata value or -infinity, little-endian), and
+# r8 the raster of the same bytes in bands of 8BUI.
+statement ok
+CREATE TABLE rast(pixtype VARCHAR, head BLOB, r raster, r8 raster);
+
+statement ok
+INSERT INTO rast VALUES
+  ('1BB', from_hex('53520000020000000300000002000000000000000000F0FF'),
+  addBand(raster(from_hex('000101000100'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '1BB'),
+    raster(from_hex('010100000101'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '1BB')),
+  addBand(raster(from_hex('000101000100'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI'),
+    raster(from_hex('010100000101'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI'))),
+  ('2BUI', from_hex('535200000200000003000000020000000000000000000840'),
+  addBand(raster(from_hex('000102030001'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '2BUI', 3.0),
+    raster(from_hex('030201000302'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '2BUI', 3.0)),
+  addBand(raster(from_hex('000102030001'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI', 3.0),
+    raster(from_hex('030201000302'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI', 3.0))),
+  ('4BUI', from_hex('53520000020000000300000002000000000000000000F0FF'),
+  addBand(raster(from_hex('00050A0F0708'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '4BUI'),
+    raster(from_hex('0F0E0D010203'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '4BUI')),
+  addBand(raster(from_hex('00050A0F0708'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI'),
+    raster(from_hex('0F0E0D010203'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI'))),
+  ('8BUI', from_hex('535200000200000003000000020000000000000000E06F40'),
+  addBand(raster(from_hex('000180FEFF07'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI', 255.0),
+    raster(from_hex('0908070605FF'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI', 255.0)),
+  addBand(raster(from_hex('000180FEFF07'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI', 255.0),
+    raster(from_hex('0908070605FF'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BUI', 255.0))),
+  ('8BSI', from_hex('53520001020000000300000002000000000000000000F0FF'),
+  addBand(raster(from_hex('80FF00017F05'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BSI'),
+    raster(from_hex('0403020100FF'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '8BSI')),
+  NULL),
+  ('16BUI', from_hex('535200020200000003000000020000000000000000000000'),
+  addBand(raster(from_hex('00000100FFFF2C0104000500'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '16BUI', 0.0),
+    raster(from_hex('06000700080009000A000000'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '16BUI', 0.0)),
+  NULL),
+  ('16BSI', from_hex('53520003020000000300000002000000000000008087C3C0'),
+  addBand(raster(from_hex('0080F1D80000FF7F04000500'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '16BSI', -9999.0),
+    raster(from_hex('FFFFFEFFFDFFFCFFFBFFF1D8'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '16BSI', -9999.0)),
+  NULL),
+  ('32BUI', from_hex('53520004020000000300000002000000000000000000F0FF'),
+  addBand(raster(from_hex('0000000001000000FFFFFFFF000001000400000005000000'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '32BUI'),
+    raster(from_hex('060000000700000008000000090000000A0000000B000000'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '32BUI')),
+  NULL),
+  ('32BSI', from_hex('53520005020000000300000002000000000000000000E0C1'),
+  addBand(raster(from_hex('00000080FFFFFFFF00000000FFFFFF7F0400000005000000'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '32BSI', -2147483648.0),
+    raster(from_hex('060000000700000008000000090000000A00000000000080'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '32BSI', -2147483648.0)),
+  NULL),
+  ('32BF', from_hex('53520008020000000300000002000000000000008087C3C0'),
+  addBand(raster(from_hex('0000C03F000010C000000000003C1CC6E6B1617F6042A20D'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '32BF', -9999.0),
+    raster(from_hex('0000003F0000803E0000003E000000400000804000000041'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '32BF', -9999.0)),
+  NULL),
+  ('64BF', from_hex('53520009020000000300000002000000000000000000F0FF'),
+  addBand(raster(from_hex('000000000000F83F00000000000002C09A9999999999B93F9C7500883CE4377E59F3F8C21F6EA581182D4454FB210940'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '64BF'),
+    raster(from_hex('000000000000F87F00000000000000400000000000001040000000000000204000000000000030400000000000000080'), 3, 2, 100.5, -20.25, 0.5, -0.25, 0.1, -0.2, 3857, '64BF')),
+  NULL);
+
+# A raster is the raster of its datacube, the header followed by the bytes of
+# its bands, and of its metadata: for every pixel type of a byte or more, the
+# same raster; for 1BB, 2BUI and 4BUI, whose datacube is of UINT8, the raster
+# of the same bytes in bands of 8BUI, as through PostGIS's GDAL path.
+query TIII
+SELECT pixtype, raster(head || pixels(r, 1) || pixels(r, 2), 0, 0, rasterMetadata(r)) = r,
+  raster(head || pixels(r, 1) || pixels(r, 2), 0, 0, rasterMetadata(r)) = r8,
+  pixels(raster(head || pixels(r, 1) || pixels(r, 2), 0, 0, rasterMetadata(r)), 2) = pixels(r, 2)
+FROM rast ORDER BY pixtype;
+----
+16BSI	true	NULL	true
+16BUI	true	NULL	true
+1BB	false	true	true
+2BUI	false	true	true
+32BF	true	NULL	true
+32BSI	true	NULL	true
+32BUI	true	NULL	true
+4BUI	false	true	true
+64BF	true	NULL	true
+8BSI	true	NULL	true
+8BUI	true	true	true
+
+# ── the metadata of a raster ─────────────────────────────────────────────────
+
+# The metadata RT_Read writes of a tile, for a raster as the one tile of its
+# datacube: its reference system, the six GDAL coefficients of its grid
+# [upperleftx, scalex, skewx, upperlefty, skewy, scaley], its bounds and
+# footprint, its size as its block size, and per band GDAL's type and the
+# nodata value.
+query T
+SELECT rasterMetadata(r) FROM rast WHERE pixtype = '16BSI';
+----
+{"file_format": "raster", "version": "0.1.0", "data_format": "RAW", "datacube": true, "crs": "EPSG:3857", "transform": [100.5, 0.5, 0.1, -20.25, -0.2, -0.25], "bounds": [100.5, -21.35, 102.2, -20.25], "geometry": "POLYGON((100.5 -20.25, 102.0 -20.85, 102.2 -21.35, 100.7 -20.75, 100.5 -20.25))", "width": 3, "height": 2, "blocksize_x": 3, "blocksize_y": 2, "band_count": 2, "bands": [{"name": "databand_1", "description": "", "type_name": "Int16", "data_type": 3, "data_size": 2, "width": 3, "height": 2, "colorinterp": 0, "nodata": -9999.0, "scale": null, "offset": null, "unit": ""}, {"name": "databand_2", "description": "", "type_name": "Int16", "data_type": 3, "data_size": 2, "width": 3, "height": 2, "colorinterp": 0, "nodata": -9999.0, "scale": null, "offset": null, "unit": ""}]}
+
+# A band without a nodata value states null, a raster without a reference
+# system the empty crs.
+query T
+SELECT rasterMetadata(raster(from_hex('000102'), 3, 1, 0.0, 1.0, 1.0, -1.0, 0.0, 0.0, 0, '8BSI'))
+----
+{"file_format": "raster", "version": "0.1.0", "data_format": "RAW", "datacube": true, "crs": "", "transform": [0.0, 1.0, 0.0, 1.0, 0.0, -1.0], "bounds": [0.0, 0.0, 3.0, 1.0], "geometry": "POLYGON((0.0 1.0, 3.0 1.0, 3.0 0.0, 0.0 0.0, 0.0 1.0))", "width": 3, "height": 1, "blocksize_x": 3, "blocksize_y": 1, "band_count": 1, "bands": [{"name": "databand_1", "description": "", "type_name": "Int8", "data_type": 14, "data_size": 1, "width": 3, "height": 1, "colorinterp": 0, "nodata": null, "scale": null, "offset": null, "unit": ""}]}
+
+# GDAL's name and code of the type of each band.
+query TT
+SELECT pixtype, array_to_string(regexp_extract_all(rasterMetadata(r)::VARCHAR, '"type_name": "[A-Za-z0-9]+", "data_type": [0-9]+', 0), '; ')
+FROM rast ORDER BY pixtype;
+----
+16BSI	"type_name": "Int16", "data_type": 3; "type_name": "Int16", "data_type": 3
+16BUI	"type_name": "UInt16", "data_type": 2; "type_name": "UInt16", "data_type": 2
+1BB	"type_name": "Byte", "data_type": 1; "type_name": "Byte", "data_type": 1
+2BUI	"type_name": "Byte", "data_type": 1; "type_name": "Byte", "data_type": 1
+32BF	"type_name": "Float32", "data_type": 6; "type_name": "Float32", "data_type": 6
+32BSI	"type_name": "Int32", "data_type": 5; "type_name": "Int32", "data_type": 5
+32BUI	"type_name": "UInt32", "data_type": 4; "type_name": "UInt32", "data_type": 4
+4BUI	"type_name": "Byte", "data_type": 1; "type_name": "Byte", "data_type": 1
+64BF	"type_name": "Float64", "data_type": 7; "type_name": "Float64", "data_type": 7
+8BSI	"type_name": "Int8", "data_type": 14; "type_name": "Int8", "data_type": 14
+8BUI	"type_name": "Byte", "data_type": 1; "type_name": "Byte", "data_type": 1
+
+# A raster whose nodata value JSON cannot state has no metadata.
+statement error
+SELECT rasterMetadata(raster(from_hex('000000000000F87F'), 1, 1, 0.0, 1.0, 1.0, -1.0, 0.0, 0.0, 0, '64BF', 'NaN'::DOUBLE))
+----
+raster: band 1 states the nodata value NaN, which a datacube and its metadata cannot state
+
+# ── what a datacube cannot be ────────────────────────────────────────────────
+
+# A datacube is untrusted input: each case below raises an error naming what
+# is wrong, and where the header alone shows it, before a byte of the pixels
+# is allocated.
+
+# A truncated header.
+statement error
+SELECT raster(from_hex('5352000002000000'), 0, 0, meta_none())
+----
+datacube: 8 bytes cannot hold its header of 24 bytes
+
+# A wrong magic code.
+statement error
+SELECT raster(from_hex('525300000200000003000000020000000000000000E06F400001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: the magic code is 0x5352, not 0x5253
+
+# An unknown data format.
+statement error
+SELECT raster(from_hex('535205000200000003000000020000000000000000E06F400001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: unknown data format code 5
+
+# An unknown data type.
+statement error
+SELECT raster(from_hex('5352000A0200000003000000020000000000000000E06F400001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: unknown data type code 10
+
+# No band.
+statement error
+SELECT raster(from_hex('535200000000000003000000020000000000000000E06F400001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: 0 bands of 3 columns and 2 rows, where each must be positive
+
+# A negative width.
+statement error
+SELECT raster(from_hex('5352000002000000FDFFFFFF020000000000000000E06F400001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: 2 bands of -3 columns and 2 rows, where each must be positive
+
+# Dimensions whose size overflows 64 bits.
+statement error
+SELECT raster(from_hex('53520009FFFFFF7FFFFFFF7FFFFFFF7F000000000000F0FF'), 0, 0, meta_none())
+----
+datacube: 2147483647 bands of 2147483647 x 2147483647 pixels of DOUBLE overflow the size of a buffer
+
+# A width beyond the 16 bits rt_core states it in, raised before the payload is read.
+statement error
+SELECT raster(from_hex('53520000010000007011010001000000000000000000F0FF00000000'), 0, 0, meta_none())
+----
+raster: a datacube of 1 bands of 70000 x 1 pixels exceeds the 65535 bands, columns and rows of a raster
+
+# A header stating more pixels than a value holds, refused before any buffer of
+# that size is allocated.
+statement error
+SELECT raster(from_hex('53520000FFFF0000FFFF000002000000000000000000F0FF00000000'), 0, 0, meta_none())
+----
+raster: a datacube of 65535 bands of 65535 x 2 pixels of UINT8 exceeds the size of a raster value
+
+# A payload shorter than the header states.
+statement error
+SELECT raster(from_hex('535200000200000003000000020000000000000000E06F400001027F80FF0A141E2832'), 0, 0, meta_none())
+----
+datacube: the RAW payload holds 11 bytes where the header states 12
+
+# A payload longer than the header states.
+statement error
+SELECT raster(from_hex('535200000200000003000000020000000000000000E06F400001027F80FF0A141E28323C00'), 0, 0, meta_none())
+----
+datacube: the RAW payload holds 13 bytes where the header states 12
+
+# A Snappy payload of another size than the header's.
+statement error
+SELECT raster(from_hex('535201000200000004000000020000000000000000E06F400C2C0001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: the SNAPPY payload decompresses into 12 bytes where the header states 16
+
+# A GZIP payload of another size than the header's.
+statement error
+SELECT raster(from_hex('535202000200000004000000020000000000000000E06F401F8B08000000000000FF010C00F3FF0001027F80FF0A141E28323C5A07C5200C000000'), 0, 0, meta_none())
+----
+datacube: the GZIP payload inflates into 12 bytes where the header states 16
+
+# A Zstandard payload of another size than the header's.
+statement error
+SELECT raster(from_hex('535203000200000004000000020000000000000000E06F4028B52FFD200C6100000001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: the ZSTD payload decompresses into 12 bytes where the header states 16
+
+# An LZ4 payload of another size than the header's.
+statement error
+SELECT raster(from_hex('535204000200000004000000020000000000000000E06F400C000000C00001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: the LZ4 payload states 12 bytes where the header states 16
+
+# A Snappy payload with a byte left over.
+statement error
+SELECT raster(from_hex('535201000200000003000000020000000000000000E06F400C2C0001027F80FF0A141E28323C00'), 0, 0, meta_none())
+----
+datacube: the SNAPPY payload is not a Snappy stream of that length
+
+# A GZIP payload whose CRC-32 is wrong.
+statement error
+SELECT raster(from_hex('535202000200000003000000020000000000000000E06F401F8B08000000000000FF010C00F3FF0001027F80FF0A141E28323C000000000C000000'), 0, 0, meta_none())
+----
+datacube: the GZIP payload fails its CRC-32
+
+# A GZIP payload whose footer states another size.
+statement error
+SELECT raster(from_hex('535202000200000003000000020000000000000000E06F401F8B08000000000000FF010C00F3FF0001027F80FF0A141E28323C5A07C5200D000000'), 0, 0, meta_none())
+----
+datacube: the GZIP payload states in its footer a size other than the header's
+
+# A GZIP payload with a byte left over.
+statement error
+SELECT raster(from_hex('535202000200000003000000020000000000000000E06F401F8B08000000000000FF010C00F3FF0001027F80FF0A141E28323C5A07C5200C00000000'), 0, 0, meta_none())
+----
+datacube: the GZIP payload carries bytes after its deflate stream and footer
+
+# A Zstandard payload with a byte left over.
+statement error
+SELECT raster(from_hex('535203000200000003000000020000000000000000E06F4028B52FFD200C6100000001027F80FF0A141E28323C00'), 0, 0, meta_none())
+----
+datacube: the ZSTD payload carries bytes after its Zstandard frame
+
+# A truncated Zstandard payload.
+statement error
+SELECT raster(from_hex('535203000200000003000000020000000000000000E06F4028B52FFD200C6100000001027F80FF0A141E28'), 0, 0, meta_none())
+----
+datacube: the ZSTD payload is a truncated Zstandard frame
+
+# An LZ4 payload with a byte left over.
+statement error
+SELECT raster(from_hex('535204000200000003000000020000000000000000E06F400C000000C00001027F80FF0A141E28323C00'), 0, 0, meta_none())
+----
+datacube: the LZ4 payload does not decompress into exactly the number of bytes the header states
+
+# A UINT64 cube in RAW: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520006020000000300000002000000000000000000F0FF00000000000000000100000000000000020000000000000003000000000000000400000000000000000000000000000006000000000000000700000000000000080000000000000009000000000000000A000000000000000B00000000000000'), 0, 0, meta_none())
+----
+raster: a datacube of UINT64 has no MEOS pixel type
+
+# A UINT64 cube in SNAPPY: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520106020000000300000002000000000000000000F0FF6000000D0100010D0800020D0800030D0800040D08110100060D0900070D0800080D0800090D083C0A000000000000000B00000000000000'), 0, 0, meta_none())
+----
+raster: a datacube of UINT64 has no MEOS pixel type
+
+# A UINT64 cube in GZIP: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520206020000000300000002000000000000000000F0FF1F8B08000000000000FF55C5B71100300804C1971909D37FBF045CC2262BB5C59B0F5F4D8F3F1B3B072717DF0129C360000000'), 0, 0, meta_none())
+----
+raster: a datacube of UINT64 has no MEOS pixel type
+
+# A UINT64 cube in ZSTD: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520306020000000300000002000000000000000000F0FF28B52FFD2060450100E00000010002000300040006000700080009000A000B000000000000000A500200638C31483CC610'), 0, 0, meta_none())
+----
+raster: a datacube of UINT64 has no MEOS pixel type
+
+# A UINT64 cube in LZ4: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520406020000000300000002000000000000000000F0FF60000000130001001301080013020800130308001304080004020013060900130708001308080013090800130A0800800B00000000000000'), 0, 0, meta_none())
+----
+raster: a datacube of UINT64 has no MEOS pixel type
+
+# A INT64 cube in RAW: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520007020000000300000002000000000000000000F0FF0000000000000080FFFFFFFFFFFFFFFF000000000000000001000000000000000200000000000000FFFFFFFFFFFFFF7F06000000000000000700000000000000080000000000000009000000000000000A000000000000000B00000000000000'), 0, 0, meta_none())
+----
+raster: a datacube of INT64 has no MEOS pixel type
+
+# A INT64 cube in SNAPPY: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520107020000000300000002000000000000000000F0FF60000009010480FF0D01090F080000010D0900020D080D1F047F060D1000070D0800080D0800090D083C0A000000000000000B00000000000000'), 0, 0, meta_none())
+----
+raster: a datacube of INT64 has no MEOS pixel type
+
+# A INT64 cube in GZIP: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520207020000000300000002000000000000000000F0FF1F8B08000000000000FF2DC9C90900201004C1D58767D09AB9C252FD298689C8EE53A8B0D27D9ADD3938B9B8F901F9F077F760000000'), 0, 0, meta_none())
+----
+raster: a datacube of INT64 has no MEOS pixel type
+
+# A INT64 cube in ZSTD: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520307020000000300000002000000000000000000F0FF28B52FFD20607D0100E8000080FF0001000200FF7F06000700080009000A000B000000000000000B1000030F3CF0C063C61D786066D9DA36'), 0, 0, meta_none())
+----
+raster: a datacube of INT64 has no MEOS pixel type
+
+# A INT64 cube in LZ4: no MEOS pixel type holds 64-bit integers.
+statement error
+SELECT raster(from_hex('53520407020000000300000002000000000000000000F0FF60000000120001002380FF0100020F00300000010500410000000206002300001F00207F060D0041000000070600300000080500410000000906003000000A0500B00000000B00000000000000'), 0, 0, meta_none())
+----
+raster: a datacube of INT64 has no MEOS pixel type
+
+# A NaN nodata value.
+statement error
+SELECT raster(from_hex('53520000020000000300000002000000000000000000F87F0001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: the nodata value is NaN, where it is finite or -infinity for none
+
+# A +infinity nodata value.
+statement error
+SELECT raster(from_hex('53520000020000000300000002000000000000000000F07F0001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+datacube: the nodata value is +infinity, where it is finite or -infinity for none
+
+# A nodata value beyond the data type.
+statement error
+SELECT raster(from_hex('535200000200000003000000020000000000000000C072400001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+raster: the datacube nodata value 300.0 is no value of its data type UINT8
+
+# A fractional nodata value of an integer type.
+statement error
+SELECT raster(from_hex('53520000020000000300000002000000000000000000F83F0001027F80FF0A141E28323C'), 0, 0, meta_none())
+----
+raster: the datacube nodata value 1.5 is no value of its data type UINT8
+
+# ── what the metadata of a tile cannot be ────────────────────────────────────
+
+# Metadata that is not JSON.
+statement error
+SELECT raster(cube, 0, 0, 'not json') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata is not JSON
+
+# Metadata that is no object.
+statement error
+SELECT raster(cube, 0, 0, '[1, 2]') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata is not a JSON object
+
+# A transform of 5 coefficients.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "transform": [10, 2, 0, 50, 0], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states no 'transform' of 6 numbers
+
+# No transform.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states no 'transform' of 6 numbers
+
+# A transform coefficient that is a string.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "transform": [10, 2, "0", 50, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states a 'transform' whose coefficient 3 is not a finite number
+
+# A transform coefficient that is NaN.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "transform": [10, 2, 0, NaN, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states a 'transform' whose coefficient 4 is not a finite number
+
+# No blocksize_x.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "transform": [10, 2, 0, 50, 0, -2], "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states no integer 'blocksize_x'
+
+# A zero blocksize.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 3, "blocksize_y": 0}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states a 'blocksize_y' that is not a positive 32-bit integer
+
+# A fractional blocksize.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:4326", "transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 2.5, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states no integer 'blocksize_x'
+
+# No reference system.
+statement error
+SELECT raster(cube, 0, 0, '{"transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states no string 'crs'
+
+# A reference system as WKT, which states no SRID.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "GEOGCS[WGS 84]", "transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states the reference system 'GEOGCS[WGS 84]', where a raster reads EPSG:<code> or none
+
+# A reference system of another authority.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "OGC:CRS84", "transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states the reference system 'OGC:CRS84', where a raster reads EPSG:<code> or none
+
+# An EPSG code that is no number.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:43x6", "transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states the reference system 'EPSG:43x6', whose code is no positive 32-bit integer
+
+# The EPSG code 0.
+statement error
+SELECT raster(cube, 0, 0, '{"crs": "EPSG:0", "transform": [10, 2, 0, 50, 0, -2], "blocksize_x": 3, "blocksize_y": 2}') FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile metadata states the reference system 'EPSG:0', whose code is no positive 32-bit integer
+
+# A negative tile coordinate.
+statement error
+SELECT raster(cube, -1, 0, meta_none()) FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile (-1, 0) has a negative coordinate
+
+# A tile whose pixel offset overflows 32 bits.
+statement error
+SELECT raster(cube, 2147483647, 0, meta_none()) FROM cube WHERE type = 'UINT8' AND format = 'RAW'
+----
+raster: the tile (2147483647, 0) of 3 x 2 pixels lies beyond the pixel offsets of a raster

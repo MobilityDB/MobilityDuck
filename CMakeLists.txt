@@ -164,6 +164,8 @@ set(EXTENSION_SOURCES
     src/s2cell/ts2cell.cpp
     src/raster/raquet.cpp
     src/raster/raster.cpp
+    src/raster/raster_boundary.cpp
+    src/raster/raster_datacube.cpp
     src/temporal/temporal_blob.cpp
     src/json/tjsonb.cpp
     src/json/tjsonb_in_out.cpp
@@ -185,6 +187,18 @@ set(EXTENSION_SOURCES
     src/index/sptree_optimize_scan.cpp
     src/temporal/temporal_parquet.cpp
 )
+
+# The datacube codec of the raster boundary (src/raster/raster_datacube.cpp)
+# decompresses with the codecs DuckDB vendors in third_party. zstd, miniz and
+# yyjson are libraries of duckdb_static, their headers on DuckDB's include path;
+# snappy and lz4 are compiled into the extension that calls them, as the parquet
+# extension compiles them (duckdb/extension/parquet/CMakeLists.txt).
+set(MOBILITYDUCK_DUCKDB_THIRD_PARTY ${CMAKE_SOURCE_DIR}/third_party)
+list(APPEND EXTENSION_SOURCES
+    ${MOBILITYDUCK_DUCKDB_THIRD_PARTY}/snappy/snappy.cc
+    ${MOBILITYDUCK_DUCKDB_THIRD_PARTY}/snappy/snappy-sinksource.cc
+    ${MOBILITYDUCK_DUCKDB_THIRD_PARTY}/lz4/lz4.cpp)
+include_directories(SYSTEM ${MOBILITYDUCK_DUCKDB_THIRD_PARTY}/snappy ${MOBILITYDUCK_DUCKDB_THIRD_PARTY}/lz4)
 
 # Outside Windows and Emscripten every source but the entry file compiles to the
 # same object for the static and the loadable extension: both targets build
