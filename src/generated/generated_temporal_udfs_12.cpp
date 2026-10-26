@@ -3201,6 +3201,734 @@ static void Gen_raster_band_pixels_v1(DataChunk &args, ExpressionState &, Vector
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raster_value_count(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto in4 = FlatVector::GetData<double>(args.data[4]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], in2[i], (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), in4[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], in2[i], (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], in2[i], NULL, 0, 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], true, NULL, 0, 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, 1, true, NULL, 0, 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = ListVector::GetData(args.data[2]);
+    auto &ch2 = ListVector::GetEntry(args.data[2]);
+    ch2.Flatten(ListVector::GetListSize(args.data[2]));
+    auto ch2d = FlatVector::GetData<double>(ch2);
+    auto &ch2v = FlatVector::Validity(ch2);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le2 = in2[i];
+        vector<double> v2;
+        v2.reserve(le2.length + 1);
+        for (idx_t j = 0; j < le2.length; j++) {
+            if (!ch2v.RowIsValid(le2.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v2.push_back(ch2d[le2.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], true, (const double *) v2.data(), (int) v2.size(), in3[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = ListVector::GetData(args.data[2]);
+    auto &ch2 = ListVector::GetEntry(args.data[2]);
+    ch2.Flatten(ListVector::GetListSize(args.data[2]));
+    auto ch2d = FlatVector::GetData<double>(ch2);
+    auto &ch2v = FlatVector::Validity(ch2);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le2 = in2[i];
+        vector<double> v2;
+        v2.reserve(le2.length + 1);
+        for (idx_t j = 0; j < le2.length; j++) {
+            if (!ch2v.RowIsValid(le2.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v2.push_back(ch2d[le2.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], true, (const double *) v2.data(), (int) v2.size(), 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<double>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<double> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, 1, true, (const double *) v1.data(), (int) v1.size(), in2[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<double>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<double> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, 1, true, (const double *) v1.data(), (int) v1.size(), 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[1])[off + j] = r[j].count;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v9(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto in4 = FlatVector::GetData<double>(args.data[4]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], in2[i], (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), in4[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v10(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], in2[i], (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v11(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], in2[i], NULL, 0, 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v12(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], true, NULL, 0, 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v13(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, 1, true, NULL, 0, 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v14(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = ListVector::GetData(args.data[2]);
+    auto &ch2 = ListVector::GetEntry(args.data[2]);
+    ch2.Flatten(ListVector::GetListSize(args.data[2]));
+    auto ch2d = FlatVector::GetData<double>(ch2);
+    auto &ch2v = FlatVector::Validity(ch2);
+    auto in3 = FlatVector::GetData<double>(args.data[3]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le2 = in2[i];
+        vector<double> v2;
+        v2.reserve(le2.length + 1);
+        for (idx_t j = 0; j < le2.length; j++) {
+            if (!ch2v.RowIsValid(le2.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v2.push_back(ch2d[le2.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], true, (const double *) v2.data(), (int) v2.size(), in3[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = ListVector::GetData(args.data[2]);
+    auto &ch2 = ListVector::GetEntry(args.data[2]);
+    ch2.Flatten(ListVector::GetListSize(args.data[2]));
+    auto ch2d = FlatVector::GetData<double>(ch2);
+    auto &ch2v = FlatVector::Validity(ch2);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le2 = in2[i];
+        vector<double> v2;
+        v2.reserve(le2.length + 1);
+        for (idx_t j = 0; j < le2.length; j++) {
+            if (!ch2v.RowIsValid(le2.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v2.push_back(ch2d[le2.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, in1[i], true, (const double *) v2.data(), (int) v2.size(), 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v16(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<double>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto in2 = FlatVector::GetData<double>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<double> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, 1, true, (const double *) v1.data(), (int) v1.size(), in2[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_value_count_v17(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<double>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<double> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        int cnt = 0;
+        ValueCount *r = raster_value_count(p0, 1, true, (const double *) v1.data(), (int) v1.size(), 0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<double>(*ents[0])[off + j] = r[j].value;
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].percent;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_tile_value_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -5037,6 +5765,24 @@ void RegisterGenerated_meos_raster_base_accessor(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandNoDataValue", {RasterTypes::raster()}, LogicalType::DOUBLE, Gen_raster_band_nodata_value_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::BLOB, Gen_raster_band_pixels));
     RegisterSerializedScalarFunction(loader, ScalarFunction("pixels", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_band_pixels_v1));
+    { ScalarFunction sf = ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v3));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v4));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v5));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v6));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v7));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valueCount", {RasterTypes::raster(), LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"count", LogicalType(LogicalType::INTEGER)}})), Gen_raster_value_count_v8));
+    { ScalarFunction sf = ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v9); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v10); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v11));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v12));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v13));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v14));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v15));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::DOUBLE}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v16));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("valuePercent", {RasterTypes::raster(), LogicalType::LIST(LogicalType::DOUBLE)}, LogicalType::LIST(LogicalType::STRUCT({{"value", LogicalType(LogicalType::DOUBLE)}, {"percent", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_value_count_v17));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rasterTileValueQuadbin", {TgeompointType::tgeompoint(), LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, QuadbinTypes::quadbin(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_raster_tile_value_quadbin));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandPixelType", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_raster_band_pixel_type));
     RegisterSerializedScalarFunction(loader, ScalarFunction("bandPixelType", {RasterTypes::raster()}, LogicalType::VARCHAR, Gen_raster_band_pixel_type_d));

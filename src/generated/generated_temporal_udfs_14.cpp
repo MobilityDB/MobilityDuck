@@ -2527,6 +2527,208 @@ static void Gen_raster_clip_v2(DataChunk &args, ExpressionState &, Vector &resul
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raster_clip_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<int32_t>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto in4 = FlatVector::GetData<bool>(args.data[4]);
+    auto in5 = FlatVector::GetData<bool>(args.data[5]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<int32_t> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], crs2 ? crs2 : raster_srid(p0));
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        Raster *r = raster_clip(p0, (const int *) v1.data(), (int) v1.size(), p2, (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), in4[i], in5[i]);
+        free(p0);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_clip_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<int32_t>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto in4 = FlatVector::GetData<bool>(args.data[4]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<int32_t> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], crs2 ? crs2 : raster_srid(p0));
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        Raster *r = raster_clip(p0, (const int *) v1.data(), (int) v1.size(), p2, (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), in4[i], false);
+        free(p0);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_clip_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<int32_t>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    auto in3 = ListVector::GetData(args.data[3]);
+    auto &ch3 = ListVector::GetEntry(args.data[3]);
+    ch3.Flatten(ListVector::GetListSize(args.data[3]));
+    auto ch3d = FlatVector::GetData<double>(ch3);
+    auto &ch3v = FlatVector::Validity(ch3);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<int32_t> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], crs2 ? crs2 : raster_srid(p0));
+        vector<double> v3;
+        if (!n3) {
+            const list_entry_t le3 = in3[i];
+            v3.reserve(le3.length + 1);
+            for (idx_t j = 0; j < le3.length; j++) {
+                if (!ch3v.RowIsValid(le3.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                v3.push_back(ch3d[le3.offset + j]);
+            }
+        }
+        Raster *r = raster_clip(p0, (const int *) v1.data(), (int) v1.size(), p2, (n3 ? NULL : (const double *) v3.data()), (n3 ? 0 : (int) v3.size()), true, false);
+        free(p0);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_clip_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto ch1d = FlatVector::GetData<int32_t>(ch1);
+    auto &ch1v = FlatVector::Validity(ch1);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        const list_entry_t le1 = in1[i];
+        vector<int32_t> v1;
+        v1.reserve(le1.length + 1);
+        for (idx_t j = 0; j < le1.length; j++) {
+            if (!ch1v.RowIsValid(le1.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            v1.push_back(ch1d[le1.offset + j]);
+        }
+        GSERIALIZED *p2 = GeometryToGSerialized(in2[i], crs2 ? crs2 : raster_srid(p0));
+        Raster *r = raster_clip(p0, (const int *) v1.data(), (int) v1.size(), p2, NULL, 0, true, false);
+        free(p0);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_transform(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -2988,6 +3190,280 @@ static void Gen_raster_rescale_v2(DataChunk &args, ExpressionState &, Vector &re
         free(p0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_dump_as_polygons(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        GeomVal *r = raster_dump_as_polygons(p0, in1[i], in2[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<string_t>(*ents[0])[off + j] = GSerializedToGeometry(r[j].geom, state, *ents[0]);
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].val;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) geomval_arr_free(r, cnt);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_dump_as_polygons_v1(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        GeomVal *r = raster_dump_as_polygons(p0, in1[i], true, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<string_t>(*ents[0])[off + j] = GSerializedToGeometry(r[j].geom, state, *ents[0]);
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].val;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) geomval_arr_free(r, cnt);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_dump_as_polygons_v2(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        GeomVal *r = raster_dump_as_polygons(p0, 1, true, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<string_t>(*ents[0])[off + j] = GSerializedToGeometry(r[j].geom, state, *ents[0]);
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].val;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) geomval_arr_free(r, cnt);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_dump_values(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        bool *nul = NULL;
+        double *r = raster_dump_values(p0, in1[i], in2[i], &nul, &cnt);
+        const int w = r ? raster_width(p0) : 0;
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const int nrows = w > 0 ? cnt / w : 0;
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + nrows);
+        auto &inner = ListVector::GetEntry(result);
+        const idx_t ioff = ListVector::GetListSize(inner);
+        ListVector::Reserve(inner, ioff + cnt);
+        auto ient = FlatVector::GetData<list_entry_t>(inner);
+        auto &vals = ListVector::GetEntry(inner);
+        auto vdat = FlatVector::GetData<double>(vals);
+        auto &vval = FlatVector::Validity(vals);
+        for (int k = 0; k < nrows; k++)
+            ient[off + k] = list_entry_t{ioff + idx_t(k) * idx_t(w), idx_t(w)};
+        for (int j = 0; j < cnt; j++) {
+            vdat[ioff + j] = r[j];
+            if (nul && nul[j]) vval.SetInvalid(ioff + j);
+        }
+        ListVector::SetListSize(inner, ioff + cnt);
+        ListVector::SetListSize(result, off + nrows);
+        out[i] = list_entry_t{off, idx_t(nrows)};
+        free(r);
+        free(nul);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_dump_values_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        bool *nul = NULL;
+        double *r = raster_dump_values(p0, in1[i], true, &nul, &cnt);
+        const int w = r ? raster_width(p0) : 0;
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const int nrows = w > 0 ? cnt / w : 0;
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + nrows);
+        auto &inner = ListVector::GetEntry(result);
+        const idx_t ioff = ListVector::GetListSize(inner);
+        ListVector::Reserve(inner, ioff + cnt);
+        auto ient = FlatVector::GetData<list_entry_t>(inner);
+        auto &vals = ListVector::GetEntry(inner);
+        auto vdat = FlatVector::GetData<double>(vals);
+        auto &vval = FlatVector::Validity(vals);
+        for (int k = 0; k < nrows; k++)
+            ient[off + k] = list_entry_t{ioff + idx_t(k) * idx_t(w), idx_t(w)};
+        for (int j = 0; j < cnt; j++) {
+            vdat[ioff + j] = r[j];
+            if (nul && nul[j]) vval.SetInvalid(ioff + j);
+        }
+        ListVector::SetListSize(inner, ioff + cnt);
+        ListVector::SetListSize(result, off + nrows);
+        out[i] = list_entry_t{off, idx_t(nrows)};
+        free(r);
+        free(nul);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_pixel_as_points(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<bool>(args.data[2]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        Pixel *r = raster_pixel_as_points(p0, in1[i], in2[i], &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<string_t>(*ents[0])[off + j] = GSerializedToGeometry(r[j].geom, state, *ents[0]);
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[2])[off + j] = r[j].x;
+            FlatVector::GetData<int32_t>(*ents[3])[off + j] = r[j].y;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) pixel_arr_free(r, cnt);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_pixel_as_points_v1(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        Pixel *r = raster_pixel_as_points(p0, in1[i], true, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<string_t>(*ents[0])[off + j] = GSerializedToGeometry(r[j].geom, state, *ents[0]);
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[2])[off + j] = r[j].x;
+            FlatVector::GetData<int32_t>(*ents[3])[off + j] = r[j].y;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) pixel_arr_free(r, cnt);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_pixel_as_points_v2(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int cnt = 0;
+        Pixel *r = raster_pixel_as_points(p0, 1, true, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            FlatVector::GetData<string_t>(*ents[0])[off + j] = GSerializedToGeometry(r[j].geom, state, *ents[0]);
+            FlatVector::GetData<double>(*ents[1])[off + j] = r[j].value;
+            FlatVector::GetData<int32_t>(*ents[2])[off + j] = r[j].x;
+            FlatVector::GetData<int32_t>(*ents[3])[off + j] = r[j].y;
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        if (r) pixel_arr_free(r, cnt);
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
@@ -4491,6 +4967,10 @@ void RegisterGenerated_meos_raster_base_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip));
     RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType(), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType()}, RasterTypes::raster(), Gen_raster_clip_v2));
+    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE)}, RasterTypes::raster(), Gen_raster_clip_v5); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
+    RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType()}, RasterTypes::raster(), Gen_raster_clip_v6));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_v2));
@@ -4509,6 +4989,14 @@ void RegisterGenerated_meos_raster_base_transf(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_rescale));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_rescale_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_rescale_v2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons_v2));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpValues", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), Gen_raster_dump_values));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpValues", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), Gen_raster_dump_values_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v1));
+    RegisterSerializedScalarFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v2));
     { ScalarFunction sf = ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_reclass); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
     RegisterSerializedScalarFunction(loader, ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_reclass_v1));
     RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope));
