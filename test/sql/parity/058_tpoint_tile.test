@@ -120,6 +120,95 @@ STBOX XT(((5,5),(7,7)),[2001-01-05 00:00:00-08, 2001-01-07 00:00:00-08))
 STBOX XT(((7,7),(9,9)),[2001-01-07 00:00:00-08, 2001-01-09 00:00:00-08))
 STBOX XT(((9,9),(10,10)),[2001-01-09 00:00:00-08, 2001-01-10 00:00:00-08])
 
+# MobilityDB declares timeBoxes(<tgeompoint|tgeometry|trgeometry>, interval, timestamptz DEFAULT
+# '2000-01-03', boolean DEFAULT TRUE, boolean DEFAULT TRUE), so each of its 2- to 5-argument forms
+# is called below. The default origin lies 182 two-day bins before 2001-01-01, so the 2-argument
+# form and the forms passing TRUE answer what the 3-argument query above answers.
+query I
+SELECT unnest(timeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', INTERVAL '2 days'))::VARCHAR;
+----
+STBOX XT(((1,1),(3,3)),[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08))
+STBOX XT(((3,3),(5,5)),[2001-01-03 00:00:00-08, 2001-01-05 00:00:00-08))
+STBOX XT(((5,5),(7,7)),[2001-01-05 00:00:00-08, 2001-01-07 00:00:00-08))
+STBOX XT(((7,7),(9,9)),[2001-01-07 00:00:00-08, 2001-01-09 00:00:00-08))
+STBOX XT(((9,9),(10,10)),[2001-01-09 00:00:00-08, 2001-01-10 00:00:00-08])
+
+query I
+SELECT unnest(timeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', INTERVAL '2 days', TIMESTAMPTZ '2001-01-01', TRUE))::VARCHAR;
+----
+STBOX XT(((1,1),(3,3)),[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08))
+STBOX XT(((3,3),(5,5)),[2001-01-03 00:00:00-08, 2001-01-05 00:00:00-08))
+STBOX XT(((5,5),(7,7)),[2001-01-05 00:00:00-08, 2001-01-07 00:00:00-08))
+STBOX XT(((7,7),(9,9)),[2001-01-07 00:00:00-08, 2001-01-09 00:00:00-08))
+STBOX XT(((9,9),(10,10)),[2001-01-09 00:00:00-08, 2001-01-10 00:00:00-08])
+
+query I
+SELECT unnest(timeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', INTERVAL '2 days', TIMESTAMPTZ '2001-01-01', TRUE, TRUE))::VARCHAR;
+----
+STBOX XT(((1,1),(3,3)),[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08))
+STBOX XT(((3,3),(5,5)),[2001-01-03 00:00:00-08, 2001-01-05 00:00:00-08))
+STBOX XT(((5,5),(7,7)),[2001-01-05 00:00:00-08, 2001-01-07 00:00:00-08))
+STBOX XT(((7,7),(9,9)),[2001-01-07 00:00:00-08, 2001-01-09 00:00:00-08))
+STBOX XT(((9,9),(10,10)),[2001-01-09 00:00:00-08, 2001-01-10 00:00:00-08])
+
+# MobilityDB: SELECT count(*) AS boxes FROM unnest(timeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(9 9)@2001-01-05]', duration := '2 days', torigin := '2001-01-01'));
+query I
+SELECT len(timeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(9 9)@2001-01-05]', INTERVAL '2 days', TIMESTAMPTZ '2001-01-01'));
+----
+3
+
+# MobilityDB (058_tgeo_tile): SELECT round(timeBoxes(tgeometry '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', interval '2 days', '2001-01-01'), 6);
+query I
+SELECT unnest(timeBoxes(tgeometry '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', INTERVAL '2 days', TIMESTAMPTZ '2001-01-01'))::VARCHAR;
+----
+STBOX XT(((1,1),(1,1)),[2001-01-01 00:00:00-08, 2001-01-03 00:00:00-08))
+STBOX XT(((1,1),(1,1)),[2001-01-03 00:00:00-08, 2001-01-05 00:00:00-08))
+STBOX XT(((1,1),(1,1)),[2001-01-05 00:00:00-08, 2001-01-07 00:00:00-08))
+STBOX XT(((1,1),(1,1)),[2001-01-07 00:00:00-08, 2001-01-09 00:00:00-08))
+STBOX XT(((1,1),(10,10)),[2001-01-09 00:00:00-08, 2001-01-10 00:00:00-08])
+
+query I
+SELECT [timeBoxes(g, INTERVAL '2 days') = b, timeBoxes(g, INTERVAL '2 days', TIMESTAMPTZ '2001-01-01', TRUE) = b,
+  timeBoxes(g, INTERVAL '2 days', TIMESTAMPTZ '2001-01-01', TRUE, TRUE) = b]::VARCHAR
+FROM (SELECT g, timeBoxes(g, INTERVAL '2 days', TIMESTAMPTZ '2001-01-01') AS b
+  FROM (SELECT tgeometry '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]' AS g));
+----
+[true, true, true]
+
+# MobilityDB (158_trgeo_tile): SELECT array_length(timeBoxes(trgeometry 'Polygon((0 0,1 0,1 1,0 1,0 0));[Pose(Point(0 0),0)@2001-01-01, Pose(Point(10 0),0)@2001-01-05]', interval '1 day'), 1);
+query IIII
+SELECT len(timeBoxes(r, INTERVAL '1 day')), len(timeBoxes(r, INTERVAL '1 day', TIMESTAMPTZ '2000-01-03')),
+  len(timeBoxes(r, INTERVAL '1 day', TIMESTAMPTZ '2000-01-03', TRUE)),
+  len(timeBoxes(r, INTERVAL '1 day', TIMESTAMPTZ '2000-01-03', TRUE, TRUE))
+FROM (SELECT trgeometry 'Polygon((0 0,1 0,1 1,0 1,0 0));[Pose(Point(0 0),0)@2001-01-01, Pose(Point(10 0),0)@2001-01-05]' AS r);
+----
+5	5	5	5
+
+# Every timeBoxes form MobilityDB declares is registered, the spatial ones and the temporal number
+# ones (timeBoxes(<tint|tfloat|tbigint>, interval, timestamptz, boolean) and its 2-argument form).
+query II
+SELECT parameter_types::VARCHAR, count(*) FROM duckdb_functions() WHERE function_name = 'timeBoxes'
+GROUP BY ALL ORDER BY 1;
+----
+[tbigint, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN]	1
+[tbigint, INTERVAL]	1
+[tfloat, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN]	1
+[tfloat, INTERVAL]	1
+[tgeometry, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN, BOOLEAN]	1
+[tgeometry, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN]	1
+[tgeometry, INTERVAL, TIMESTAMP WITH TIME ZONE]	1
+[tgeometry, INTERVAL]	1
+[tgeompoint, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN, BOOLEAN]	1
+[tgeompoint, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN]	1
+[tgeompoint, INTERVAL, TIMESTAMP WITH TIME ZONE]	1
+[tgeompoint, INTERVAL]	1
+[tint, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN]	1
+[tint, INTERVAL]	1
+[trgeometry, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN, BOOLEAN]	1
+[trgeometry, INTERVAL, TIMESTAMP WITH TIME ZONE, BOOLEAN]	1
+[trgeometry, INTERVAL, TIMESTAMP WITH TIME ZONE]	1
+[trgeometry, INTERVAL]	1
+
 # MobilityDB: SELECT round(spaceTimeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', 2.0, interval '2 days', 'Point(1 1)', '2001-01-01'), 6);
 query I
 SELECT unnest(spaceTimeBoxes(tgeompoint '[Point(1 1)@2001-01-01, Point(10 10)@2001-01-10]', 2.0, INTERVAL '2 days', ST_GeomFromText('POINT(1 1)'), TIMESTAMPTZ '2001-01-01'))::VARCHAR;

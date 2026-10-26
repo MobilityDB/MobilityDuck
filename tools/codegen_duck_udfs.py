@@ -4162,9 +4162,10 @@ def emit_row_out(f, tag, s, ins, ms):
 # origin: tspatial_srid of a temporal value, 0 for a geometry.
 def shape_box_scalars(f):
     """[(first kind, [(sigs, ins, bound)]), ret kind] for a retired group's public function
-    answering stbox[] from a spatial temporal value whose tail #shape_array does not take, or one
-    stbox from a geometry followed by a geometry; None otherwise. Signatures with the same tail and
-    the same bindings share one body."""
+    answering stbox[] from a spatial temporal value, its tail other than the split-into-N count
+    #shape_array takes, or one stbox from a geometry followed by a geometry; None otherwise.
+    Signatures with the same tail and the same bindings share one body. #shape_array refuses what
+    this takes, so each form registers once."""
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
     ar = (f.get("shape") or {}).get("arrayReturn") or {}
@@ -4790,6 +4791,12 @@ def shape_array(f):
         return None                       # internal pointer-preserving twin (temporal_sequences_p)
     ar = (f.get("shape") or {}).get("arrayReturn")
     if not ar:
+        return None
+    # The boxes of a spatial temporal value in a retired group are #shape_box_scalars's, which
+    # registers every form the SQL defaults allow (timeBoxes(tgeompoint, interval, timestamptz,
+    # boolean) among them); taking them here too registers the full form and the projected
+    # shorter ones (#project_signature_forms) a second time
+    if shape_box_scalars(f):
         return None
     # NB: no STRUCTS-fields exclusion here — the MEOS value-type structs Span/STBox/TBox ARE handled
     # (as opaque BLOB elements, in ARRAY_ELEM); the LIST(STRUCT) path structs (Match/warp) are routed
