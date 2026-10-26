@@ -1132,10 +1132,13 @@ static void Gen_tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &, Vec
 // ===== @ingroup meos_geo_accessor =====
 static void Gen_bearing_point_point(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs1;
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> double {
-            GSERIALIZED *g1 = GeometryToGSerialized(in1, 0);
-            GSERIALIZED *g2 = GeometryToGSerialized(in2, 0);
+            GSERIALIZED *g1 = GeometryToGSerialized(in1, crs0 ? crs0 : crs_any);
+            GSERIALIZED *g2 = GeometryToGSerialized(in2, crs1 ? crs1 : crs_any);
             double v;
             bool ok = bearing_point_point(g1, g2, &v);
             free(g1); free(g2);
@@ -1146,10 +1149,11 @@ static void Gen_bearing_point_point(DataChunk &args, ExpressionState &, Vector &
 
 static void Gen_bearing_tpoint_point_invert_invert_no(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1162,10 +1166,11 @@ static void Gen_bearing_tpoint_point_invert_invert_no(DataChunk &args, Expressio
 
 static void Gen_bearing_tpoint_point_invert_invert(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1716,6 +1721,7 @@ static void Gen_tgeoinst_make(DataChunk &args, ExpressionState &, Vector &result
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1723,7 +1729,7 @@ static void Gen_tgeoinst_make(DataChunk &args, ExpressionState &, Vector &result
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
         Temporal *r = (Temporal *) tgeoinst_make(v0, v1);
         free(v0);
@@ -1764,6 +1770,7 @@ static void Gen_tgeoseq_from_base_tstzset(DataChunk &args, ExpressionState &, Ve
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1771,7 +1778,7 @@ static void Gen_tgeoseq_from_base_tstzset(DataChunk &args, ExpressionState &, Ve
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = BlobToSet(in1[i]);
         Temporal *r = (Temporal *) tgeoseq_from_base_tstzset(v0, v1);
         free(v0);
@@ -1814,6 +1821,7 @@ static void Gen_tgeoseq_from_base_tstzspan(DataChunk &args, ExpressionState &, V
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1822,7 +1830,7 @@ static void Gen_tgeoseq_from_base_tstzspan(DataChunk &args, ExpressionState &, V
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = BlobToSpan(in1[i]);
         Temporal *r = (Temporal *) tgeoseq_from_base_tstzspan(v0, v1, interp);
         free(v0);
@@ -1866,6 +1874,7 @@ static void Gen_tgeoseqset_from_base_tstzspanset(DataChunk &args, ExpressionStat
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1874,7 +1883,7 @@ static void Gen_tgeoseqset_from_base_tstzspanset(DataChunk &args, ExpressionStat
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("step");
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = BlobToSpanSet(in1[i]);
         Temporal *r = (Temporal *) tgeoseqset_from_base_tstzspanset(v0, v1, interp);
         free(v0);
@@ -1918,6 +1927,7 @@ static void Gen_tpointinst_make(DataChunk &args, ExpressionState &, Vector &resu
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1925,7 +1935,7 @@ static void Gen_tpointinst_make(DataChunk &args, ExpressionState &, Vector &resu
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = DuckDBToMeosTimestamp(in1[i]).value;
         Temporal *r = (Temporal *) tpointinst_make(v0, v1);
         free(v0);
@@ -1966,6 +1976,7 @@ static void Gen_tpointseq_from_base_tstzset(DataChunk &args, ExpressionState &, 
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1973,7 +1984,7 @@ static void Gen_tpointseq_from_base_tstzset(DataChunk &args, ExpressionState &, 
         for (idx_t c = 0; c < ncol; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = BlobToSet(in1[i]);
         Temporal *r = (Temporal *) tpointseq_from_base_tstzset(v0, v1);
         free(v0);
@@ -2016,6 +2027,7 @@ static void Gen_tpointseq_from_base_tstzspan(DataChunk &args, ExpressionState &,
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2024,7 +2036,7 @@ static void Gen_tpointseq_from_base_tstzspan(DataChunk &args, ExpressionState &,
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = BlobToSpan(in1[i]);
         Temporal *r = (Temporal *) tpointseq_from_base_tstzspan(v0, v1, interp);
         free(v0);
@@ -2068,6 +2080,7 @@ static void Gen_tpointseqset_from_base_tstzspanset(DataChunk &args, ExpressionSt
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto in2 = ncol > 2 ? FlatVector::GetData<string_t>(args.data[2]) : nullptr;
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2076,7 +2089,7 @@ static void Gen_tpointseqset_from_base_tstzspanset(DataChunk &args, ExpressionSt
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         interpType interp = in2 ? interptype_from_string(in2[i].GetString().c_str()) : interptype_from_string("linear");
-        auto v0 = GeometryToGSerialized(in0[i], 0);
+        auto v0 = GeometryToGSerialized(in0[i], crs0);
         auto v1 = BlobToSpanSet(in1[i]);
         Temporal *r = (Temporal *) tpointseqset_from_base_tstzspanset(v0, v1, interp);
         free(v0);

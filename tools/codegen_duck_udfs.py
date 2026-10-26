@@ -2756,8 +2756,10 @@ def emit_geo_temporal(f, kind, geo_first, has_dbl, suffix=""):
     # planar/geodetic flags + bbox match before the MEOS call (MEOS correctly errors on a
     # mixed planar/geodetic pair). DuckDB has a single GEOMETRY type, so this cross-argument
     # coercion is the binding's job; the SRID likewise comes from the sibling temporal.
+    # A geometry whose type states a CRS is read in its SRID, which MEOS tests against the
+    # temporal's (GeometryCrsSrid); one stating none takes the temporal's
     marshal = ("            Temporal *t = BlobToTemporal(in_t);\n"
-               "            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));\n"
+               "            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));\n"
                "            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {\n"
                "                GSERIALIZED *gs_geog = geom_to_geog(gs);\n"
                "                free(gs); gs = gs_geog;\n"
@@ -2799,6 +2801,7 @@ def emit_geo_temporal(f, kind, geo_first, has_dbl, suffix=""):
                 f"            return r != 0;\n")
     return (f"static void Gen_{name}{suffix}(DataChunk &args, ExpressionState &{state}, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
+            f"    const int32_t crs_g = GeometryCrsSrid(args.data[{0 if geo_first else 1}].GetType());\n"
             f"    {head}\n"
             f"        [&]({lam_decl}) -> {rett} {{\n{marshal}{body}        }});\n}}\n")
 
@@ -3179,7 +3182,7 @@ def emit_value_array_make(f, kind, b0, rb):
     raises PostgreSQL's message for it, as the other arrays do."""
     name = f["name"]
     writer = PTR_RET[rb][1] % "r"
-    read = ("GeometryToGSerialized(cd[le.offset + j], 0)" if b0 == "GSERIALIZED"
+    read = ("GeometryToGSerialized(cd[le.offset + j], crs0)" if b0 == "GSERIALIZED"
             else PTR_IN[b0][1] % "cd[le.offset + j]")
     if kind == "ptrarr":
         decl = f"{b0} **arr = ({b0} **) malloc(sizeof({b0} *) * (n > 0 ? n : 1));"
@@ -3198,6 +3201,7 @@ f"    auto &lv = args.data[0];\n"
 f"    auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));\n"
 f"    auto cd = FlatVector::GetData<string_t>(child);\n"
 f"    auto &cv = FlatVector::Validity(child);\n"
++ (f"    const int32_t crs0 = GeometryCrsSrid(lv.GetType());\n" if b0 == "GSERIALIZED" else "") +
 f"    UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),\n"
 f"        [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {{\n"
 f"            int n = (int) le.length, got = 0;\n"
@@ -4190,6 +4194,16 @@ def emit_box_scalars(f, first, tag, s, ins, bound, k, ret):
          "    const idx_t rows = args.size();",
          f"    for (idx_t c = 0; c < {k}; c++) args.data[c].Flatten(rows);",
          "    auto &outv = FlatVector::Validity(result);"]
+    # the SRID the type of each geometry argument states, 0 if none (GeometryCrsSrid); among
+    # geometries alone, one stating none takes the first stated one, as #emit_nary_scalars
+    gidx = ([0] if first != "temporal" else []) + [
+        byname[p["name"]] for p in ps[1:] if p["name"] not in bound
+        and byname[p["name"]] < k and base(p["canonical"]) == "GSERIALIZED"]
+    for gi in gidx:
+        L.append(f"    const int32_t crs{gi} = GeometryCrsSrid(args.data[{gi}].GetType());")
+    if first != "temporal":
+        L.append("    const int32_t crs_any = %s;" % ("".join(
+            f"crs{gi} ? crs{gi} : " for gi in gidx) + "0"))
     if ret == "list":
         L += ["    auto list_entries = FlatVector::GetData<list_entry_t>(result);",
               "    idx_t off = 0;"]
@@ -4209,8 +4223,8 @@ def emit_box_scalars(f, first, tag, s, ins, bound, k, ret):
         L += ["        Temporal *x0 = BlobToTemporal(a0);",
               "        int32_t srid0 = tspatial_srid(x0);"]
     else:
-        L += ["        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);",
-              "        int32_t srid0 = 0;"]
+        L += ["        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);",
+              "        int32_t srid0 = crs_any;"]
     call, geos = ["x0"], []
     for p in ps[1:]:
         nm = p["name"]
@@ -4223,7 +4237,7 @@ def emit_box_scalars(f, first, tag, s, ins, bound, k, ret):
             g = f"g{i}"
             if i < k:
                 L.append(f"        GSERIALIZED *{g} = GeometryToGSerialized("
-                         f"FlatVector::GetData<string_t>(args.data[{i}])[i], srid0);")
+                         f"FlatVector::GetData<string_t>(args.data[{i}])[i], crs{i} ? crs{i} : srid0);")
             else:
                 lit = str(defs[i]).strip().strip("'")
                 L.append(f"        GSERIALIZED *{g} = geom_in(\"{lit}\", -1);")
@@ -4351,10 +4365,12 @@ def shape_nary_scalars(f):
         if sp is not None:
             tail.append(sp)
             continue
-        # a geometry, read in the SRID of the temporal value beside it as #emit_geo_temporal
-        # reads one, else in SRID 0, and freed after the call (#hoist_span_operands)
+        # a geometry, read in the SRID its type states (crs<k>, #emit_nary_scalars), else in the
+        # SRID of the temporal value beside it as #emit_geo_temporal reads one, else in SRID 0, and
+        # freed after the call (#hoist_span_operands)
         if bb == "GSERIALIZED" and nn.count("*") == 1:
-            srid = "tspatial_srid(x0)" if first == "temporal" else "0"
+            srid = (f"crs{k} ? crs{k} : tspatial_srid(x0)" if first == "temporal"
+                    else f"crs{k} ? crs{k} : crs_any")
             tail.append(("MobilityDuckGeometryType()", "string_t",
                          "GeometryToGSerialized(a2, %s)" % srid))
             continue
@@ -4420,8 +4436,20 @@ def emit_nary_scalars(f, first, tail, ret, dval=None):
               "    auto &ch0v = FlatVector::Validity(ch0);"]
     else:
         L.append("    auto in0 = FlatVector::GetData<string_t>(args.data[0]);")
-    for k, (_dt, cpp, _m) in enumerate(tail, start=1):
+    # the SRID the type of each geometry operand states, 0 if none (GeometryCrsSrid)
+    if first in ("geo", "geoarr"):
+        L.append("    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());")
+    geos = [0] if first in ("geo", "geoarr") else []
+    for k, (dt, cpp, _m) in enumerate(tail, start=1):
         L.append(f"    auto in{k} = FlatVector::GetData<{cpp}>(args.data[{k}]);")
+        if dt == "MobilityDuckGeometryType()":
+            L.append(f"    const int32_t crs{k} = GeometryCrsSrid(args.data[{k}].GetType());")
+            geos.append(k)
+    # Among geometries alone, one whose type states no CRS states nothing, and takes the SRID
+    # the first of them stating one states; two stating different ones are MEOS's to refuse
+    if first in ("geo", "geoarr"):
+        L.append("    const int32_t crs_any = %s;" % ("".join(
+            f"crs{k} ? crs{k} : " for k in geos) + "0"))
     L += [f"    auto out = FlatVector::GetData<{scpp}>(result);",
           "    auto &outv = FlatVector::Validity(result);",
           "    for (idx_t i = 0; i < rows; i++) {",
@@ -4443,11 +4471,11 @@ def emit_nary_scalars(f, first, tail, ret, dval=None):
               "        int n0 = 0;",
               "        for (idx_t j = 0; j < le0.length; j++)",
               "            if (ch0v.RowIsValid(le0.offset + j))",
-              "                x0[n0++] = GeometryToGSerialized(ch0d[le0.offset + j], 0);",
+              "                x0[n0++] = GeometryToGSerialized(ch0d[le0.offset + j], crs_any);",
               "        if (n0 == 0) { free(x0); outv.SetInvalid(i); continue; }"]
         free_x0 = ["        for (int j = 0; j < n0; j++) free(x0[j]);", "        free(x0);"]
     else:
-        L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);")
+        L.append("        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);")
     decl, args_, free_ = hoist_span_operands(
         ["x0"] + (["n0"] if first == "geoarr" else [])
         + [m.replace("a2", f"in{k}[i]") for k, (_d, _c, m) in enumerate(tail, start=1)]
@@ -4507,15 +4535,20 @@ def shape_geo_pair_out(f):
 
 def emit_geo_pair_out(f, local):
     """Two geometries, each read as #emit_geo_temporal reads one; with no temporal operand to
-    take an SRID from, both are read with SRID 0, the planar plane DuckDB's GEOMETRY stands for."""
+    take an SRID from, each is read in the SRID its type states, one stating none in the SRID the
+    other's states, and both in SRID 0, the planar plane DuckDB's GEOMETRY stands for, when
+    neither states one (GeometryCrsSrid)."""
     name = f["name"]; ctype, ecpp = local
     return (
 f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
 f"    EnsureMeosThreadInitialized();\n"
+f"    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());\n"
+f"    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());\n"
+f"    const int32_t crs_any = crs0 ? crs0 : crs1;\n"
 f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, {ecpp}>(args.data[0], args.data[1], result, args.size(),\n"
 f"        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> {ecpp} {{\n"
-f"            GSERIALIZED *g1 = GeometryToGSerialized(in1, 0);\n"
-f"            GSERIALIZED *g2 = GeometryToGSerialized(in2, 0);\n"
+f"            GSERIALIZED *g1 = GeometryToGSerialized(in1, crs0 ? crs0 : crs_any);\n"
+f"            GSERIALIZED *g2 = GeometryToGSerialized(in2, crs1 ? crs1 : crs_any);\n"
 f"            {ctype} v;\n"
 f"            bool ok = {name}(g1, g2, &v);\n"
 f"            free(g1); free(g2);\n"
@@ -6146,9 +6179,11 @@ def base_operand(p, sqlt):
     if b == "text" and sqlt == "text":
         return ("LogicalType::VARCHAR", "string_t", "MakeText(a2)", True)
     if b == "GSERIALIZED" and sqlt.startswith(("geometry", "geography")):
+        # a geometry takes the SRID its type states, which the caller puts in place of CRS
+        # (GeometryCrsSrid, 0 when the type states none)
         geog = sqlt.startswith("geography")
         return ("MobilityDuckGeometryType()", "string_t",
-                "GeogFromGeometry(a2)" if geog else "GeometryToGSerialized(a2, 0)", True)
+                "GeogFromGeometry(a2)" if geog else "GeometryToGSerialized(a2, CRS)", True)
     if b in PTR_IN and PTR_IN[b][0] != "MD_TEMPORAL":
         return (PTR_IN[b][0], "string_t", PTR_IN[b][1] % "a2", True)
     return None
@@ -6241,7 +6276,11 @@ def emit_temporal_from_base(f, value, time_, has_interp):
             L += [f'        if (interp != interptype_from_string("{dlit}"))',
                   f'            throw NotImplementedException("{f["sqlfn"]} constructs the {dlit} '
                   f'interpolation only");']
-    L.append(f"        auto v0 = {value[2].replace('a2', 'in0[i]')};")
+    if "CRS" in value[2]:
+        # the SRID the type of the geometry states (#base_operand)
+        L.insert(L.index("    auto out = FlatVector::GetData<string_t>(result);"),
+                 "    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());")
+    L.append(f"        auto v0 = {value[2].replace('a2', 'in0[i]').replace('CRS', 'crs0')};")
     L.append(f"        auto v1 = {time_[1].replace('a2', 'in1[i]')};")
     call = ["v0", "v1"] + (["interp"] if has_interp else [])
     L.append(f"        Temporal *r = (Temporal *) {name}({', '.join(call)});")
@@ -6488,9 +6527,10 @@ def emit_h3_prefilter(f, kind):
     if kind == "geo2set":   # (geometry, int) -> h3indexset ; geometry marshalled @ 4326
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
+                f"    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());\n"
                 f"    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in_g, int32_t res) {{\n"
-                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);\n"
+                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);\n"
                 f"            Set *r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return SetToBlob(result, r);\n"
@@ -6498,9 +6538,10 @@ def emit_h3_prefilter(f, kind):
     if kind == "geo2scalar":   # (geometry, int) -> h3index (BIGINT, bit-preserving) @ 4326
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
+                f"    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());\n"
                 f"    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in_g, int32_t res) {{\n"
-                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, 4326);\n"
+                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);\n"
                 f"            uint64_t r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return (int64_t) r;\n"
@@ -6601,8 +6642,8 @@ def static_cell_arg(p, sqlt, i, wide=False):
             return None
         dt, _cpp, marsh, _freed = bo
         loc = "p%d" % i
-        return (dt, "string_t", loc, "%s *%s = %s;\n            " % (b, loc, marsh.replace("a2", v)),
-                "free(%s); " % loc)
+        return (dt, "string_t", loc, "%s *%s = %s;\n            "
+                % (b, loc, marsh.replace("a2", v).replace("CRS", "crs%d" % i)), "free(%s); " % loc)
     if b in CELL_UINT and "*" not in n:
         if sqlt in CELL_SQL:
             return (CELL_SQL[sqlt], "int64_t", "static_cast<uint64_t>(%s)" % v, "", "")
@@ -6786,8 +6827,11 @@ def emit_static_cell(f, args, ret, sfx="", dval=None):
     else:
         head = (f"    {ex}::Execute<{tps}, {rett}>({vecs}, result, args.size(),\n"
                 f"        [&]({params}) -> {rett} {{\n")
+    # the SRID the type of each geometry operand states (#base_operand)
+    crs = "".join(f"    const int32_t crs{i} = GeometryCrsSrid(args.data[{i}].GetType());\n"
+                  for i, a in enumerate(args) if f"crs{i}" in a[3])
     return (f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &{state}, Vector &result) {{\n"
-            f"    EnsureMeosThreadInitialized();\n{head}"
+            f"    EnsureMeosThreadInitialized();\n{crs}{head}"
             f"            {pre}{cct} r = {name}({call});\n"
             + (f"            {post}\n" if post else "")
             + f"            {rlines}\n        }});\n}}\n")
@@ -7045,10 +7089,11 @@ def shape_sig_call(f):
         if any(a is None for a in args):
             continue
         # GeometryToGSerialized reads the WKB of a DuckDB geometry, which carries no SRID, so a
-        # geometry argument takes the SRID of the one value of the call that states one, read
-        # before it, as the geo shapes take the SRID of the temporal value (#shape_geo_temporal):
-        # clip(rast, geom) reads geom in the SRID of rast, the SRID PostGIS's ST_Clip requires of
-        # it. The CRS a typed GEOMETRY('EPSG:n') states is not read, as at every geometry argument.
+        # geometry argument whose type states no CRS takes the SRID of the one value of the call
+        # that states one, read before it, as the geo shapes take the SRID of the temporal value
+        # (#shape_geo_temporal): clip(rast, geom) reads geom in the SRID of rast. One whose type
+        # states a CRS is read in its SRID (crs<k>, #emit_sig_call), which MEOS tests against
+        # that value's.
         srcs = [k for k, (nm, a) in enumerate(zip(order, args))
                 if a["kind"] == "ptr" and base(byname[nm]["canonical"]) in SIG_SRID_OF]
         for k, a in enumerate(args):
@@ -7058,6 +7103,7 @@ def shape_sig_call(f):
                 args = None
                 break
             src = SIG_SRID_OF[base(byname[order[srcs[0]]]["canonical"])] % srcs[0]
+            src = "crs%d ? crs%d : %s" % (k, k, src)
             args[k] = dict(a, pre=[x.replace("SRID", src) for x in a["pre"]])
         if args is None:
             continue
@@ -7147,6 +7193,8 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
                   f"    auto &ch{k}v = FlatVector::Validity(ch{k});"]
         else:
             L.append(f"    auto in{k} = FlatVector::GetData<{a['cpp']}>(args.data[{k}]);")
+        if a["kind"] == "geo":
+            L.append(f"    const int32_t crs{k} = GeometryCrsSrid(args.data[{k}].GetType());")
     L += [f"    auto out = FlatVector::GetData<{rcpp}>(result);",
           "    auto &outv = FlatVector::Validity(result);",
           "    for (idx_t i = 0; i < rows; i++) {"]

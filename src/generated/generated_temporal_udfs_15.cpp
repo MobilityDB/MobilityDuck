@@ -1332,7 +1332,9 @@ static void Gen_geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1340,7 +1342,7 @@ static void Gen_geo_timestamptz_to_stbox(DataChunk &args, ExpressionState &state
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         STBox *r = geo_timestamptz_to_stbox(x0, DuckDBToMeosTimestamp(in1[i]).value);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -1354,7 +1356,9 @@ static void Gen_geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, V
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1362,7 +1366,7 @@ static void Gen_geo_tstzspan_to_stbox(DataChunk &args, ExpressionState &state, V
         for (idx_t c = 0; c < 2; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], 0);
+        GSERIALIZED *x0 = GeometryToGSerialized(in0[i], crs_any);
         Span *p1 = BlobToSpan(in1[i]);
         STBox *r = geo_tstzspan_to_stbox(x0, p1);
         free(p1);
@@ -1745,10 +1749,11 @@ static void Gen_tne_pose_tpose(DataChunk &args, ExpressionState &, Vector &resul
 // ===== @ingroup meos_pose_geopose_accessor =====
 static void Gen_tpose_apply_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;

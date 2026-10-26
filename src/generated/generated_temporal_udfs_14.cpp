@@ -1344,10 +1344,11 @@ static void Gen_tbigintbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, 
 // ===== @ingroup meos_cbuffer_rel_ever =====
 static void Gen_acontains_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1374,10 +1375,11 @@ static void Gen_acontains_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, V
 
 static void Gen_acontains_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1404,10 +1406,11 @@ static void Gen_acontains_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, 
 
 static void Gen_acovers_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1434,10 +1437,11 @@ static void Gen_acovers_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_acovers_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1464,10 +1468,11 @@ static void Gen_acovers_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Ve
 
 static void Gen_adisjoint_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1481,10 +1486,11 @@ static void Gen_adisjoint_geo_tcbuffer(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_adisjoint_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1524,10 +1530,11 @@ static void Gen_adisjoint_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, 
 
 static void Gen_adwithin_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in_g, string_t in_t, double d, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1541,10 +1548,11 @@ static void Gen_adwithin_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_adwithin_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in_t, string_t in_g, double d, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1571,10 +1579,11 @@ static void Gen_adwithin_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, V
 
 static void Gen_aintersects_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1588,10 +1597,11 @@ static void Gen_aintersects_geo_tcbuffer(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_aintersects_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1631,10 +1641,11 @@ static void Gen_aintersects_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &
 
 static void Gen_atouches_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1648,10 +1659,11 @@ static void Gen_atouches_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_atouches_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1691,10 +1703,11 @@ static void Gen_atouches_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, V
 
 static void Gen_econtains_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1721,10 +1734,11 @@ static void Gen_econtains_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, V
 
 static void Gen_econtains_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1751,10 +1765,11 @@ static void Gen_econtains_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, 
 
 static void Gen_ecovers_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1781,10 +1796,11 @@ static void Gen_ecovers_tcbuffer_cbuffer(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ecovers_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1811,10 +1827,11 @@ static void Gen_ecovers_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, Ve
 
 static void Gen_edisjoint_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1828,10 +1845,11 @@ static void Gen_edisjoint_geo_tcbuffer(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_edisjoint_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1871,10 +1889,11 @@ static void Gen_edisjoint_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, 
 
 static void Gen_edwithin_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in_g, string_t in_t, double d, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1888,10 +1907,11 @@ static void Gen_edwithin_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_edwithin_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, double, bool>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in_t, string_t in_g, double d, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1918,10 +1938,11 @@ static void Gen_edwithin_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &, V
 
 static void Gen_eintersects_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1935,10 +1956,11 @@ static void Gen_eintersects_geo_tcbuffer(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_eintersects_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1978,10 +2000,11 @@ static void Gen_eintersects_tcbuffer_tcbuffer(DataChunk &args, ExpressionState &
 
 static void Gen_etouches_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1995,10 +2018,11 @@ static void Gen_etouches_geo_tcbuffer(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_etouches_tcbuffer_geo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> bool {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -2434,6 +2458,7 @@ static void Gen_raster_clip(DataChunk &args, ExpressionState &, Vector &result) 
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
     auto in2 = FlatVector::GetData<bool>(args.data[2]);
     auto in3 = FlatVector::GetData<bool>(args.data[3]);
     auto out = FlatVector::GetData<string_t>(result);
@@ -2444,7 +2469,7 @@ static void Gen_raster_clip(DataChunk &args, ExpressionState &, Vector &result) 
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], raster_srid(p0));
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : raster_srid(p0));
         Raster *r = raster_clip(p0, NULL, 0, p1, NULL, 0, in2[i], in3[i]);
         free(p0);
         free(p1);
@@ -2460,6 +2485,7 @@ static void Gen_raster_clip_v1(DataChunk &args, ExpressionState &, Vector &resul
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
     auto in2 = FlatVector::GetData<bool>(args.data[2]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
@@ -2468,7 +2494,7 @@ static void Gen_raster_clip_v1(DataChunk &args, ExpressionState &, Vector &resul
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], raster_srid(p0));
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : raster_srid(p0));
         Raster *r = raster_clip(p0, NULL, 0, p1, NULL, 0, in2[i], false);
         free(p0);
         free(p1);
@@ -2484,13 +2510,14 @@ static void Gen_raster_clip_v2(DataChunk &args, ExpressionState &, Vector &resul
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    const int32_t crs1 = GeometryCrsSrid(args.data[1].GetType());
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], raster_srid(p0));
+        GSERIALIZED *p1 = GeometryToGSerialized(in1[i], crs1 ? crs1 : raster_srid(p0));
         Raster *r = raster_clip(p0, NULL, 0, p1, NULL, 0, true, false);
         free(p0);
         free(p1);

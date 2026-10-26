@@ -1363,10 +1363,11 @@ static void Gen_same_tspatial_stbox(DataChunk &args, ExpressionState &, Vector &
 // ===== @ingroup meos_geo_restrict =====
 static void Gen_tgeo_at_geom(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1403,10 +1404,11 @@ static void Gen_tgeo_at_stbox_d(DataChunk &args, ExpressionState &, Vector &resu
 
 static void Gen_tgeo_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1419,10 +1421,11 @@ static void Gen_tgeo_at_value(DataChunk &args, ExpressionState &, Vector &result
 
 static void Gen_tgeo_minus_geom(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1459,10 +1462,11 @@ static void Gen_tgeo_minus_stbox_d(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_tgeo_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
@@ -1504,6 +1508,7 @@ static void Gen_tgeo_space_boxes_s0_a7(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs4 = GeometryCrsSrid(args.data[4].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1517,7 +1522,7 @@ static void Gen_tgeo_space_boxes_s0_a7(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], crs4 ? crs4 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, FlatVector::GetData<bool>(args.data[5])[i], FlatVector::GetData<bool>(args.data[6])[i], &count);
         free(x0); free(g4);
@@ -1541,6 +1546,7 @@ static void Gen_tgeo_space_boxes_s0_a6(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs4 = GeometryCrsSrid(args.data[4].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1554,7 +1560,7 @@ static void Gen_tgeo_space_boxes_s0_a6(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], crs4 ? crs4 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, FlatVector::GetData<bool>(args.data[5])[i], true, &count);
         free(x0); free(g4);
@@ -1578,6 +1584,7 @@ static void Gen_tgeo_space_boxes_s0_a5(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs4 = GeometryCrsSrid(args.data[4].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1591,7 +1598,7 @@ static void Gen_tgeo_space_boxes_s0_a5(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], crs4 ? crs4 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4, true, true, &count);
         free(x0); free(g4);
@@ -1652,6 +1659,7 @@ static void Gen_tgeo_space_boxes_s1_a5(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1665,7 +1673,7 @@ static void Gen_tgeo_space_boxes_s1_a5(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], crs2 ? crs2 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, FlatVector::GetData<bool>(args.data[3])[i], FlatVector::GetData<bool>(args.data[4])[i], &count);
         free(x0); free(g2);
@@ -1689,6 +1697,7 @@ static void Gen_tgeo_space_boxes_s1_a4(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1702,7 +1711,7 @@ static void Gen_tgeo_space_boxes_s1_a4(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], crs2 ? crs2 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, FlatVector::GetData<bool>(args.data[3])[i], true, &count);
         free(x0); free(g2);
@@ -1726,6 +1735,7 @@ static void Gen_tgeo_space_boxes_s1_a3(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1739,7 +1749,7 @@ static void Gen_tgeo_space_boxes_s1_a3(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], crs2 ? crs2 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], 0, 0, g2, true, true, &count);
         free(x0); free(g2);
@@ -1800,6 +1810,7 @@ static void Gen_tgeo_space_boxes_s2_a6(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs3 = GeometryCrsSrid(args.data[3].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1813,7 +1824,7 @@ static void Gen_tgeo_space_boxes_s2_a6(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], crs3 ? crs3 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, FlatVector::GetData<bool>(args.data[4])[i], FlatVector::GetData<bool>(args.data[5])[i], &count);
         free(x0); free(g3);
@@ -1837,6 +1848,7 @@ static void Gen_tgeo_space_boxes_s2_a5(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs3 = GeometryCrsSrid(args.data[3].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1850,7 +1862,7 @@ static void Gen_tgeo_space_boxes_s2_a5(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], crs3 ? crs3 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, FlatVector::GetData<bool>(args.data[4])[i], true, &count);
         free(x0); free(g3);
@@ -1874,6 +1886,7 @@ static void Gen_tgeo_space_boxes_s2_a4(DataChunk &args, ExpressionState &, Vecto
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs3 = GeometryCrsSrid(args.data[3].GetType());
     auto list_entries = FlatVector::GetData<list_entry_t>(result);
     idx_t off = 0;
     for (idx_t i = 0; i < rows; i++) {
@@ -1887,7 +1900,7 @@ static void Gen_tgeo_space_boxes_s2_a4(DataChunk &args, ExpressionState &, Vecto
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
         Temporal *x0 = BlobToTemporal(a0);
         int32_t srid0 = tspatial_srid(x0);
-        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], crs3 ? crs3 : srid0);
         int count = 0;
         STBox *arr = tgeo_space_boxes(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], 0, g3, true, true, &count);
         free(x0); free(g3);
@@ -2092,6 +2105,9 @@ static void Gen_stbox_get_space_tile_s0_a5(DataChunk &args, ExpressionState &, V
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs4 = GeometryCrsSrid(args.data[4].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs4 ? crs4 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2102,9 +2118,9 @@ static void Gen_stbox_get_space_tile_s0_a5(DataChunk &args, ExpressionState &, V
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], crs4 ? crs4 : srid0);
         STBox *r = stbox_get_space_tile(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4);
         free(x0); free(g4);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2117,6 +2133,8 @@ static void Gen_stbox_get_space_tile_s0_a4(DataChunk &args, ExpressionState &, V
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2127,8 +2145,8 @@ static void Gen_stbox_get_space_tile_s0_a4(DataChunk &args, ExpressionState &, V
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
         GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
         STBox *r = stbox_get_space_tile(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], g4);
         free(x0); free(g4);
@@ -2142,6 +2160,9 @@ static void Gen_stbox_get_space_tile_ysize_zsize_s0_a3(DataChunk &args, Expressi
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs2 = GeometryCrsSrid(args.data[2].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs2 ? crs2 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2152,9 +2173,9 @@ static void Gen_stbox_get_space_tile_ysize_zsize_s0_a3(DataChunk &args, Expressi
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g2 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[2])[i], crs2 ? crs2 : srid0);
         STBox *r = stbox_get_space_tile_ysize_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], g2);
         free(x0); free(g2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2167,6 +2188,8 @@ static void Gen_stbox_get_space_tile_ysize_zsize_s0_a2(DataChunk &args, Expressi
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2177,8 +2200,8 @@ static void Gen_stbox_get_space_tile_ysize_zsize_s0_a2(DataChunk &args, Expressi
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
         GSERIALIZED *g2 = geom_in("Point(0 0 0)", -1);
         STBox *r = stbox_get_space_tile_ysize_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], g2);
         free(x0); free(g2);
@@ -2192,6 +2215,9 @@ static void Gen_stbox_get_space_tile_zsize_s0_a4(DataChunk &args, ExpressionStat
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs3 = GeometryCrsSrid(args.data[3].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs3 ? crs3 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2202,9 +2228,9 @@ static void Gen_stbox_get_space_tile_zsize_s0_a4(DataChunk &args, ExpressionStat
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g3 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[3])[i], crs3 ? crs3 : srid0);
         STBox *r = stbox_get_space_tile_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], g3);
         free(x0); free(g3);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2217,6 +2243,8 @@ static void Gen_stbox_get_space_tile_zsize_s0_a3(DataChunk &args, ExpressionStat
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2227,8 +2255,8 @@ static void Gen_stbox_get_space_tile_zsize_s0_a3(DataChunk &args, ExpressionStat
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
         GSERIALIZED *g3 = geom_in("Point(0 0 0)", -1);
         STBox *r = stbox_get_space_tile_zsize(x0, FlatVector::GetData<double>(args.data[1])[i], FlatVector::GetData<double>(args.data[2])[i], g3);
         free(x0); free(g3);
@@ -2242,6 +2270,9 @@ static void Gen_stbox_get_space_time_tile_s0_a8(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 8; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs6 = GeometryCrsSrid(args.data[6].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs6 ? crs6 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2252,9 +2283,9 @@ static void Gen_stbox_get_space_time_tile_s0_a8(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g6 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g6 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[i], crs6 ? crs6 : srid0);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], FlatVector::GetData<double>(args.data[4])[i], MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[5])[i]), g6, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[7])[i]).value);
         free(x0); free(g6);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2267,6 +2298,9 @@ static void Gen_stbox_get_space_time_tile_s0_a7(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs6 = GeometryCrsSrid(args.data[6].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs6 ? crs6 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2277,9 +2311,9 @@ static void Gen_stbox_get_space_time_tile_s0_a7(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g6 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g6 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[6])[i], crs6 ? crs6 : srid0);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], FlatVector::GetData<double>(args.data[4])[i], MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[5])[i]), g6, timestamptz_in("2000-01-03", -1));
         free(x0); free(g6);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2292,6 +2326,8 @@ static void Gen_stbox_get_space_time_tile_s0_a6(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2302,8 +2338,8 @@ static void Gen_stbox_get_space_time_tile_s0_a6(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
         GSERIALIZED *g6 = geom_in("Point(0 0 0)", -1);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], FlatVector::GetData<double>(args.data[4])[i], MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[5])[i]), g6, timestamptz_in("2000-01-03", -1));
         free(x0); free(g6);
@@ -2317,6 +2353,9 @@ static void Gen_stbox_get_space_time_tile_s1_a6(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs4 = GeometryCrsSrid(args.data[4].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs4 ? crs4 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2327,9 +2366,9 @@ static void Gen_stbox_get_space_time_tile_s1_a6(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], crs4 ? crs4 : srid0);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], 0, 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[5])[i]).value);
         free(x0); free(g4);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2342,6 +2381,9 @@ static void Gen_stbox_get_space_time_tile_s1_a5(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs4 = GeometryCrsSrid(args.data[4].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs4 ? crs4 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2352,9 +2394,9 @@ static void Gen_stbox_get_space_time_tile_s1_a5(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g4 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[4])[i], crs4 ? crs4 : srid0);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], 0, 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, timestamptz_in("2000-01-03", -1));
         free(x0); free(g4);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2367,6 +2409,8 @@ static void Gen_stbox_get_space_time_tile_s1_a4(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2377,8 +2421,8 @@ static void Gen_stbox_get_space_time_tile_s1_a4(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
         GSERIALIZED *g4 = geom_in("Point(0 0 0)", -1);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], 0, 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[3])[i]), g4, timestamptz_in("2000-01-03", -1));
         free(x0); free(g4);
@@ -2392,6 +2436,9 @@ static void Gen_stbox_get_space_time_tile_s2_a7(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs5 = GeometryCrsSrid(args.data[5].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs5 ? crs5 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2402,9 +2449,9 @@ static void Gen_stbox_get_space_time_tile_s2_a7(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g5 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g5 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[i], crs5 ? crs5 : srid0);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[4])[i]), g5, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[6])[i]).value);
         free(x0); free(g5);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2417,6 +2464,9 @@ static void Gen_stbox_get_space_time_tile_s2_a6(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs5 = GeometryCrsSrid(args.data[5].GetType());
+    const int32_t crs_any = crs0 ? crs0 : crs5 ? crs5 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2427,9 +2477,9 @@ static void Gen_stbox_get_space_time_tile_s2_a6(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
-        GSERIALIZED *g5 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[i], srid0);
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
+        GSERIALIZED *g5 = GeometryToGSerialized(FlatVector::GetData<string_t>(args.data[5])[i], crs5 ? crs5 : srid0);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[4])[i]), g5, timestamptz_in("2000-01-03", -1));
         free(x0); free(g5);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2442,6 +2492,8 @@ static void Gen_stbox_get_space_time_tile_s2_a5(DataChunk &args, ExpressionState
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
     auto &outv = FlatVector::Validity(result);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
     auto out = FlatVector::GetData<string_t>(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2452,8 +2504,8 @@ static void Gen_stbox_get_space_time_tile_s2_a5(DataChunk &args, ExpressionState
             continue;
         }
         string_t a0 = FlatVector::GetData<string_t>(args.data[0])[i];
-        GSERIALIZED *x0 = GeometryToGSerialized(a0, 0);
-        int32_t srid0 = 0;
+        GSERIALIZED *x0 = GeometryToGSerialized(a0, crs_any);
+        int32_t srid0 = crs_any;
         GSERIALIZED *g5 = geom_in("Point(0 0 0)", -1);
         STBox *r = stbox_get_space_time_tile(x0, DuckDBToMeosTimestamp(FlatVector::GetData<timestamp_tz_t>(args.data[1])[i]).value, FlatVector::GetData<double>(args.data[2])[i], FlatVector::GetData<double>(args.data[3])[i], 0, MeosIntervalArg(FlatVector::GetData<interval_t>(args.data[4])[i]), g5, timestamptz_in("2000-01-03", -1));
         free(x0); free(g5);
@@ -5190,10 +5242,11 @@ static void Gen_tposechain_to_tpose(DataChunk &args, ExpressionState &, Vector &
 // ===== @ingroup meos_rgeo_spatialfuncs =====
 static void Gen_trgeometry_body_point_trajectory(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, tspatial_srid(t));
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
             if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <mutex>
 #include <string>
 #include <utility>
 
+#include "duckdb_version_compat.hpp"
 #include "duckdb/function/cast/default_casts.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -27,7 +29,41 @@ inline std::mutex &MeosSerializedExecMutex() {
 	return mutex;
 }
 
+/**
+ * DuckDB keeps the coordinate reference system of a GEOMETRY on its type, and binds an argument
+ * typed GEOMETRY('EPSG:n') to a parameter declared GEOMETRY through a cast that leaves the CRS
+ * behind (GeoCastSwitch, src/function/cast/geo_casts.cpp). Binding each GEOMETRY parameter to the
+ * type of its argument, as DuckDB's own ST_CRS binds its parameter, keeps the CRS on the vector the
+ * function reads, where GeometryCrsSrid (geo_util.hpp) reads it.
+ */
+#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+//! A GEOMETRY, or a list of them, whose CRS a parameter of the type keeps
+inline bool IsGeometryOrGeometryList(const LogicalType &t) {
+	return t.id() == LogicalTypeId::GEOMETRY ||
+	       (t.id() == LogicalTypeId::LIST && ListType::GetChildType(t).id() == LogicalTypeId::GEOMETRY);
+}
+
+inline unique_ptr<FunctionData> BindGeometryArgumentTypes(ClientContext &, ScalarFunction &bound_function,
+                                                          vector<unique_ptr<Expression>> &arguments) {
+	for (idx_t k = 0; k < arguments.size() && k < bound_function.arguments.size(); k++) {
+		const LogicalType &declared = bound_function.arguments[k];
+		const LogicalType &given = arguments[k]->return_type;
+		if (IsGeometryOrGeometryList(declared) && IsGeometryOrGeometryList(given) &&
+		    declared.id() == given.id()) {
+			bound_function.arguments[k] = given;
+		}
+	}
+	return nullptr;
+}
+#endif
+
 inline ScalarFunction WrapScalarFunctionWithMeosExecMutex(ScalarFunction sf) {
+#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+	if (!sf.HasBindCallback() &&
+	    std::any_of(sf.arguments.begin(), sf.arguments.end(), IsGeometryOrGeometryList)) {
+		sf.SetBindCallback(BindGeometryArgumentTypes);
+	}
+#endif
 	scalar_function_t orig = std::move(sf.function);
 	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
 		std::lock_guard<std::mutex> guard(MeosSerializedExecMutex());
