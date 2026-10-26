@@ -141,7 +141,7 @@ shape MobilityDuck uses for `frechetDistancePath` /
 | Name | Notes |
 |---|---|
 | Every aggregate of the MEOS catalog over a type MobilityDuck registers | generated from the catalog, one registration per signature, under the catalog's `altSqlName` (`tMinAgg`, `mergeAgg`, …) where a scalar holds the name — see PARITY.md |
-| `rasterUnion`, `sameAlignment`, `summaryStatsAgg`, `setUnion(geography)` | not registered: MobilityDuck has no `raster` and no `geography` SQL type |
+| `setUnion(geography)` | not registered: MobilityDuck has no `geography` SQL type |
 
 ## Reporting a gap
 
