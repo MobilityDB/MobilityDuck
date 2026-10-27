@@ -49,7 +49,7 @@ jobs:
     steps:
       - id: pick
         shell: bash
-        run: echo 'supported=["v1.5.5"]' >> "$GITHUB_OUTPUT"
+        run: echo 'supported=["v1.5.6"]' >> "$GITHUB_OUTPUT"
 
   duckdb-latest-build:
     needs: versions
@@ -68,7 +68,7 @@ jobs:
     # upstream; the fork is where it runs until it is taken. On the MinGW job the fork
     # also takes the R the runner image carries: the build compiles with the Rtools
     # toolchain and never runs R, so R devel is not downloaded.
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.5-node24.1
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_distribution.yml@v1.5.6-node24
     with:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
@@ -231,7 +231,7 @@ jobs:
       fail-fast: false
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
-    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5.5-node24.5
+    uses: estebanzimanyi/extension-ci-tools/.github/workflows/_extension_deploy.yml@v1.5.6-node24
     secrets: inherit
     with:
       duckdb_version: ${{ matrix.duckdb }}

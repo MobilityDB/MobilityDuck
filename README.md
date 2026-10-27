@@ -120,11 +120,11 @@ to GitHub, and GitHub deletes it 90 days after its run, so always take it from t
 
 | Platform | Artifact |
 |:--------:|:--------:|
-| Linux amd64 | `mobilityduck-v1.5.5-extension-linux_amd64` |
-| Linux arm64 | `mobilityduck-v1.5.5-extension-linux_arm64` |
-| macOS amd64 | `mobilityduck-v1.5.5-extension-osx_amd64` |
-| macOS arm64 | `mobilityduck-v1.5.5-extension-osx_arm64` |
-| Windows amd64 (MinGW) | `mobilityduck-v1.5.5-extension-windows_amd64_mingw` |
+| Linux amd64 | `mobilityduck-v1.5.6-extension-linux_amd64` |
+| Linux arm64 | `mobilityduck-v1.5.6-extension-linux_arm64` |
+| macOS amd64 | `mobilityduck-v1.5.6-extension-osx_amd64` |
+| macOS arm64 | `mobilityduck-v1.5.6-extension-osx_arm64` |
+| Windows amd64 (MinGW) | `mobilityduck-v1.5.6-extension-windows_amd64_mingw` |
 
 With the [GitHub CLI](https://cli.github.com/), the following commands download the binary of
 the latest successful run, here for macOS arm64, into `mobilityduck/mobilityduck.duckdb_extension`:
@@ -133,7 +133,7 @@ the latest successful run, here for macOS arm64, into `mobilityduck/mobilityduck
 RUN=$(gh run list --repo MobilityDB/MobilityDuck --workflow MainDistributionPipeline.yml \
   --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
 gh run download "$RUN" --repo MobilityDB/MobilityDuck \
-  --name mobilityduck-v1.5.5-extension-osx_arm64 --dir mobilityduck
+  --name mobilityduck-v1.5.6-extension-osx_arm64 --dir mobilityduck
 ```
 
 To use your independent DuckDB shell, first, run the shell with an additional flag:
@@ -147,7 +147,7 @@ Within the shell, load MobilityDuck by calling ```LOAD``` and the path to the ex
 
 #### 3.2.1. DuckDB and GeoParquet versions
 
-MobilityDuck targets DuckDB v1.5.5 and
+MobilityDuck targets DuckDB v1.5.6 and
 [GeoParquet 2.0.0-rc.1](https://github.com/opengeospatial/geoparquet/releases/tag/v2.0.0-rc.1)
 for static geometry and geography columns, stored as
 [doc/geography-boundary.md](doc/geography-boundary.md) describes. GeoParquet
