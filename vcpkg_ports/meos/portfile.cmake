@@ -85,8 +85,8 @@ vcpkg_cmake_configure(
         # one .duckdb_extension file with nowhere to put a sidecar libmeos, so
         # forcing a shared build here produced a binary that referenced
         # @rpath/libmeos.dylib and failed to load anywhere but the CI runner.
-        # Build only the MEOS library, not the MEOS C test binaries: those link
-        # the GEOS C++ API, which the arm64-linux vcpkg triplet does not carry.
+        # Build only the MEOS library, the one artifact the extension links, not
+        # the MEOS C test binaries.
         -DBUILD_TESTING=OFF
         "-DCMAKE_PROJECT_INCLUDE=${CMAKE_CURRENT_LIST_DIR}/cmake-project-include.cmake"
 )

@@ -187,7 +187,7 @@ jobs:
           else
             readelf -d "$EXT" | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p' > deps.txt
             # glibc's own set plus the C++ runtime. Anything vcpkg built (MEOS,
-            # PROJ, GDAL, GSL, json-c, h3, libxml2) must be absorbed into
+            # PROJ, GDAL, json-c, h3, libxml2) must be absorbed into
             # the binary, so none of them may appear here.
             ALLOW='^(libc\.so|libm\.so|libdl\.so|libpthread\.so|librt\.so|libresolv\.so|libstdc\+\+\.so|libgcc_s\.so|libz\.so|ld-linux)'
           fi

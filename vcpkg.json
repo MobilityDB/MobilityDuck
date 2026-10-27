@@ -1,6 +1,5 @@
 {
         "dependencies": [
-          "gsl",
           { "name": "meos", "version>=": "0" },
 
           "vcpkg-cmake",
