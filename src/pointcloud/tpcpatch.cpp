@@ -13,7 +13,7 @@
 #include<time_util.hpp>
 #include "geo_util.hpp"
 #include "duckdb_version_compat.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 #include "tydef.hpp"
 
 extern "C" {

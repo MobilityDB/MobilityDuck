@@ -1,4 +1,4 @@
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 #include "geo/tgeogpoint.hpp"
 #include "geo/tgeogpoint_functions.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"

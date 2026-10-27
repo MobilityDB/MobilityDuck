@@ -36,7 +36,7 @@
 #include "meos_json.h"
 #include "meos_pointcloud.h"
 #include "time_util.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 #include "mobilityduck/meos_aggregate.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"

@@ -41,55 +41,25 @@ inline unique_ptr<FunctionData> BindGeometryArgumentTypes(ClientContext &, Scala
 }
 #endif
 
-inline ScalarFunction WrapScalarFunctionWithMeosExecMutex(ScalarFunction sf) {
+/**
+ * A scalar MobilityDuck registers runs on whichever DuckDB worker thread runs the
+ * query, and calls MEOS there after the per-thread MEOS initialization
+ * (meos_thread.hpp): MEOS parses and prints timestamps, and turns them into
+ * dates, in the zone of the session that runs the query. A scalar taking a
+ * GEOMETRY and binding none of its own binds each GEOMETRY parameter to the type
+ * of its argument, so the CRS reaches the function. A function set is the same
+ * scalars under one name. Aggregates register unchanged: they hand values to the
+ * query in binary, so no zone enters their results. A table function follows the
+ * session's zone in its own init, which DuckDB may run on any worker thread: the
+ * tiles read their default time origin and divide time by a duration there.
+ */
+inline ScalarFunction FollowingSessionTimezone(ScalarFunction sf) {
 #if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	if (!sf.HasBindCallback() &&
 	    std::any_of(sf.arguments.begin(), sf.arguments.end(), IsGeometryOrGeometryList)) {
 		sf.SetBindCallback(BindGeometryArgumentTypes);
 	}
 #endif
-	scalar_function_t orig = std::move(sf.function);
-	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
-		// DuckDB runs scalar/cast/aggregate bodies on worker threads whose MEOS
-		// thread-local state (timezone/locale/PROJ/RNG) is uninitialised; init once
-		// per thread before any MEOS call, in the zone of the session running the
-		// query (see meos_thread.hpp).
-		EnsureMeosThreadInitialized(state.GetContext());
-		orig(args, state, result);
-	};
-	return sf;
-}
-
-inline void RegisterSerializedScalarFunction(ExtensionLoader &loader, ScalarFunction sf) {
-	loader.RegisterFunction(WrapScalarFunctionWithMeosExecMutex(std::move(sf)));
-}
-
-/**
- * Register one scalar under the canonical MobilityDB name it is built with, and
- * under any additional spelling this extension already publishes. The canonical
- * name is the one the MobilityDB manual and every other binding use, so a query
- * written against them runs here; an extra spelling stays valid beside it.
- */
-inline void RegisterSerializedScalarFunctionAs(ExtensionLoader &loader, ScalarFunction sf,
-                                               const vector<string> &also) {
-	for (const auto &name : also) {
-		ScalarFunction alias = sf;
-		alias.name = name;
-		RegisterSerializedScalarFunction(loader, std::move(alias));
-	}
-	RegisterSerializedScalarFunction(loader, std::move(sf));
-}
-
-/**
- * Every other scalar MobilityDuck registers follows the session's zone as well:
- * MEOS parses and prints timestamps, and turns them into dates, in the zone of
- * the session that runs the query. A function set is the same scalars under one
- * name. Aggregates register unchanged: they hand values to the query in binary,
- * so no zone enters their results. A table function follows the session's zone
- * in its own init, which DuckDB may run on any worker thread: the tiles read
- * their default time origin and divide time by a duration there.
- */
-inline ScalarFunction FollowingSessionTimezone(ScalarFunction sf) {
 	scalar_function_t orig = std::move(sf.function);
 	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
 		EnsureMeosThreadInitialized(state.GetContext());
@@ -100,6 +70,21 @@ inline ScalarFunction FollowingSessionTimezone(ScalarFunction sf) {
 
 inline void RegisterMeosFunction(ExtensionLoader &loader, ScalarFunction sf) {
 	loader.RegisterFunction(FollowingSessionTimezone(std::move(sf)));
+}
+
+/**
+ * Register one scalar under the canonical MobilityDB name it is built with, and
+ * under any additional spelling this extension already publishes. The canonical
+ * name is the one the MobilityDB manual and every other binding use, so a query
+ * written against them runs here; an extra spelling stays valid beside it.
+ */
+inline void RegisterMeosFunctionAs(ExtensionLoader &loader, ScalarFunction sf, const vector<string> &also) {
+	for (const auto &name : also) {
+		ScalarFunction alias = sf;
+		alias.name = name;
+		RegisterMeosFunction(loader, std::move(alias));
+	}
+	RegisterMeosFunction(loader, std::move(sf));
 }
 
 inline void RegisterMeosFunction(ExtensionLoader &loader, ScalarFunctionSet set) {

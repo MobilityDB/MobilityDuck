@@ -8,7 +8,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 
 #include "time_util.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 
 extern "C" {     

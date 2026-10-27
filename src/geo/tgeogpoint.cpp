@@ -17,7 +17,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 #include "duckdb/common/extension_type_info.hpp"
 #include <regex>
@@ -76,7 +76,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
 
-    duckdb::RegisterSerializedScalarFunction(loader,
+    duckdb::RegisterMeosFunction(loader,
         ScalarFunction(
             "asText",
             {LogicalType::LIST(tgeogpoint())},
@@ -84,7 +84,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader,
+    duckdb::RegisterMeosFunction(loader,
         ScalarFunction(
             "asText",
             {LogicalType::LIST(tgeogpoint()), LogicalType::INTEGER},
@@ -93,7 +93,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader,
+    duckdb::RegisterMeosFunction(loader,
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(tgeogpoint())},
@@ -101,7 +101,7 @@ void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader,
+    duckdb::RegisterMeosFunction(loader,
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(tgeogpoint()), LogicalType::INTEGER},

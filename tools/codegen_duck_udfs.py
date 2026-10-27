@@ -7520,7 +7520,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     emitted_values.append(value)
                     bodies.append(emit_temporal_from_base(f, value, time_, has_interp))
                 specific_regs.append(
-                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'    RegisterMeosFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{{", ".join(slots)}}}, {acc}, '
                     f'Gen_{f["name"]}{from_base_suffix(value)}));')
             continue
@@ -7556,7 +7556,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for k in range(required, len(s["args"]) + 1):
                     slots = ", ".join(ctor_arg_slot(s["args"][i], acc) for i in range(k))
                     specific_regs.append(
-                        f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        f'    RegisterMeosFunction(loader, ScalarFunction('
                         f'"{reg_name(nm, f)}", {{{slots}}}, {acc}, Gen_{fn}));')
             continue
         cont = CONTAINER_FROM_HEXWKB.get(f["name"]) or container_from_text(f)
@@ -7578,7 +7578,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 if re.search(r'_(out|in|send|recv)$', nm):
                     continue
                 specific_regs.append(
-                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'    RegisterMeosFunction(loader, ScalarFunction('
                     f'"{reg_name(nm, f)}", {{LogicalType::VARCHAR}}, {acc}, Gen_{fn}));')
             # The input function of a type (#type_input) also answers the function form of its
             # cast, T(text), which MobilityDB answers for every type as PostgreSQL does
@@ -7587,7 +7587,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             tin = type_input(f)
             if tin:
                 specific_regs.append(
-                    f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    f'    RegisterMeosFunction(loader, ScalarFunction('
                     f'"{tin[0]}", {{LogicalType::VARCHAR}}, {tin[1]}, Gen_{fn}));')
             continue
         # the WKB writers and reader of a set, span or span set (asBinary, asHexWKB,
@@ -7628,7 +7628,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
                 for args_ in forms:
-                    reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    reg = (f'    RegisterMeosFunction(loader, ScalarFunction('
                            f'"{reg_name(nm, f)}", {{{", ".join(args_)}}}, {rty}, Gen_{fn}));')
                     if reg not in wseen:
                         wseen.add(reg)
@@ -7650,12 +7650,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     continue            # a signature the one body does not marshal
                 slots = ", ".join(a[0] for a in sargs)
                 for nm in reg_names(f, s.get("sqlName", f["sqlfn"]), aliases, "{%s}" % slots):
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, Gen_{fn}));')
                 # the input function of a cell (quadbin_in) answers the function form of its
                 # cast, quadbin(text), as #type_input's types do
                 if fn == s.get("ret", "") + "_in" and slots == "LogicalType::VARCHAR":
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{s["ret"]}", {{{slots}}}, {sret[0]}, Gen_{fn}));')
             continue
         # Base-value UNARY scalar accessors (Cbuffer/Npoint/Nsegment radius/route/
@@ -7670,7 +7670,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_baseval_scalar(f, bb, rbb))
             argt = PTR_IN[bb][0]; dret_bv = byval_ret_duck(rbb)
             for nm in reg_names(f, f["sqlfn"], aliases):
-                specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {{{argt}}}, {dret_bv}, Gen_{fn}));')
             continue
         # an array of temporal values (merge(tint[])), registered over the element types its
@@ -7682,7 +7682,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for t_ in _arr:
                 a_ = SIG_TEMPORAL_ACC[t_]
                 for nm in reg_names(f, f["sqlfn"], aliases):
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{LogicalType::LIST({a_})}}, {a_}, '
                                          f'Gen_{f["name"]}));')
             continue
@@ -7712,7 +7712,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         if (nm.lower(), tuple(argt[:k])) in taken:
                             continue
                         taken.add((nm.lower(), tuple(argt[:k])))
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{nm}", {{{", ".join(argt[:k])}}}, {ret_}, '
                                              f'Gen_{f["name"]}{sfx}));')
             continue
@@ -7769,7 +7769,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 bodies.append(emit_row_out(f, tag, s_, ins_, ms_))
                 for nm, types_ in regs_:
                     SPLIT_REGISTERED.add((nm, types_))
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{nm}", {{{", ".join(types_)}}}, {rt_}, Gen_{f["name"]}_{tag}));')
             continue
         # the pieces of a temporal value with their bins (timeSplit, spaceTimeSplit): a table
@@ -7821,7 +7821,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     bodies.append(emit_box_scalars(f, first_, tag, s_, ins_, bound_, k_, ret_))
                     for nm, types_ in regs_:
                         TILE_REGISTERED.add((nm, types_))
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{nm}", {{{", ".join(types_)}}}, {rt_}, Gen_{f["name"]}_{tag}));')
             continue
         # a temporal value or a geometry followed by three or more scalars (rotate, affine),
@@ -7888,7 +7888,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                             forms.append((short, "_d"))
                     for rr, sfx in forms:
                         for nm in reg_names(f, nm0, aliases, "{x%s}" % rr):
-                            reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            reg = (f'    RegisterMeosFunction(loader, ScalarFunction('
                                    f'"{reg_name(nm, f)}", {{{a}{rr}}}, {r}, Gen_{f["name"]}{sfx}));')
                             if reg not in seen:
                                 seen.add(reg)
@@ -7930,7 +7930,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for a, r, nms in pairs:
                 for rr, sfx in forms:
                     for nm in [x for nm0 in nms for x in reg_names(f, nm0, aliases, "{x%s}" % rr)]:
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}{rr}}}, {r}, Gen_{f["name"]}{sfx}));')
             continue
         # a set, span or span set handing its value back through an out-parameter
@@ -7947,7 +7947,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 if len(s.get("args") or []) != 1 + len(ctail) or s["args"][0] not in cacc:
                     continue
                 for nm in reg_names(f, s.get("sqlName") or f["sqlfn"], aliases, "{x%s}" % crest):
-                    reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    reg = (f'    RegisterMeosFunction(loader, ScalarFunction('
                            f'"{reg_name(nm, f)}", {{{cacc[s["args"][0]]}{crest}}}, {cdt}, Gen_{f["name"]}));')
                     if reg not in cseen:
                         cseen.add(reg)
@@ -7959,7 +7959,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             STATE["grp"] = f.get("group") or "meos_ungrouped"
             bodies.append(emit_geo_pair_out(f, _gpo[1])); n_bin += 1
             for nm in reg_names(f, f["sqlfn"], aliases):
-                specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {{MobilityDuckGeometryType(), '
                                      f'MobilityDuckGeometryType()}}, {_gpo[0]}, Gen_{f["name"]}));')
             continue
@@ -8089,7 +8089,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for a in elems:
                     for nm in reg_names(f, sqlfn, aliases):
                         specific_regs.append(
-                            f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            f'    RegisterMeosFunction(loader, ScalarFunction('
                             f'"{reg_name(nm, f)}", {{LogicalType::LIST({a}), LogicalType::LIST({a})}}, '
                             f'LogicalType::DOUBLE, Gen_{fn}));')
             else:
@@ -8105,7 +8105,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         slots += ", LogicalType::DOUBLE"
                     for nm in reg_names(f, sqlfn, aliases):
                         specific_regs.append(
-                            f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            f'    RegisterMeosFunction(loader, ScalarFunction('
                             f'"{reg_name(nm, f)}", {{{slots}}}, {rett}, Gen_{fn}));')
             continue
         else:
@@ -8152,7 +8152,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 # (tjsonbContained, contains_tjsonb_tjsonb over its operands swapped) takes
                 # that name alone, never the operator of the name it computes
                 for nm in (reg_names(f, snm, aliases, argsig) if snm == sqlfn else [snm]):
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {_r}, '
                                          f'Gen_{fn}{"_rev" if rv else ""}));')
             continue
@@ -8161,7 +8161,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             rett = (ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType")) if dret == "MD_TEMPORAL"
                     else ret_set_type(fn, "type") if dret == "MD_SET" else dret)
             for nm in names:
-                generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                generic_regs.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
         else:
             for a in accs:
@@ -8183,7 +8183,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                and len(s["args"]) == sig.count(",") + 1}) if not u else []
                 for nm in names + [x for m in more for x in reg_names(f, m, aliases, argsig)
                                    if x not in names]:
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
         # THE COMMUTED OVERLOAD. Six geo backings are CREATE FUNCTION'd in BOTH operand orders
         # over one MEOS kernel — `tDistance(trgeometry, geometry)` beside
@@ -8215,7 +8215,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         _cr = sig_declared_ret(f, a, _csig.count(",") + 1) or _cr
                     for nm in _cnames:
                         specific_regs.append(
-                            f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            f'    RegisterMeosFunction(loader, ScalarFunction('
                             f'"{reg_name(nm, f)}", {_csig}, {_cr}, Gen_{fn}_rev));')
         # A retired group's binary kernel declared in both orders (nearestApproachDistance over
         # (tcbuffer, cbuffer) and (cbuffer, tcbuffer), one MEOS function) registers the commuted
@@ -8229,7 +8229,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                            or ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")))
                           if dret == "MD_TEMPORAL" else dret)
                     for nm in reg_names(f, sqlfn, aliases, argsig):
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{arg2[0]}, {a}}}, {_r}, Gen_{fn}_rev));')
         # A (temporal, scalar-param DEFAULT)->temporal fn (round's precision integer DEFAULT 0)
         # is callable at the shorter arity; emit the (temporal)->temporal overload with the
@@ -8241,14 +8241,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if scope == "all":
                 rett = ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType"))
                 for nm in names:
-                    generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    generic_regs.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{type}}, {rett}, Gen_{fn}_d));')
             else:
                 for a in accs:
                     r2 = ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType"))
                     r2 = sig_declared_ret(f, a, 1) or r2
                     for nm in names:
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {r2}, Gen_{fn}_d));')
         # A (temporal, scalar, scalar-param DEFAULT)->X fn (tquadbin(tgeompoint, integer[,
         # borderInc DEFAULT TRUE])) is callable one argument shorter too: the same overload one
@@ -8275,7 +8275,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 rett = (ret_temporal_type(fn, "type", f.get("group"), f.get("sqlReturnType"))
                         if dret == "MD_TEMPORAL" else dret)
                 for nm in names:
-                    generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    generic_regs.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{type, {arg2[0]}}}, {rett}, Gen_{fn}_d));')
             else:
                 for a in accs:
@@ -8284,7 +8284,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         r2 = (sig_declared_ret(f, a, 2)
                               or ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")))
                     for nm in names:
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}, {arg2[0]}}}, {r2}, Gen_{fn}_d));')
         # The shorter call of a retired group's temporal pair with a defaulted third argument
         # (insert(tint, tint) for insert(tint, tint, connect boolean DEFAULT TRUE)), registered
@@ -8298,7 +8298,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     r2 = (sig_declared_ret(f, a, 2)
                           or ret_temporal_type(fn, a, f.get("group"), f.get("sqlReturnType")))
                 for nm in names:
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a}, {a}}}, {r2}, Gen_{fn}_d));')
         # Same shorter-arity overload for a (Temporal, scalar-param DEFAULT)->SCALAR fn
         # (duration(temporal[,boolean]) DEFAULT FALSE; asText/asEWKT(tspatial[,int]) DEFAULT 15):
@@ -8309,12 +8309,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_defaulted_unary_temporal_scalar(f, dflt))
             if scope == "all":
                 for nm in names:
-                    generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    generic_regs.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{type}}, {dret}, Gen_{fn}_d));')
             else:
                 for a in accs:
                     for nm in names:
-                        specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
         # the same shorter overload of a geometry-returning one (traversedArea(tgeometry))
         if b and kind == "geo" and trailing_arg_default(f) and scope != "all":
@@ -8322,7 +8322,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_defaulted_unary_geo(f, dflt))
             for a in accs:
                 for nm in names:
-                    specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
     # CONTAINER SCALARS — one registration per declared signature, over the body whose operand
     # order it spells (shape_container_scalar).
@@ -8344,7 +8344,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         for (a0, a1), rev, sqlnm in sigs:
             body = f"Gen_{fn}_rev" if rev else f"Gen_{fn}"
             for nm in reg_names(f, sqlnm, aliases):
-                set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {dret}, {body}));')
     # SET family — separate loop (the temporal path above is untouched).
     for f in fns:
@@ -8389,7 +8389,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for acc, rett, _d in pairs:
                 sig = f"{{{acc}, {scd}}}" if setfirst else f"{{{scd}, {acc}}}"
                 for nm in names:
-                    set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
             # A SQL-optional trailing param (round's precision DEFAULT 0) is callable at the
             # shorter arity; emit the (Set)->Set overload with the catalog default substituted.
@@ -8397,7 +8397,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 set_bodies.append(emit_defaulted_unary(fn, "BlobToSet", "SetToBlob", "Set", sql_default_to_cpp(dflt)))
                 for acc, rett, _d in pairs:
                     for nm in names:
-                        set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                  f'"{reg_name(nm, f)}", {{{acc}}}, {rett}, Gen_{fn}_d));')
             continue
         if kind.startswith("u2text_d:"):   # (Set)->text alone: asText(jsonbset), its digit count bound
@@ -8405,7 +8405,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for a, _two, one in declared_text_sigs(f):
                     if one:
                         for nm in names:
-                            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                      f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             scope, accs = set_reg_scope(fn)
@@ -8413,7 +8413,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             sink = set_generic_regs if scope == "all" else set_specific_regs
             for a in acc_list:
                 for nm in names:
-                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                 f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
             continue
         if kind.startswith("u2text:"):   # (Set, scalar PARAM)->text: asText(floatset, integer)
@@ -8425,10 +8425,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for a, two, one in declared_text_sigs(f):
                     for nm in names:
                         if two:
-                            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                      f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
                         if one:
-                            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                      f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             scope, accs = set_reg_scope(fn)
@@ -8436,10 +8436,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             sink = set_generic_regs if scope == "all" else set_specific_regs
             for a in acc_list:
                 for nm in names:
-                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                 f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
                     if dflt is not None:
-                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
             continue
         if kind.startswith("setcsc:"):   # (Set, scalar PARAM)->Set: degrees(floatset, bool)
@@ -8453,10 +8453,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             sink = set_generic_regs if scope == "all" else set_specific_regs
             for a in acc_list:
                 for nm in names:
-                    sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                 f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {a}, Gen_{fn}));')
                     if dflt is not None:
-                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {{{a}}}, {a}, Gen_{fn}_d));')
             continue
         if kind.startswith("setsc:") or kind.startswith("scset:"):
@@ -8464,7 +8464,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             scd = "LogicalType::VARCHAR" if b == "text" else SCALAR_ARG[b][0]
             sig = "{%s, %s}" % (acc, scd) if kind.startswith("setsc:") else "{%s, %s}" % (scd, acc)
             for nm in names:
-                set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
             continue
         if kind.startswith("bsc:"):   # (Set, by-value uint64 seed) -> uint64 hash: name-scoped 2-arg {type, UBIGINT}
@@ -8472,12 +8472,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             scope, accs = set_reg_scope(fn)
             if scope == "all":
                 for nm in names:
-                    set_generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    set_generic_regs.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                             f'"{reg_name(nm, f)}", {{type, {argdt}}}, {dret}, Gen_{fn}));')
             else:
                 for a in accs:
                     for nm in names:
-                        set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                  f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
             continue
         sc = set_reg_scope(fn)
@@ -8488,7 +8488,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         if scope == "all":
             rett = ret_set_type(fn, "type") if dret == "LogicalType::BLOB" else dret
             for nm in names:
-                set_generic_regs.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                set_generic_regs.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {argsig}, {rett}, Gen_{fn}));')
             # the geometry and geography sets, which SetTypes::AllTypes() does not hold, over the
             # signatures declared for them (memSize(geomset), setUnion(geogset, geogset))
@@ -8500,14 +8500,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 if r2 is None:
                     continue
                 for nm in names:
-                    set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {{{", ".join(ga)}}}, {r2}, Gen_{fn}));')
         else:
             for a in accs:
                 sig = spec_sig % ((a,) * spec_sig.count("%s"))
                 r2 = ret_set_type(fn, a) if dret == "LogicalType::BLOB" else dret
                 for nm in names:
-                    set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {sig}, {r2}, Gen_{fn}));')
     # COLLECTION families (Span + SpanSet) — ONE machinery via descriptor (shape_span/emit_span
     # take C). Per-container generic list (its own AllTypes loop); specific list shared.
@@ -8539,7 +8539,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 b = kind.split(':')[1]; acc = C["elem"][b]; scd = SCALAR_ARG[b][0]
                 sig = "{%s, %s}" % (acc, scd) if kind.startswith("setsc:") else "{%s, %s}" % (scd, acc)
                 for nm in names:
-                    span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                               f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
                 continue
             # mixed span<->spanset positional: typed per the catalog sqlSignatures
@@ -8556,7 +8556,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         continue
                     _seen.add(sig)
                     for nm in names:
-                        span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {sig}, LogicalType::BOOLEAN, Gen_{fn}));')
                 continue
             # set operation between two collections answering a third: one registration per
@@ -8570,7 +8570,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     if not (a0 and a1 and racc):
                         continue
                     for nm in reg_names(f, s.get("sqlName") or sqlfn, aliases):
-                        reg = (f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        reg = (f'    RegisterMeosFunction(loader, ScalarFunction('
                                f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {racc}, Gen_{fn}));')
                         if reg not in _seen:
                             _seen.add(reg)
@@ -8586,7 +8586,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     continue
                 sig = "{%s, %s}" % (acc, scd) if _k == "cval" else "{%s, %s}" % (scd, acc)
                 for nm in names:
-                    span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                               f'"{reg_name(nm, f)}", {sig}, {racc}, Gen_{fn}));')
                 continue
             # text rendering alone at one argument: the digit count bound to the literal the
@@ -8596,7 +8596,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 accs_here = [acc] if isinstance(acc, str) else list(acc)
                 for a in accs_here:
                     for nm in names:
-                        span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # text rendering: the (X, int) form the MEOS entry declares, plus the shorter arity
@@ -8607,14 +8607,14 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 scd = SCALAR_ARG[kind.split(':', 1)[1]][0]
                 for a in accs_here:
                     for nm in names:
-                        span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                   f'"{reg_name(nm, f)}", {{{a}, {scd}}}, {dret}, Gen_{fn}));')
                 _, dflt = text_arities(f)
                 if dflt is not None:
                     span_bodies.append(emit_span(f, "u2text_d:" + str(sql_default_to_cpp(dflt)), C))
                     for a in accs_here:
                         for nm in names:
-                            span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # unary (X)->X|scalar: name-scoped (X_*→AllTypes, <elem>X_*→accessor).
@@ -8622,20 +8622,20 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 if C.get("single"):   # box hash carve-out: single type, concrete accessor
                     acc = C["single"]; r = acc if kind == "u_span" else dret
                     for nm in names:
-                        box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{{acc}}}, {r}, Gen_{fn}));')
                     continue
                 scope, accs = C["scope"](fn)
                 if scope == "all":
                     rett = C["ret"](fn, "type") if kind == "u_span" else dret
                     for nm in names:
-                        gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        gen.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                    f'"{reg_name(nm, f)}", {{type}}, {rett}, Gen_{fn}));')
                 else:
                     for a in accs:
                         r2 = C["ret"](fn, a) if kind == "u_span" else dret
                         for nm in names:
-                            span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}}}, {r2}, Gen_{fn}));')
                 continue
             # (X, by-value scalar)->Interval: name-scoped, 2-arg sig {acc, argtype}.
@@ -8650,18 +8650,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         kind.split(':', 1)[1], sql_default_to_cpp(dflt)), C))
                 if scope == "all":
                     for nm in names:
-                        gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        gen.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                    f'"{reg_name(nm, f)}", {{type, {argdt}}}, {dret}, Gen_{fn}));')
                         if dflt is not None:
-                            gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            gen.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                        f'"{reg_name(nm, f)}", {{type}}, {dret}, Gen_{fn}_d));')
                 else:
                     for a in accs:
                         for nm in names:
-                            span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
                             if dflt is not None:
-                                span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                                span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                           f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # (X, by-value scalar)->by-value scalar: name-scoped as u2iv, 2-arg sig {acc, argtype},
@@ -8677,10 +8677,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for a in (["type"] if scope == "all" else accs):
                     sink = gen if scope == "all" else span_specific_regs
                     for nm in names:
-                        sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        sink.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
                         if dflt is not None:
-                            sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            sink.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
                 continue
             # (X, by-value uint64 seed)->uint64 hash: name-scoped, 2-arg sig {acc, UBIGINT}.
@@ -8689,18 +8689,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 if C.get("single"):   # box hashExtended carve-out: single type, concrete accessor
                     acc = C["single"]
                     for nm in names:
-                        box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{{acc}, {argdt}}}, {dret}, Gen_{fn}));')
                     continue
                 scope, accs = C["scope"](fn)
                 if scope == "all":
                     for nm in names:
-                        gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        gen.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                    f'"{reg_name(nm, f)}", {{type, {argdt}}}, {dret}, Gen_{fn}));')
                 else:
                     for a in accs:
                         for nm in names:
-                            span_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            span_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                                       f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {dret}, Gen_{fn}));')
                 continue
             # (X, scalar PARAM)->X: floatspan(set)_round. Name-scoped 2-arg {X, argtype}->X;
@@ -8724,22 +8724,22 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 sink = gen if scope == "all" else span_specific_regs
                 for a in acc_list:
                     for nm in names:
-                        sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {{{a}, {argdt}}}, {a}, Gen_{fn}));')
                         if dflt is not None:
-                            sink.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                            sink.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                         f'"{reg_name(nm, f)}", {{{a}}}, {a}, Gen_{fn}_d));')
                 continue
             # generic (X,X)->bool|X.
             if C.get("single"):   # box: single type, concrete accessor (no AllTypes loop)
                 acc = C["single"]; r = acc if kind == "b_span" else dret
                 for nm in names:
-                    box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                     f'"{reg_name(nm, f)}", {{{acc}, {acc}}}, {r}, Gen_{fn}));')
             else:
                 rett = "type" if kind == "b_span" else dret   # (X,X)->X preserves the type
                 for nm in names:
-                    gen.append(f'        RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    gen.append(f'        RegisterMeosFunction(loader, ScalarFunction('
                                f'"{reg_name(nm, f)}", {{type, type}}, {rett}, Gen_{fn}));')
     # Temporal + box (STBox/TBox) -> bool: spatiotemporal/numeric topological predicates,
     # registered over the temporal accessors from reg_scope × the single box accessor.
@@ -8761,7 +8761,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         for a in accs:
             sig = "{%s, %s}" % (a, box_acc) if kind.startswith("tb_r:") else "{%s, %s}" % (box_acc, a)
             for nm in names:
-                temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                temporal_box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {dret}, Gen_{fn}));')
         # A retired group's kernel declared in both orders (nearestApproachDistance over
         # (trgeometry, stbox) and (stbox, trgeometry), one MEOS function) registers the commuted
@@ -8772,7 +8772,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             for a in _raccs:
                 sig = "{%s, %s}" % (box_acc, a) if kind.startswith("tb_r:") else "{%s, %s}" % (a, box_acc)
                 for nm in names:
-                    temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                    temporal_box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                              f'"{reg_name(nm, f)}", {sig}, {dret}, Gen_{fn}_rev));')
     # Temporal x span -> bool: numspan PAIRS to the tnumber value type (tint↔intspan,
     # tfloat↔floatspan); tstzspan is fixed and registered over every temporal type.
@@ -8819,7 +8819,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             sig = "{%s, %s}" % (tacc, spacc) if not span_first else "{%s, %s}" % (spacc, tacc)
             rett = tacc if retk == "T" else "LogicalType::BOOLEAN"   # at/minus span preserves type
             for nm in (names if signame == sqlfn else reg_names(f, signame, aliases)):
-                temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                temporal_box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
     # Temporal -> container conversion (timeSpan/valueSpan/tbox), sqlSignatures-driven — the
     # per-overload (temporal arg type -> container ret type) comes straight from the catalog
@@ -8841,7 +8841,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         names = reg_names(f, sqlfn, aliases)
         for aacc, racc, signame in pairs:
             for nm in (names if signame == sqlfn else reg_names(f, signame, aliases)):
-                temporal_box_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                temporal_box_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                          f'"{reg_name(nm, f)}", {{{aacc}}}, {racc}, Gen_{fn}));')
     # Include order mirrors the hand .cpp files (meos_wrapper + common FIRST, before
     # anything pulls duckdb::Interval into scope; all outside `namespace duckdb`).
@@ -8883,7 +8883,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "meos_json.h"\n'                  # Jsonb type (via pgtypes.h) + tjsonb_*/jsonb_* fns
            '#include "meos_pointcloud.h"\n'            # Pcpoint/Pcpatch types + tpcpoint/tpcpatch fns
            '#include "time_util.hpp"\n'
-           '#include "mobilityduck/meos_exec_serial.hpp"\n'
+           '#include "mobilityduck/meos_registration.hpp"\n'
            '#include "duckdb/function/scalar_function.hpp"\n'
            '#include "duckdb/main/extension/extension_loader.hpp"\n'
            '#include "duckdb/common/vector_operations/unary_executor.hpp"\n'
@@ -9169,7 +9169,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             if ret is None:
                 continue
             for nm in names:
-                spec_sink.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                spec_sink.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                  f'"{reg_name(nm, f)}", {{{acc}{sig_tail}}}, {ret}, Gen_{fn}));')
 
     # ---- H3 cell-set prefilter: geoToH3IndexSet + eEq(h3indexset,th3index) ----
@@ -9196,7 +9196,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         else:   # settemp_ebool
             sig, rett = "{SetTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
         for nm in names:
-            set_specific_regs.append(f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+            set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
 
     # The functions of a retired group over no temporal value that no shape above emits, one
@@ -9240,7 +9240,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         body_of[bkey] = body_of[key] + ("_d" if dv is not None else "")
                         bodies.append(emit_static_cell(f, sargs, sret, body_of[key], dv))
                     specific_regs.append(
-                        f'    RegisterSerializedScalarFunction(loader, ScalarFunction('
+                        f'    RegisterMeosFunction(loader, ScalarFunction('
                         f'"{reg_name(nm, f)}", {{{slots}}}, {sret[0]}, Gen_{fn}{body_of[bkey]}));')
 
     # a set-returning function over a set the other engines call by its `altSqlName`
@@ -9303,10 +9303,10 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                         specific_regs.append(
                             f'    {{ ScalarFunction sf = {sf}; '
                             f'sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; '
-                            f'RegisterSerializedScalarFunction(loader, sf); }}')
+                            f'RegisterMeosFunction(loader, sf); }}')
                     else:
                         specific_regs.append(
-                            f'    RegisterSerializedScalarFunction(loader, {sf});')
+                            f'    RegisterMeosFunction(loader, {sf});')
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)
@@ -9959,8 +9959,8 @@ def gen_aggregates(d, out_path, scalars):
         regs.append("    {\n        AggregateFunctionSet set(\"%s\");" % name)
         regs += ["        set.AddFunction(%s);" % r for r in sets[name]]
         regs.append("        RegisterMeosFunction(loader, std::move(set));\n    }")
-    text = (PREAMBLE[0].replace('#include "mobilityduck/meos_exec_serial.hpp"\n',
-                                '#include "mobilityduck/meos_exec_serial.hpp"\n'
+    text = (PREAMBLE[0].replace('#include "mobilityduck/meos_registration.hpp"\n',
+                                '#include "mobilityduck/meos_registration.hpp"\n'
                                 '#include "mobilityduck/meos_aggregate.hpp"\n', 1)
             + "\n".join(bodies) + "} // anonymous\n\n"
             + "// The aggregates of the MEOS catalog, one function set per name.\n"
@@ -10163,7 +10163,7 @@ def main():
         argts = ", ".join(arg_type(p["canonical"], f["name"])[0] for p in ins)
         rt, kind = ret_type(f, out)
         print(f'  // {f["sqlfn"]}  <- {f["name"]}  ({kind})')
-        print(f'  RegisterSerializedScalarFunction(loader, ScalarFunction("{f["sqlfn"]}", '
+        print(f'  RegisterMeosFunction(loader, ScalarFunction("{f["sqlfn"]}", '
               f'{{{argts}}}, {rt}, Gen_{f["name"]}));')
     return emittable, by_fam
 

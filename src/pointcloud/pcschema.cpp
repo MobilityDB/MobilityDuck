@@ -2,7 +2,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <string>
 #include <vector>
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -161,7 +161,7 @@ void PcschemaFunctions::RegisterScalarFunctions(ExtensionLoader &loader) {
     // calls with the same rows are not one call: the function states an effect
     // rather than a value.
     pcschema_register.stability = FunctionStability::VOLATILE;
-    duckdb::RegisterSerializedScalarFunction(loader, pcschema_register);
+    duckdb::RegisterMeosFunction(loader, pcschema_register);
 }
 
 } // namespace duckdb

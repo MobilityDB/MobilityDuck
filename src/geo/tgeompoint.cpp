@@ -17,7 +17,7 @@
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 #include "geo_util.hpp"
 #include "time_util.hpp"
 
@@ -67,7 +67,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
 
     const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(tgeompoint())},
@@ -75,7 +75,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(tgeompoint()), LogicalType::INTEGER},
@@ -83,7 +83,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(MobilityDuckGeometryType())},
@@ -91,7 +91,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_text
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asText",
             {LogicalType::LIST(MobilityDuckGeometryType()), LogicalType::INTEGER},
@@ -100,7 +100,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
         )
     );
 
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(tgeompoint())},
@@ -108,7 +108,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(tgeompoint()), LogicalType::INTEGER},
@@ -116,7 +116,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(MobilityDuckGeometryType())},
@@ -124,7 +124,7 @@ void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
             TgeompointFunctions::Spatialarr_as_ewkt
         )
     );
-    duckdb::RegisterSerializedScalarFunction(loader, 
+    duckdb::RegisterMeosFunction(loader, 
         ScalarFunction(
             "asEWKT",
             {LogicalType::LIST(MobilityDuckGeometryType()), LogicalType::INTEGER},
