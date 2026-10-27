@@ -8,6 +8,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # posechain/expected/551_posechainset.test.out:210
 query I
 SELECT cmp(posechainset '{"PoseChain(Pose(Point(0 0), 0))"}', posechainset '{"PoseChain(Pose(Point(0 0), 0))"}');

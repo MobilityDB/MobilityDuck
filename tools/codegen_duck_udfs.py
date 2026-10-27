@@ -8875,7 +8875,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            '#include "posechain/tposechain.hpp"\n'     # PosechainTypes::posechain()/tposechain()
            '#include "raster/raquet.hpp"\n'           # RaquetTypes::raquet()
            '#include "raster/raster.hpp"\n'           # RasterTypes::raster()
-           '#include "spatial/spatial_types.hpp"\n'   # MobilityDuckGeometryType() (duckdb-spatial)
+           '#include "duckdb_version_compat.hpp"\n'   # MobilityDuckGeometryType() (DuckDB core GEOMETRY)
            '#include "geo_util.hpp"\n'                # GeometryToGSerialized(blob, srid)
            '#include "meos_internal.h"\n'
            '#include "meos_geo.h"\n'

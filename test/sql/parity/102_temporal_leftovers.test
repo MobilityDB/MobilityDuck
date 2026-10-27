@@ -14,6 +14,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ---------------------------------------------------------------------------
 # tsample, with the time origin, its default '2000-01-03' and the interpolation
 # ---------------------------------------------------------------------------

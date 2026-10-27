@@ -18,7 +18,6 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
-#include "spatial/spatial_types.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 
 extern "C" {

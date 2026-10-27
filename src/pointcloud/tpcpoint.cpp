@@ -12,7 +12,7 @@
 #include "geo/geoset.hpp"
 #include<time_util.hpp>
 #include "geo_util.hpp"
-#include "spatial/spatial_types.hpp"
+#include "duckdb_version_compat.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 #include "tydef.hpp"
 

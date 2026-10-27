@@ -489,15 +489,12 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TemporalParquetFunctions::Register(loader);
 }
 
-// A static build registers the spatial extension it links through the
-// extension loader DuckDB generates for it. A loadable extension runs in a
-// DuckDB that links no such loader, so it loads the spatial extension the user
-// has installed, the way LoadInternal loads ICU, and reports rather than fails
-// when none is available; its object never names ExtensionHelper::LoadExtension,
-// which a linker that keeps every function of an object (MinGW's) would
-// otherwise fail to resolve.
+// MobilityDuck links no spatial extension: it loads the one DuckDB publishes
+// that the user has installed, the way LoadInternal loads ICU, and reports
+// rather than fails when none is available. Its object never names
+// ExtensionHelper::LoadExtension, which a linker that keeps every function of an
+// object (MinGW's) would otherwise fail to resolve.
 static void LoadSpatial(DatabaseInstance &db) {
-#if defined(DUCKDB_BUILD_LOADABLE_EXTENSION)
 	try {
 		ExtensionHelper::AutoLoadExtension(db, "spatial");
 	} catch (const std::exception &e) {
@@ -505,10 +502,6 @@ static void LoadSpatial(DatabaseInstance &db) {
 		        "mobilityduck: spatial extension not available (%s); its "
 		        "functions are not loaded.\n", e.what());
 	}
-#else
-	DuckDB db_wrapper(db);
-	ExtensionHelper::LoadExtension(db_wrapper, "spatial");
-#endif
 }
 
 // DuckDB runs extension optimizers in the order they register, so MobilityDuck

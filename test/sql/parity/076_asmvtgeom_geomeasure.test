@@ -7,6 +7,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # asMVTGeom returns a STRUCT(geom GEOMETRY, times BIGINT[])
 
 query I

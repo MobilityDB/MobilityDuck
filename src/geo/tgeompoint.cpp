@@ -17,7 +17,6 @@
 #include "duckdb/function/table_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-#include "spatial/spatial_types.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 #include "geo_util.hpp"
 #include "time_util.hpp"

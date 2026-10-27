@@ -5,6 +5,12 @@
 require mobilityduck
 
 statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
+statement ok
 CREATE TABLE box_idx(box stbox, label varchar);
 
 statement ok

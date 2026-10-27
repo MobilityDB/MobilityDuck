@@ -28,7 +28,7 @@
 #include "posechain/tposechain.hpp"
 #include "raster/raquet.hpp"
 #include "raster/raster.hpp"
-#include "spatial/spatial_types.hpp"
+#include "duckdb_version_compat.hpp"
 #include "geo_util.hpp"
 #include "meos_internal.h"
 #include "meos_geo.h"

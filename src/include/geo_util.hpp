@@ -9,13 +9,7 @@
 #include "duckdb/storage/arena_allocator.hpp"
 #include "duckdb/execution/expression_executor_state.hpp"
 #include "duckdb_version_compat.hpp"
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 #include "duckdb/common/types/geometry_crs.hpp"
-#endif
-#if !MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
-#include "spatial/geometry/geometry_serialization.hpp"
-#include "spatial/geometry/sgl.hpp"
-#endif
 
 namespace duckdb {
 
@@ -43,7 +37,6 @@ inline GSERIALIZED* GeometryToGSerialized(string_t geometry_blob, int32_t srid) 
  * SRID MEOS reads, and is refused rather than read as none.
  */
 inline int32_t GeometryCrsSrid(const LogicalType &type) {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
     // a list of geometries states the CRS of its element type
     if (type.id() == LogicalTypeId::LIST) {
         return GeometryCrsSrid(ListType::GetChildType(type));
@@ -66,10 +59,6 @@ inline int32_t GeometryCrsSrid(const LogicalType &type) {
         return (int32_t) std::stoi(code);
     }
     throw InvalidInputException("The coordinate reference system '%s' of a GEOMETRY names no EPSG code", id);
-#else
-    (void) type;
-    return 0;
-#endif
 }
 
 inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &arena, Vector &result) {
@@ -83,7 +72,6 @@ inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &are
         throw InvalidInputException("Failed to convert GSERIALIZED to EWKB");
     }
 
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
     // DuckDB core reads EWKB itself: it drops the SRID and writes the
     // little-endian ISO WKB its GEOMETRY type stores, so a loadable extension
     // needs none of the spatial extension's code for this conversion.
@@ -98,31 +86,6 @@ inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ArenaAllocator &are
     }
     free(ewkb_data);
     return blob;
-#else
-    GeometryAllocator alloc(arena);
-    sgl::wkb_reader reader(alloc);
-    reader.set_allow_mixed_zm(true);
-    reader.set_nan_as_empty(true);
-
-    sgl::geometry geom;
-    if (!reader.try_parse(geom, reinterpret_cast<const char *>(ewkb_data), ewkb_size)) {
-        const auto error = reader.get_error_message();
-        free(ewkb_data);
-        throw InvalidInputException("Could not parse EWKB input: %s", error);
-    }
-
-    if (reader.parsed_mixed_zm()) {
-        sgl::ops::force_zm(alloc, geom, reader.parsed_any_z(), reader.parsed_any_m(), 0, 0);
-    }
-
-    const auto size = Serde::GetRequiredSize(geom);
-    auto blob = StringVector::EmptyString(result, size);
-    Serde::Serialize(geom, blob.GetDataWriteable(), size);
-    blob.Finalize();
-
-    free(ewkb_data);
-    return blob;
-#endif
 }
 
 inline string_t GSerializedToGeometry(const GSERIALIZED *gs, ExpressionState &state, Vector &result) {

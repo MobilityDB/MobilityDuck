@@ -6,6 +6,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ── jsonbsetDelete(jsonbset, text) removes the key from every element ──
 
 query I

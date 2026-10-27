@@ -10,6 +10,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # A region cell-set at the trip's own location shares the trip's H3 cell -> true.
 query I
 SELECT eEqual(geoToH3IndexSet(ST_Point(1, 1), 5),

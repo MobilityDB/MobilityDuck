@@ -1,5 +1,11 @@
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 query I
 SELECT tgeompoint 'Point(1 1)@2012-01-01 08:00:00';
 ----

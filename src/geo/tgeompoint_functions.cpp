@@ -11,7 +11,7 @@
 #include "duckdb/common/vector_operations/ternary_executor.hpp"
 #include "duckdb/common/typedefs.hpp"
 
-#include "spatial/spatial_types.hpp"
+#include "duckdb_version_compat.hpp"
 
 #include "duckdb/common/types.hpp"
 

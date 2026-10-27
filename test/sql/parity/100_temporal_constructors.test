@@ -12,6 +12,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ---------------------------------------------------------------------------
 # An alphanumeric temporal value from a value and a timestamp, a set, a span or a span set
 # ---------------------------------------------------------------------------

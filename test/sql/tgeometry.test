@@ -1,5 +1,11 @@
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # Test tgeometry constructor with parentheses
 query I
 SELECT tgeometry('[Point(0 0)@2017-01-01 08:00:00, Linestring(0 0,0 1)@2017-01-02 08:05:00]');
