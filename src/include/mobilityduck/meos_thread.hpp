@@ -24,8 +24,8 @@ inline std::string &MeosThreadTimezone() {
 	return zone;
 }
 
-// MEOS keeps the session timezone, the collation cache, errno, the PROJ and
-// GEOS contexts and the RNGs in thread-local storage, so a thread that calls
+// MEOS keeps the session timezone, the collation cache, errno, the PROJ
+// context and the RNGs in thread-local storage, so a thread that calls
 // MEOS initialises its own caches before its first call (see meos.h,
 // "Multithreading"). DuckDB runs scalar, cast and aggregate bodies on
 // TaskScheduler worker threads, so a one-shot init on the load thread leaves
@@ -38,9 +38,9 @@ inline std::string &MeosThreadTimezone() {
 // process-global error handler to the exit-on-error default, so an error
 // raised on any other thread during that window would print a bare message and
 // end the process rather than reach the handler that turns it into a DuckDB
-// exception. The PROJ, GEOS and GSL contexts are thread-local statics inside
-// MEOS that it creates lazily on first use, so a caller neither can nor needs
-// to initialise them.
+// exception. The PROJ context and the RNGs are thread-local statics inside MEOS
+// that it creates lazily on first use, so a caller neither can nor needs to
+// initialise them.
 inline void EnsureMeosThreadInitialized() {
 	static thread_local const bool meos_thread_ready = []() {
 		meos_initialize_timezone(MEOS_DEFAULT_TIMEZONE);

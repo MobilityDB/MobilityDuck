@@ -15,14 +15,9 @@
 namespace duckdb {
 
 /**
- * Mutex serialization for MobilityDuck scalar function bodies that ultimately call
- * MEOS / liblwgeom. MEOS uses GEOS's legacy global API (`initGEOS` / `finishGEOS`)
- * internally from worker threads; concurrent legacy GEOS init/teardown from DuckDB's
- * parallelism triggers intermittent GEOS errors and allocator corruption when spatial
- * and MobilityDuck coexist.
- *
- * Wrapping each MEOS-backed ScalarFunction execution prevents overlapping MEOS/GEOS
- * legacy pairs across concurrent pipelines while preserving parallelism elsewhere.
+ * Mutex serialization for MobilityDuck scalar function bodies that call MEOS:
+ * wrapping each MEOS-backed ScalarFunction execution keeps the MEOS calls of
+ * concurrent pipelines from overlapping while preserving parallelism elsewhere.
  */
 inline std::mutex &MeosSerializedExecMutex() {
 	static std::mutex mutex;

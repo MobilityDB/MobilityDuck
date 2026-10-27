@@ -1,7 +1,7 @@
 {
     "name": "meos",
     "version-string": "git",
-    "port-version": 17,
+    "port-version": 18,
     "description": "MEOS - Mobility Engine Open Source C library (built from MobilityDB with -DMEOS=ON)",
     "homepage": "https://libmeos.org/",
     "dependencies": [
@@ -9,7 +9,6 @@
         "vcpkg-cmake-config",
         "proj",
         "json-c",
-        "gsl",
         "h3",
         { "name": "gdal", "default-features": false },
         { "name": "libxml2", "features": [ "zlib" ], "default-features": false },

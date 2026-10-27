@@ -26,7 +26,6 @@ endif()
 # Dependencies (vcpkg)
 # -----------------------------
 find_package(PROJ CONFIG REQUIRED)
-find_package(GSL REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(json-c CONFIG QUIET)
 if(NOT json-c_FOUND)
@@ -251,7 +250,7 @@ endforeach()
 # libmeos is a static archive (the meos port follows the triplet's static
 # linkage), so it carries only MEOS's objects: every library MEOS itself calls
 # into has to be resolved on this link line instead of inside a shared libmeos.
-# PROJ, GSL and json-c already appear in the link list below; these four
+# PROJ and json-c already appear in the link list below; these four
 # are the ones the list was missing, one per optional family the meos port
 # enables with -DALL=ON — H3 for th3index, GDAL for the raster operators, and
 # libxml2 plus zlib for the pgPointCloud core.
@@ -266,8 +265,6 @@ find_package(ZLIB REQUIRED)
 set(MOBILITYDUCK_LINK_LIBS
   MEOS::meos
   PROJ::proj
-  GSL::gsl
-  GSL::gslcblas
   ${JSONC_TGT}
   OpenSSL::SSL
   OpenSSL::Crypto
