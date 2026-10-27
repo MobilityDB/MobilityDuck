@@ -39,7 +39,7 @@ MobilityDuck needs some dependencies(including MEOS) which can be installed thro
 ```sh
 cd <your-working-dir-not-the-plugin-repo>
 git clone https://github.com/Microsoft/vcpkg.git
-git -C vcpkg checkout c27eeddba73f608f10605d80bc0144c1166f8fb7
+git -C vcpkg checkout 84bab45d415d22042bd0b9081aea57f362da3f35
 sh ./vcpkg/scripts/bootstrap.sh -disableMetrics
 export VCPKG_TOOLCHAIN_PATH=`pwd`/vcpkg/scripts/buildsystems/vcpkg.cmake
 ```

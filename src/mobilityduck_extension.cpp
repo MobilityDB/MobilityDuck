@@ -66,7 +66,6 @@
 
 extern "C" {
     #include <stdarg.h>
-    #include <geos_c.h>
     #include <meos.h>
     #include <proj.h>
 }
@@ -116,8 +115,6 @@ inline std::string MobilityduckFullVersion() {
 	out += MOBILITYDUCK_MEOS_PIN;
 	out += ", DuckDB ";
 	out += DuckDB::LibraryVersion();
-	out += ", GEOS ";
-	out += GEOSversion();
 	out += ", PROJ ";
 	out += std::to_string(PROJ_VERSION_MAJOR) + "." +
 	       std::to_string(PROJ_VERSION_MINOR) + "." +
