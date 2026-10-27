@@ -25,7 +25,6 @@ endif()
 # -----------------------------
 # Dependencies (vcpkg)
 # -----------------------------
-find_package(GEOS CONFIG REQUIRED)
 find_package(PROJ CONFIG REQUIRED)
 find_package(GSL REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -79,14 +78,6 @@ find_path(H3_INCLUDE_DIR NAMES h3api.h
   NO_CMAKE_FIND_ROOT_PATH)
 if(NOT H3_INCLUDE_DIR)
   message(FATAL_ERROR "h3api.h not found; install libh3-dev (the meos port is built with -DH3=ON).")
-endif()
-
-if(TARGET GEOS::geos_c)
-  set(GEOS_TGT GEOS::geos_c)
-elseif(TARGET GEOS::geos)
-  set(GEOS_TGT GEOS::geos)
-else()
-  message(FATAL_ERROR "Neither GEOS::geos_c nor GEOS::geos was found.")
 endif()
 
 # -----------------------------
@@ -260,7 +251,7 @@ endforeach()
 # libmeos is a static archive (the meos port follows the triplet's static
 # linkage), so it carries only MEOS's objects: every library MEOS itself calls
 # into has to be resolved on this link line instead of inside a shared libmeos.
-# GEOS, PROJ, GSL and json-c already appear in the link list below; these four
+# PROJ, GSL and json-c already appear in the link list below; these four
 # are the ones the list was missing, one per optional family the meos port
 # enables with -DALL=ON — H3 for th3index, GDAL for the raster operators, and
 # libxml2 plus zlib for the pgPointCloud core.
@@ -274,7 +265,6 @@ find_package(ZLIB REQUIRED)
 # -----------------------------
 set(MOBILITYDUCK_LINK_LIBS
   MEOS::meos
-  ${GEOS_TGT}
   PROJ::proj
   GSL::gsl
   GSL::gslcblas

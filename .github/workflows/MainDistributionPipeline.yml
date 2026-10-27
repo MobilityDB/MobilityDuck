@@ -58,8 +58,8 @@ jobs:
       matrix:
         duckdb: ${{ fromJSON(needs.versions.outputs.supported) }}
     # The upstream distribution workflow with one addition: every job keeps a vcpkg binary
-    # cache of its own, so the dependency set the manifest names — GDAL, GEOS,
-    # PROJ, OpenSSL, libmeos and the twenty ports beneath them — is restored
+    # cache of its own, so the dependency set the manifest names — GDAL, PROJ,
+    # OpenSSL, libmeos and the ports beneath them — is restored
     # rather than compiled. The public cache the workflow reads holds an archive
     # only for the dependency sets DuckDB itself builds, and this extension
     # carries a port of its own, so twenty-seven of its twenty-eight packages
@@ -73,7 +73,9 @@ jobs:
       duckdb_version: ${{ matrix.duckdb }}
       extension_name: mobilityduck
       ci_tools_version: ${{ matrix.duckdb }}
-      vcpkg_commit: c27eeddba73f608f10605d80bc0144c1166f8fb7
+      # The vcpkg commit DuckDB's own extension-ci-tools builds v1.5.6 with, which
+      # the manifest's builtin-baseline names too.
+      vcpkg_commit: 84bab45d415d22042bd0b9081aea57f362da3f35
 
       # A compiler cache only pays off if it is still there next time, and a
       # repository gets 10 GB for all of them. The distribution workflow allows
@@ -185,7 +187,7 @@ jobs:
           else
             readelf -d "$EXT" | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p' > deps.txt
             # glibc's own set plus the C++ runtime. Anything vcpkg built (MEOS,
-            # GEOS, PROJ, GDAL, GSL, json-c, h3, libxml2) must be absorbed into
+            # PROJ, GDAL, GSL, json-c, h3, libxml2) must be absorbed into
             # the binary, so none of them may appear here.
             ALLOW='^(libc\.so|libm\.so|libdl\.so|libpthread\.so|librt\.so|libresolv\.so|libstdc\+\+\.so|libgcc_s\.so|libz\.so|ld-linux)'
           fi

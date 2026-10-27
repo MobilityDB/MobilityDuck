@@ -1,6 +1,5 @@
 {
         "dependencies": [
-          { "name": "geos", "version>=": "3.14.0" },
           "gsl",
           { "name": "meos", "version>=": "0" },
 
@@ -32,18 +31,25 @@
           },
           {
             "name": "gdal",
-            "version>=": "3.8.5",
+            "version>=": "3.12.0",
+            "default-features": false,
             "features": [
               {
-                "name": "network",
+                "name": "curl",
                 "platform": "!wasm32 & !ios & !android"
               },
-              "geos"
+              {
+                "name": "openssl",
+                "platform": "!wasm32 & !ios & !android"
+              }
             ]
           }
         ],
-        "builtin-baseline": "6603e6392c5a1474ce2d7d0574eb774ab43a3236",
+        "builtin-baseline": "84bab45d415d22042bd0b9081aea57f362da3f35",
         "vcpkg-configuration": {
+                "overlay-triplets": [
+                        "./vcpkg_triplets"
+                ],
                 "overlay-ports": [
                         "./extension-ci-tools/vcpkg_ports",
                         "./vcpkg_ports"
