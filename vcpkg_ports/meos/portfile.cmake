@@ -88,8 +88,7 @@ vcpkg_cmake_configure(
         # Build only the MEOS library, not the MEOS C test binaries: those link
         # the GEOS C++ API, which the arm64-linux vcpkg triplet does not carry.
         -DBUILD_TESTING=OFF
-        -DCMAKE_C_FLAGS="-Dsession_timezone=meos_session_timezone"
-        -DCMAKE_CXX_FLAGS="-Dsession_timezone=meos_session_timezone"
+        "-DCMAKE_PROJECT_INCLUDE=${CMAKE_CURRENT_LIST_DIR}/cmake-project-include.cmake"
 )
 
 vcpkg_cmake_install()
