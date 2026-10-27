@@ -6,7 +6,7 @@
 
 #include <cstdio>
 #include <string>
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 namespace duckdb {
 

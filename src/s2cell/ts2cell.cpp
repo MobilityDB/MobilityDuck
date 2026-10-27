@@ -19,7 +19,7 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 namespace duckdb {
 

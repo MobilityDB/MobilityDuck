@@ -13,7 +13,7 @@
 #include "geo/geoset.hpp"
 #include<time_util.hpp>
 #include "geo_util.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 extern "C" {
     #include <meos.h>

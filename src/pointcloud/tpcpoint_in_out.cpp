@@ -5,7 +5,7 @@
 #include <string>
 #include <temporal/span.hpp>
 #include "temporal/temporal_functions.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 extern "C" {
     #include <meos.h>

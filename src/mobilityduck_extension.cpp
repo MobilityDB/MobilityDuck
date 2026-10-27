@@ -73,7 +73,7 @@ extern "C" {
 // OpenSSL linked through vcpkg
 #include <openssl/opensslv.h>
 
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 namespace duckdb {
 #include "spatial_ref_sys_csv.inc"
@@ -341,22 +341,22 @@ static void LoadInternal(ExtensionLoader &loader) {
 	        LogicalType::VARCHAR,
 	        MobilityduckOpenSSLVersionScalarFun
 	    );
-	duckdb::RegisterSerializedScalarFunction(loader,  mobilityduck_openssl_version_scalar_function);
+	duckdb::RegisterMeosFunction(loader,  mobilityduck_openssl_version_scalar_function);
 
-	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+	duckdb::RegisterMeosFunction(loader, ScalarFunction(
 		"mobilityduckVersion", {}, LogicalType::VARCHAR,
 		MobilityduckVersionScalarFun));
-	duckdb::RegisterSerializedScalarFunction(loader, ScalarFunction(
+	duckdb::RegisterMeosFunction(loader, ScalarFunction(
 		"mobilityduckFullVersion", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
 	// Portable-SQL aliases — MobilityDB publishes `mobilitydbVersion` and
 	// `mobilitydbFullVersion`, so a query that probes for the engine version
 	// runs unchanged across both. The `mobilitydb_*` spellings this extension
 	// already publishes stay registered beside them.
-	duckdb::RegisterSerializedScalarFunctionAs(loader, ScalarFunction(
+	duckdb::RegisterMeosFunctionAs(loader, ScalarFunction(
 		"mobilitydbVersion", {}, LogicalType::VARCHAR,
 		MobilityduckVersionScalarFun), {"mobilitydb_version"});
-	duckdb::RegisterSerializedScalarFunctionAs(loader, ScalarFunction(
+	duckdb::RegisterMeosFunctionAs(loader, ScalarFunction(
 		"mobilitydbFullVersion", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun), {"mobilitydb_full_version"});
 

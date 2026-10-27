@@ -22,7 +22,7 @@
 #include "duckdb/common/types/data_chunk.hpp"
 
 #include "time_util.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 namespace duckdb {
 
@@ -117,7 +117,7 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
         // The constructors from a base value and a time value, tint(integer, timestamptz) ..
         // ttext(text, tstzspanset), are generated (meos_temporal_constructor, RETIRED_GROUPS).
-        duckdb::RegisterSerializedScalarFunction(loader, 
+        duckdb::RegisterMeosFunction(loader, 
             ScalarFunction(
                 StringUtil::Lower(type.GetAlias()),
                 {type, LogicalType::INTEGER},

@@ -36,7 +36,7 @@
 #include "meos_json.h"
 #include "meos_pointcloud.h"
 #include "time_util.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
@@ -5000,310 +5000,310 @@ static void Gen_temporal_append_finalfn(DataChunk &args, ExpressionState &, Vect
 } // anonymous
 
 void RegisterGenerated_meos_box_transf(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("expandTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_expand_time));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleTime", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time_duration));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time_shift));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_expand));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_expand));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tbox_round));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TboxType::tbox()}, TboxType::tbox(), Gen_tbox_round_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_width));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_shift));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_width));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_shift));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_expand));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_width));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("expandTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_expand_time));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleTime", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time));
+    RegisterMeosFunction(loader, ScalarFunction("shiftTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time_duration));
+    RegisterMeosFunction(loader, ScalarFunction("scaleTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time_shift));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth));
+    RegisterMeosFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_expand));
+    RegisterMeosFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_expand));
+    RegisterMeosFunction(loader, ScalarFunction("round", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tbox_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {TboxType::tbox()}, TboxType::tbox(), Gen_tbox_round_d));
+    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_width));
+    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_width));
+    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_expand));
+    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_width));
+    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_shift));
 }
 
 void RegisterGenerated_meos_cbuffer_rel_ever(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acontains_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acovers_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aDwithin", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_atouches_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eContains", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_econtains_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eDwithin", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_etouches_geo_tcbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_geo));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_cbuffer));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aContains", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acontains_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("aContains", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acontains_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aCovers", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acovers_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("aCovers", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_acovers_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aDisjoint", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_adisjoint_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aDwithin", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aDwithin", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("aDwithin", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_adwithin_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aIntersects", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_aintersects_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aTouches", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_atouches_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("aTouches", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_atouches_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eContains", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_econtains_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("eContains", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_econtains_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eCovers", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("eCovers", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_ecovers_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eDisjoint", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eDisjoint", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_edisjoint_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eDwithin", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eDwithin", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("eDwithin", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer(), LogicalType::DOUBLE}, LogicalType::BOOLEAN, Gen_edwithin_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eIntersects", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eIntersects", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_eintersects_tcbuffer_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eTouches", {MobilityDuckGeometryType(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_etouches_geo_tcbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_geo));
+    RegisterMeosFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::cbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_cbuffer));
+    RegisterMeosFunction(loader, ScalarFunction("eTouches", {CbufferTypes::tcbuffer(), CbufferTypes::tcbuffer()}, LogicalType::BOOLEAN, Gen_etouches_tcbuffer_tcbuffer));
 }
 
 void RegisterGenerated_meos_geo_box_inout(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {StboxType::stbox()}, LogicalType::BLOB, Gen_stbox_as_ewkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asEWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_stbox_as_ewkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_as_hexewkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexEWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_stbox_as_hexewkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_as_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asHexWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_stbox_as_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {StboxType::stbox()}, LogicalType::BLOB, Gen_stbox_as_wkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asBinary", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_stbox_as_wkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromHexWKB", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromHexEWKB", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_from_hexwkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromBinary", {LogicalType::BLOB}, StboxType::stbox(), Gen_stbox_from_wkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromEWKB", {LogicalType::BLOB}, StboxType::stbox(), Gen_stbox_from_wkb));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("stboxFromText", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_in));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("stbox", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_in));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {StboxType::stbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_stbox_out));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("asText", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_out_d));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKB", {StboxType::stbox()}, LogicalType::BLOB, Gen_stbox_as_ewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_stbox_as_ewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexEWKB", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_as_hexewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexEWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_stbox_as_hexewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_as_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_stbox_as_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("asBinary", {StboxType::stbox()}, LogicalType::BLOB, Gen_stbox_as_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("asBinary", {StboxType::stbox(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_stbox_as_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("stboxFromHexWKB", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_from_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("stboxFromHexEWKB", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_from_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("stboxFromBinary", {LogicalType::BLOB}, StboxType::stbox(), Gen_stbox_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("stboxFromEWKB", {LogicalType::BLOB}, StboxType::stbox(), Gen_stbox_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("stboxFromText", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_in));
+    RegisterMeosFunction(loader, ScalarFunction("stbox", {LogicalType::VARCHAR}, StboxType::stbox(), Gen_stbox_in));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {StboxType::stbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_stbox_out));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {StboxType::stbox()}, LogicalType::VARCHAR, Gen_stbox_out_d));
 }
 
 void RegisterGenerated_meos_geo_srid(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TgeompointType::tgeompoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TgeogpointType::tgeogpoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TGeometryTypes::tgeometry()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TPcpointTypes::tpcpoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TPcpatchTypes::tpcpatch()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {NpointTypes::tnpoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {PoseTypes::tpose()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {TrgeometryTypes::trgeometry()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("SRID", {PosechainTypes::tposechain()}, LogicalType::INTEGER, Gen_tspatial_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::tpose(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setSRID", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::tposechain(), Gen_tspatial_set_srid));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::tpose(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_tspatial_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::tposechain(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TgeompointType::tgeompoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TgeogpointType::tgeogpoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TGeometryTypes::tgeometry()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TGeographyTypes::tgeography()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {CbufferTypes::tcbuffer()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TPcpointTypes::tpcpoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TPcpatchTypes::tpcpatch()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {NpointTypes::tnpoint()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {PoseTypes::tpose()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {TrgeometryTypes::trgeometry()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("SRID", {PosechainTypes::tposechain()}, LogicalType::INTEGER, Gen_tspatial_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::tpose(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::tposechain(), Gen_tspatial_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, TGeometryTypes::tgeometry(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, TGeographyTypes::tgeography(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::tpose(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_tspatial_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::tposechain(), Gen_tspatial_transform));
 }
 
 void RegisterGenerated_meos_h3_base_comp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_eq));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_ne));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_lt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_le));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_gt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_ge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::INTEGER, Gen_h3index_cmp));
+    RegisterMeosFunction(loader, ScalarFunction("eq", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_eq));
+    RegisterMeosFunction(loader, ScalarFunction("ne", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_ne));
+    RegisterMeosFunction(loader, ScalarFunction("lt", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_lt));
+    RegisterMeosFunction(loader, ScalarFunction("le", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_le));
+    RegisterMeosFunction(loader, ScalarFunction("gt", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_gt));
+    RegisterMeosFunction(loader, ScalarFunction("ge", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::BOOLEAN, Gen_h3index_ge));
+    RegisterMeosFunction(loader, ScalarFunction("cmp", {H3indexTypes::h3index(), H3indexTypes::h3index()}, LogicalType::INTEGER, Gen_h3index_cmp));
 }
 
 void RegisterGenerated_meos_npoint_set_inout(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromText", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("npointsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("npointset", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
+    RegisterMeosFunction(loader, ScalarFunction("npointsetFromText", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
+    RegisterMeosFunction(loader, ScalarFunction("npointsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
+    RegisterMeosFunction(loader, ScalarFunction("npointset", {LogicalType::VARCHAR}, SetTypes::npointset(), Gen_npointset_in));
 }
 
 void RegisterGenerated_meos_pose_set_constructor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("set", {LogicalType::LIST(PoseTypes::pose())}, SetTypes::poseset(), Gen_poseset_make));
+    RegisterMeosFunction(loader, ScalarFunction("set", {LogicalType::LIST(PoseTypes::pose())}, SetTypes::poseset(), Gen_poseset_make));
 }
 
 void RegisterGenerated_meos_quadbin_base_comp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("eq", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_eq));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_ne));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("lt", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_lt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("le", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_le));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("gt", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_gt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ge", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_ge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("cmp", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::INTEGER, Gen_quadbin_cmp));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hash", {QuadbinTypes::quadbin()}, LogicalType::UINTEGER, Gen_quadbin_hash));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("hashExtended", {QuadbinTypes::quadbin(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_quadbin_hash_extended));
+    RegisterMeosFunction(loader, ScalarFunction("eq", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_eq));
+    RegisterMeosFunction(loader, ScalarFunction("ne", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_ne));
+    RegisterMeosFunction(loader, ScalarFunction("lt", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_lt));
+    RegisterMeosFunction(loader, ScalarFunction("le", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_le));
+    RegisterMeosFunction(loader, ScalarFunction("gt", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_gt));
+    RegisterMeosFunction(loader, ScalarFunction("ge", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::BOOLEAN, Gen_quadbin_ge));
+    RegisterMeosFunction(loader, ScalarFunction("cmp", {QuadbinTypes::quadbin(), QuadbinTypes::quadbin()}, LogicalType::INTEGER, Gen_quadbin_cmp));
+    RegisterMeosFunction(loader, ScalarFunction("hash", {QuadbinTypes::quadbin()}, LogicalType::UINTEGER, Gen_quadbin_hash));
+    RegisterMeosFunction(loader, ScalarFunction("hashExtended", {QuadbinTypes::quadbin(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_quadbin_hash_extended));
 }
 
 void RegisterGenerated_meos_raster_base_transf(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType(), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType()}, RasterTypes::raster(), Gen_raster_clip_v2));
-    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE)}, RasterTypes::raster(), Gen_raster_clip_v5); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    RegisterSerializedScalarFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType()}, RasterTypes::raster(), Gen_raster_clip_v6));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_v3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_transform_v4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_pipeline));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_pipeline_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_pipeline_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_pipeline_v3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_transform_pipeline_v4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_transform_pipeline_v5));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_pipeline_v6));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_raster));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_raster_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_transform_raster_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_rescale));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_rescale_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_rescale_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpValues", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), Gen_raster_dump_values));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("dumpValues", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), Gen_raster_dump_values_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v2));
-    { ScalarFunction sf = ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_reclass); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    RegisterSerializedScalarFunction(loader, ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_reclass_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_slope_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_slope_v4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v5));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope_v6));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_slope_v7));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v8));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v9));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v10));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_tpi_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi_v4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v5));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v6));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v1));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_tri_v2));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v3));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri_v4));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v5));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v6));
-    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_map_algebra); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_map_algebra_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_map_algebra_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_map_algebra_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_map_algebra_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterSerializedScalarFunction(loader, sf); }
-    RegisterSerializedScalarFunction(loader, ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_map_algebra_v5));
+    RegisterMeosFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType(), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip));
+    RegisterMeosFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType(), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v1));
+    RegisterMeosFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), MobilityDuckGeometryType()}, RasterTypes::raster(), Gen_raster_clip_v2));
+    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::BOOLEAN, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_clip_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType(), LogicalType::LIST(LogicalType::DOUBLE)}, RasterTypes::raster(), Gen_raster_clip_v5); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("clip", {RasterTypes::raster(), LogicalType::LIST(LogicalType::INTEGER), MobilityDuckGeometryType()}, RasterTypes::raster(), Gen_raster_clip_v6));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_v1));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_v2));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_v3));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_transform_v4));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_pipeline));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_pipeline_v1));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_pipeline_v2));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_pipeline_v3));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_transform_pipeline_v4));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_transform_pipeline_v5));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_pipeline_v6));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_transform_raster));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_transform_raster_v1));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_transform_raster_v2));
+    RegisterMeosFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_rescale));
+    RegisterMeosFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_rescale_v1));
+    RegisterMeosFunction(loader, ScalarFunction("rescale", {RasterTypes::raster(), LogicalType::DOUBLE, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_rescale_v2));
+    RegisterMeosFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons));
+    RegisterMeosFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons_v1));
+    RegisterMeosFunction(loader, ScalarFunction("dumpAsPolygons", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}})), Gen_raster_dump_as_polygons_v2));
+    RegisterMeosFunction(loader, ScalarFunction("dumpValues", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), Gen_raster_dump_values));
+    RegisterMeosFunction(loader, ScalarFunction("dumpValues", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), Gen_raster_dump_values_v1));
+    RegisterMeosFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points));
+    RegisterMeosFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v1));
+    RegisterMeosFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v2));
+    { ScalarFunction sf = ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_reclass); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_reclass_v1));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_slope_v1));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v2));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v3));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_slope_v4));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v5));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope_v6));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_slope_v7));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v8));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v9));
+    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v10));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_tpi_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v3));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi_v4));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v5));
+    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v6));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_tri_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v3));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri_v4));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v5));
+    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v6));
+    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_map_algebra); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_map_algebra_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_map_algebra_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_map_algebra_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_map_algebra_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_map_algebra_v5));
 }
 
 void RegisterGenerated_meos_rgeo_modif(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstant", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_append_tinstant_expand_interp_maxdist_maxt));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendSequence", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_append_tsequence_expand));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_timestamptz));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_timestamptz_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset(), LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzset_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan(), LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspan_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspanset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspanset_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_merge));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("merge", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, TrgeometryTypes::trgeometry(), Gen_trgeometry_merge_array));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstant", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_append_tinstant_expand_interp_maxdist_maxt));
+    RegisterMeosFunction(loader, ScalarFunction("appendSequence", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_append_tsequence_expand));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_timestamptz));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_timestamptz_d));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset(), LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzset));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzset_d));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan(), LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspan_d));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset(), LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspanset));
+    RegisterMeosFunction(loader, ScalarFunction("deleteTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_delete_tstzspanset_d));
+    RegisterMeosFunction(loader, ScalarFunction("merge", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_merge));
+    RegisterMeosFunction(loader, ScalarFunction("merge", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, TrgeometryTypes::trgeometry(), Gen_trgeometry_merge_array));
 }
 
 void RegisterGenerated_meos_rgeo_transf(ExtensionLoader &loader) {
     loader.RegisterFunction(Unnest_trgeometry_unnestTable(TrgeometryTypes::trgeometry()));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_trgeometry_round));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("round", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_round_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rotateX", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_x));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rotateY", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_y));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rotateZ", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_z));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("rotate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_z));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("setInterp", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_set_interp));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_translate));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("translate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_translate_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometryInst", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tinstant));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeq", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequence));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeq", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequence_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSet", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequenceset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("trgeometrySeqSet", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequenceset_d));
+    RegisterMeosFunction(loader, ScalarFunction("round", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_trgeometry_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_round_d));
+    RegisterMeosFunction(loader, ScalarFunction("rotate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate));
+    RegisterMeosFunction(loader, ScalarFunction("rotateX", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_x));
+    RegisterMeosFunction(loader, ScalarFunction("rotateY", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_y));
+    RegisterMeosFunction(loader, ScalarFunction("rotateZ", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_z));
+    RegisterMeosFunction(loader, ScalarFunction("rotate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_rotate_z));
+    RegisterMeosFunction(loader, ScalarFunction("setInterp", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_set_interp));
+    RegisterMeosFunction(loader, ScalarFunction("translate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_translate));
+    RegisterMeosFunction(loader, ScalarFunction("translate", {TrgeometryTypes::trgeometry(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TrgeometryTypes::trgeometry(), Gen_trgeometry_translate_d));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometryInst", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tinstant));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometrySeq", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequence));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometrySeq", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequence_d));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometrySeqSet", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequenceset));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometrySeqSet", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_trgeometry_as_tsequenceset_d));
 }
 
 void RegisterGenerated_meos_s2cell_comp_temp(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {S2cellTypes::s2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbool(), Gen_teq_s2cell_ts2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tEqual", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, TemporalTypes::tbool(), Gen_teq_ts2cell_s2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {S2cellTypes::s2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbool(), Gen_tne_s2cell_ts2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tNotEqual", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, TemporalTypes::tbool(), Gen_tne_ts2cell_s2cell));
+    RegisterMeosFunction(loader, ScalarFunction("tEqual", {S2cellTypes::s2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbool(), Gen_teq_s2cell_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("tEqual", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, TemporalTypes::tbool(), Gen_teq_ts2cell_s2cell));
+    RegisterMeosFunction(loader, ScalarFunction("tNotEqual", {S2cellTypes::s2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbool(), Gen_tne_s2cell_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("tNotEqual", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, TemporalTypes::tbool(), Gen_tne_ts2cell_s2cell));
 }
 
 void RegisterGenerated_meos_s2cell_constructor(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_ts2cellinst_make));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), SetTypes::tstzset()}, S2cellTypes::ts2cell(), Gen_ts2cellseq_from_base_tstzset));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), SpanTypes::tstzspan()}, S2cellTypes::ts2cell(), Gen_ts2cellseq_from_base_tstzspan));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), SpansetTypes::tstzspanset()}, S2cellTypes::ts2cell(), Gen_ts2cellseqset_from_base_tstzspanset));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_ts2cellinst_make));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), SetTypes::tstzset()}, S2cellTypes::ts2cell(), Gen_ts2cellseq_from_base_tstzset));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), SpanTypes::tstzspan()}, S2cellTypes::ts2cell(), Gen_ts2cellseq_from_base_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {S2cellTypes::s2cell(), SpansetTypes::tstzspanset()}, S2cellTypes::ts2cell(), Gen_ts2cellseqset_from_base_tstzspanset));
 }
 
 void RegisterGenerated_meos_s2cell_conversion(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cell", {LogicalType::BIGINT}, S2cellTypes::s2cell(), Gen_bigint_to_s2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("s2cell_recv", {LogicalType::BIGINT}, S2cellTypes::s2cell(), Gen_bigint_to_s2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TemporalTypes::tbigint()}, S2cellTypes::ts2cell(), Gen_tbigint_to_ts2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("tbigint", {S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_to_tbigint));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tgeogpoint_to_ts2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, S2cellTypes::ts2cell(), Gen_tgeogpoint_to_ts2cell_d));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeompointType::tgeompoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tgeompoint_to_ts2cell));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("ts2cell", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, S2cellTypes::ts2cell(), Gen_tgeompoint_to_ts2cell_d));
+    RegisterMeosFunction(loader, ScalarFunction("s2cell", {LogicalType::BIGINT}, S2cellTypes::s2cell(), Gen_bigint_to_s2cell));
+    RegisterMeosFunction(loader, ScalarFunction("s2cell_recv", {LogicalType::BIGINT}, S2cellTypes::s2cell(), Gen_bigint_to_s2cell));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {TemporalTypes::tbigint()}, S2cellTypes::ts2cell(), Gen_tbigint_to_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("tbigint", {S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_to_tbigint));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tgeogpoint_to_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, S2cellTypes::ts2cell(), Gen_tgeogpoint_to_ts2cell_d));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {TgeompointType::tgeompoint(), LogicalType::INTEGER, LogicalType::BOOLEAN}, S2cellTypes::ts2cell(), Gen_tgeompoint_to_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("ts2cell", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, S2cellTypes::ts2cell(), Gen_tgeompoint_to_ts2cell_d));
 }
 
 void RegisterGenerated_meos_s2cell_restrict(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("atValue", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, S2cellTypes::ts2cell(), Gen_ts2cell_at_value));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("minusValue", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, S2cellTypes::ts2cell(), Gen_ts2cell_minus_value));
+    RegisterMeosFunction(loader, ScalarFunction("atValue", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, S2cellTypes::ts2cell(), Gen_ts2cell_at_value));
+    RegisterMeosFunction(loader, ScalarFunction("minusValue", {S2cellTypes::ts2cell(), S2cellTypes::s2cell()}, S2cellTypes::ts2cell(), Gen_ts2cell_minus_value));
 }
 
 void RegisterGenerated_meos_temporal_agg(ExtensionLoader &loader) {
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {S2cellTypes::ts2cell()}, S2cellTypes::ts2cell(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TPcpointTypes::tpcpoint()}, TPcpointTypes::tpcpoint(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TPcpatchTypes::tpcpatch()}, TPcpatchTypes::tpcpatch(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {NpointTypes::tnpoint()}, NpointTypes::tnpoint(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_temporal_append_finalfn));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("appendInstantFinal", {PosechainTypes::tposechain()}, PosechainTypes::tposechain(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tbool()}, TemporalTypes::tbool(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TgeogpointType::tgeogpoint()}, TgeogpointType::tgeogpoint(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TGeometryTypes::tgeometry()}, TGeometryTypes::tgeometry(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TGeographyTypes::tgeography()}, TGeographyTypes::tgeography(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {H3indexTypes::th3index()}, H3indexTypes::th3index(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {S2cellTypes::ts2cell()}, S2cellTypes::ts2cell(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TPcpointTypes::tpcpoint()}, TPcpointTypes::tpcpoint(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TPcpatchTypes::tpcpatch()}, TPcpatchTypes::tpcpatch(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {NpointTypes::tnpoint()}, NpointTypes::tnpoint(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_temporal_append_finalfn));
+    RegisterMeosFunction(loader, ScalarFunction("appendInstantFinal", {PosechainTypes::tposechain()}, PosechainTypes::tposechain(), Gen_temporal_append_finalfn));
 }
 
 } // namespace duckdb

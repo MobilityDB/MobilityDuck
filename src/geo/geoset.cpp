@@ -7,7 +7,7 @@
 #include "duckdb/common/extension_type_info.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 #include "temporal/set_functions.hpp"
 
 extern "C" {    

@@ -40,7 +40,7 @@
 #include "raster/raster_boundary.hpp"
 #include "raster/raster.hpp"
 #include "raster/raster_datacube.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 #include "duckdb/common/types/value.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
@@ -620,11 +620,11 @@ void RasterBoundary::Register(ExtensionLoader &loader) {
 	 * result reaches the summarystats accessors as summaryStats' does */
 	loader.RegisterType("summarystats", SummaryStats());
 
-	RegisterSerializedScalarFunction(
+	RegisterMeosFunction(
 	    loader, ScalarFunction("raster",
 	                           {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::JSON()},
 	                           RasterTypes::raster(), RasterFromDatacubeFunction));
-	RegisterSerializedScalarFunction(
+	RegisterMeosFunction(
 	    loader, ScalarFunction("rasterMetadata", {RasterTypes::raster()}, LogicalType::JSON(), RasterMetadataFunction));
 
 	RegisterMeosCastFunction(loader, RasterTypes::raster(), RtDatacube(), RasterToDatacubeCast);

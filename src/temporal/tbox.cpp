@@ -11,7 +11,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 // #include "duckdb/common/extension_type_info.hpp"
 
 namespace duckdb {

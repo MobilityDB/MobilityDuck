@@ -19,7 +19,7 @@
 #include "index/sptree_module.hpp"
 #include "temporal/temporal_blob.hpp"
 #include "index/sptree_index_scan.hpp"
-#include "mobilityduck/meos_exec_serial.hpp"
+#include "mobilityduck/meos_registration.hpp"
 
 namespace duckdb {
 
