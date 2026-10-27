@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <mutex>
 #include <string>
 #include <utility>
 
@@ -13,16 +12,6 @@
 #include "mobilityduck/meos_thread.hpp"
 
 namespace duckdb {
-
-/**
- * Mutex serialization for MobilityDuck scalar function bodies that call MEOS:
- * wrapping each MEOS-backed ScalarFunction execution keeps the MEOS calls of
- * concurrent pipelines from overlapping while preserving parallelism elsewhere.
- */
-inline std::mutex &MeosSerializedExecMutex() {
-	static std::mutex mutex;
-	return mutex;
-}
 
 /**
  * DuckDB keeps the coordinate reference system of a GEOMETRY on its type, and binds an argument
@@ -61,7 +50,6 @@ inline ScalarFunction WrapScalarFunctionWithMeosExecMutex(ScalarFunction sf) {
 #endif
 	scalar_function_t orig = std::move(sf.function);
 	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
-		std::lock_guard<std::mutex> guard(MeosSerializedExecMutex());
 		// DuckDB runs scalar/cast/aggregate bodies on worker threads whose MEOS
 		// thread-local state (timezone/locale/PROJ/RNG) is uninitialised; init once
 		// per thread before any MEOS call, in the zone of the session running the
