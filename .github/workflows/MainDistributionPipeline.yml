@@ -123,7 +123,9 @@ jobs:
   # A hand-written binding declares its result type twice — in the registration
   # DuckDB reads and in the executor template that writes the result vector —
   # and nothing makes the two agree. The audit is source-only, so it answers in
-  # seconds and gates the pull request rather than waiting on a build.
+  # seconds and gates the pull request rather than waiting on a build. The
+  # licence check reads every source file for the banner of
+  # tools/license/banner.txt, as MobilityDB's check-code workflow does.
   source-audits:
     name: Source audits
     runs-on: ubuntu-24.04
@@ -131,6 +133,12 @@ jobs:
       - uses: actions/checkout@v7
       - name: Declared return types are the ones the executors write
         run: python3 scripts/return-type-audit.py .
+      - name: Install Requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y licensecheck
+      - name: Run License Check
+        run: ./src/tools/scripts/test_license.sh
 
   # The published artifact is a single file a user downloads and LOADs, so the
   # guarantee it has to carry is that it names no shared library it does not

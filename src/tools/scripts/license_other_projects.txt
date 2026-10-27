@@ -1,0 +1,6 @@
+# Source files under the first-party trees that state another project's licence,
+# so test_license.sh does not ask them for MobilityDB's banner. Each line is a
+# path git lists, matched whole.
+#
+# A file leaves this list by moving to the top-level directory of the project it
+# comes from, which is where the tree keeps vendored code.
