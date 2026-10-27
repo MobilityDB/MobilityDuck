@@ -6,6 +6,12 @@
 require mobilityduck
 
 statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
+statement ok
 SET TimeZone='America/Los_Angeles'
 
 # MobilityDB: SELECT valueSplit(tbigint '[1@2001-01-01, 2@2001-01-02, 1@2001-01-03]', 2);

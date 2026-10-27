@@ -5,6 +5,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # The instants of the trajectory are read and written in UTC.
 statement ok
 SET TimeZone = 'UTC';

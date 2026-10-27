@@ -4,6 +4,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # test/data/raster_4326.tif is a 2x2 UINT8 raster covering the world in WGS 84,
 # one pixel per quadrant:
 #   NW lon -180..0 lat 0..90  = 1     NE lon 0..180 lat 0..90  = 2

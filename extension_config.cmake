@@ -9,15 +9,8 @@ duckdb_extension_load(mobilityduck
 # Any extra extensions that should be built
 # e.g.: duckdb_extension_load(json)
 
-# The spatial extension at the commit DuckDB v1.5.6 builds
-# (.github/config/extensions/spatial.cmake). It carries the fix restricting the
-# && spatial join rewrite to GEOMETRY operands (duckdb-spatial #853), without
-# which the optimizer claims MobilityDuck's && joins. DuckDB v1.5.6 ships no
-# patch for spatial.
-duckdb_extension_load(spatial
-    GIT_URL     https://github.com/duckdb/duckdb-spatial
-    GIT_TAG     04270fe7bb4eb412765cce8afde0276a9d81d3ba
-    INCLUDE_DIR src/spatial
-)
+# The spatial extension is not built here: MobilityDuck stacks on the spatial
+# extension DuckDB publishes, which a session loads beside it, and the tests
+# that call its ST_ functions install and load that published extension.
 
 duckdb_extension_load(icu)

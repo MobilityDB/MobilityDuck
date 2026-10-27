@@ -6,6 +6,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ── h3index: resolution and hierarchy (h3/expected/252_h3index_ops.test.out:1-50) ──
 
 query III

@@ -13,7 +13,7 @@
 #include <cmath>
 #include <string>
 
-#include "spatial/spatial_types.hpp"
+#include "duckdb_version_compat.hpp"
 
 namespace duckdb {
 

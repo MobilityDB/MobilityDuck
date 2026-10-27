@@ -10,6 +10,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # =============================================================================
 # getValueTile(double, double [, double=0.0]) -> tbox
 # =============================================================================

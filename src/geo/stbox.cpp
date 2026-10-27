@@ -12,7 +12,6 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <duckdb/parser/parsed_data/create_scalar_function_info.hpp>
 #include <scoped_allocator>
-#include "spatial/spatial_types.hpp"
 #include "mobilityduck/meos_exec_serial.hpp"
 
 namespace duckdb {

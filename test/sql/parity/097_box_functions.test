@@ -7,6 +7,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ---------------------------------------------------------------------------
 # The measures of a spatiotemporal box, with and without the default of their flag
 # ---------------------------------------------------------------------------

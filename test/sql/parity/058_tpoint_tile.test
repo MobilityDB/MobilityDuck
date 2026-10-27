@@ -13,6 +13,12 @@
 require mobilityduck
 
 statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
+statement ok
 SET TimeZone='America/Los_Angeles'
 
 # MobilityDB: SELECT spaceTiles(tgeompoint '[Point(3 3)@2001-01-15, Point(15 15)@2001-01-25]'::stbox, 2.0) LIMIT 3;

@@ -4,6 +4,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ---------------------------------------------------------------------------
 # Type + text I/O (hand-registered boundary; the point renders as HEXEWKB, the
 # canonical #Cbuffer_out() form — asText produces the WKT POINT(..) form).

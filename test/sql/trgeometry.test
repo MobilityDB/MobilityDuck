@@ -5,6 +5,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ---------------------------------------------------------------------------
 # Type + text I/O (hand-registered boundary).  The cast prints the reference
 # geometry as HEXEWKB and the pose as the canonical #Pose_out() form; asText

@@ -1,5 +1,11 @@
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Construction
 # ──────────────────────────────────────────────────────────────────────────────

@@ -7,6 +7,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # A 5-instant trajectory whose points are not collinear, so normalization keeps
 # all four segments: stboxes returns one box per segment.
 

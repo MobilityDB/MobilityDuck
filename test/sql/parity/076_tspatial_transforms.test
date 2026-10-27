@@ -5,6 +5,12 @@
 
 require mobilityduck
 
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
 # affine 12-arg core (3D affine matrix + translation)
 
 query I

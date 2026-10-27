@@ -1,15 +1,13 @@
 #pragma once
 
-// The DuckDB line being built decides two things this extension depends on.
+// The DuckDB line being built decides the entry points this extension calls.
 //
-// GEOMETRY is a spatial-extension type on the v1.4 line and a core DuckDB
-// LogicalTypeId from v1.5.0 (duckdb/common/types/geometry.hpp records
-// "Added to core in DuckDB v1.5.0"), so `MobilityDuckGeometryType()` names it on one
-// line and `LogicalType::GEOMETRY()` on the other. The move takes the WKB
-// conversion with it: the v1.4 spatial extension offers the scalar
-// `WKBWriter::Write`, while core offers the vector-oriented
-// `Geometry::ToBinary`, so the boundary that hands a geometry to MEOS is
-// written once here rather than at each call site.
+// GEOMETRY is a core DuckDB LogicalTypeId from v1.5.0
+// (duckdb/common/types/geometry.hpp records "Added to core in DuckDB v1.5.0"),
+// with its WKB conversion `Geometry::ToBinary`; before v1.5 it is a type of the
+// spatial extension, which MobilityDuck does not build, so v1.5 is the oldest
+// line MobilityDuck builds against. The boundary that hands a geometry to MEOS
+// is written once here rather than at each call site.
 //
 // MOBILITYDUCK_DUCKDB_MAJOR / _MINOR come from CMakeLists.txt, which reads the
 // DUCKDB_MAJOR_VERSION / DUCKDB_MINOR_VERSION variables DuckDB's own build sets.
@@ -31,40 +29,27 @@
 	(MOBILITYDUCK_DUCKDB_MAJOR > (major) ||                                                                            \
 	 (MOBILITYDUCK_DUCKDB_MAJOR == (major) && MOBILITYDUCK_DUCKDB_MINOR >= (minor)))
 
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
-#include "duckdb/common/types/geometry.hpp"
-#else
-#include "spatial/spatial_types.hpp"
-#include "spatial/geometry/wkb_writer.hpp"
+#if !MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
+#error "MobilityDuck builds against DuckDB v1.5 or later, where GEOMETRY is a core type."
 #endif
+
+#include "duckdb/common/types/geometry.hpp"
 
 namespace duckdb {
 
-//! The GEOMETRY logical type of the DuckDB line being built.
+//! The GEOMETRY logical type of DuckDB core.
 inline LogicalType MobilityDuckGeometryType() {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	return LogicalType::GEOMETRY();
-#else
-	return GeoTypes::GEOMETRY();
-#endif
 }
 
-//! Whether a value of this type is a geometry.
-//!
-//! The spatial extension gives GEOMETRY the BLOB physical type and names it by
-//! its alias, so a dispatch on the line where GEOMETRY is an extension type
-//! reads BLOB; from v1.5 core states it as a LogicalTypeId of its own.
+//! Whether a value of this type is a geometry: core states GEOMETRY as a
+//! LogicalTypeId of its own, and a BLOB holding WKB is read as one too.
 inline bool MobilityDuckIsGeometryType(const LogicalType &type) {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	return type.id() == LogicalTypeId::GEOMETRY || type.id() == LogicalTypeId::BLOB;
-#else
-	return type.id() == LogicalTypeId::BLOB;
-#endif
 }
 
 //! The WKB of one geometry value, as the byte buffer MEOS reads.
 inline void MobilityDuckGeometryToWKB(const string_t &geometry, vector<data_t> &buffer) {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	Vector source(LogicalType::GEOMETRY());
 	source.SetVectorType(VectorType::CONSTANT_VECTOR);
 	ConstantVector::GetData<string_t>(source)[0] = geometry;
@@ -75,9 +60,6 @@ inline void MobilityDuckGeometryToWKB(const string_t &geometry, vector<data_t> &
 	const auto wkb = ConstantVector::GetData<string_t>(target)[0];
 	const auto data = const_data_ptr_cast(wkb.GetData());
 	buffer.assign(data, data + wkb.GetSize());
-#else
-	WKBWriter::Write(geometry, buffer);
-#endif
 }
 
 
