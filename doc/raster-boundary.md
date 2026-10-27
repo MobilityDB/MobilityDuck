@@ -196,7 +196,7 @@ A datacube and its metadata are untrusted input; every case below raises an erro
 `test/sql/raster_boundary.test` builds rasters from datacubes the published `duckdb-raster` wrote in each data type and data format, pasted as hex, and runs without the extension. `test/sql/raster_boundary_rt.test` tests the casts against the extension itself and runs where `MOBILITYDUCK_RASTER_EXTENSION` names its file, the community binary of `duckdb-raster` for the DuckDB version of the build:
 
 ```sh
-MOBILITYDUCK_RASTER_EXTENSION=~/.duckdb/extensions/v1.5.5/linux_amd64/raster.duckdb_extension \
+MOBILITYDUCK_RASTER_EXTENSION=~/.duckdb/extensions/v1.5.6/linux_amd64/raster.duckdb_extension \
   build/release/test/unittest "test/sql/raster_boundary_rt.test"
 ```
 

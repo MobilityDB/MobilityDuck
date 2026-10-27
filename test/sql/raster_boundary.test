@@ -11,7 +11,7 @@ require mobilityduck
 # ── the fixtures ─────────────────────────────────────────────────────────────
 
 # Every datacube below was written by the published duckdb-raster 1.6.1 (the
-# community binary for DuckDB v1.5.5). A typed cube packs 12 values, 2 bands of
+# community binary for DuckDB v1.5.6). A typed cube packs 12 values, 2 bands of
 # 3 columns and 2 rows, of one DuckDB type with RT_Array2Cube; COPY ... TO
 # '<type>.tif' (FORMAT RASTER, DRIVER 'GTiff', SRS 'EPSG:4326') writes it over
 # the footprint POLYGON((10 46, 16 46, 16 50, 10 50, 10 46)); and

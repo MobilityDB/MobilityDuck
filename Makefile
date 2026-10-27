@@ -20,7 +20,7 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 # (hub ICU not reliably resolvable). So we stage the locally-built ICU into the
 # expected path before the unittester runs.
 #
-# Target DuckDB is v1.5.5. The staging path does NOT hardcode the version or
+# Target DuckDB is v1.5.6. The staging path does NOT hardcode the version or
 # platform: both are read from the freshly-built duckdb binary (authoritative
 # for whatever is being tested), and DUCKDB_VERSION_TAG and the uname map are
 # used only when that binary gives no answer.
@@ -31,7 +31,7 @@ include extension-ci-tools/makefiles/duckdb_extension.Makefile
 # file it opened; copying over it in place truncates and rewrites that file, and
 # the running process then faults on its pages (SIGBUS) or executes the new
 # content at the old offsets (SIGSEGV).
-DUCKDB_VERSION_TAG := v1.5.5
+DUCKDB_VERSION_TAG := v1.5.6
 
 define stage_icu
 	@if [ -f ./build/$(1)/extension/icu/icu.duckdb_extension ]; then \
