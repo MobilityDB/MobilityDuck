@@ -781,12 +781,6 @@ inline TSequenceSet * temporal_stops_maxdist_minduration(const Temporal * p0) {
 inline TSequenceSet * temporal_stops_maxdist(const Temporal * p0, const MeosInterval * p1) {
     return ::temporal_stops(p0, 0.0, p1);
 }
-inline Temporal * temporal_shift_scale_time_duration(const Temporal * p0, const MeosInterval * p1) {
-    return ::temporal_shift_scale_time(p0, p1, NULL);
-}
-inline Temporal * temporal_shift_scale_time_shift(const Temporal * p0, const MeosInterval * p1) {
-    return ::temporal_shift_scale_time(p0, NULL, p1);
-}
 inline Temporal * temporal_append_tinstant_expand_false_interp_linear_maxdist_00_maxt_null(Temporal * p0, const Temporal * p1) {
     return ::temporal_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
 }
@@ -936,6 +930,27 @@ inline char * spatialset_as_ewkt_maxdd(const Set * p0) {
 }
 inline Set * spatialset_transform_pipeline_is_forward_srid(const Set * p0, const char * p1) {
     return ::spatialset_transform_pipeline(p0, p1, 0, true);
+}
+inline STBox * stbox_make_geodetic_hasx_hasz_s_zmax_zmin(int32_t p0, double p1, double p2, double p3, double p4) {
+    return ::stbox_make(true, false, false, p0, p1, p2, p3, p4, 0, 0, NULL);
+}
+inline STBox * stbox_make_geodetic_false_hasx_true_hasz_true_s_null(int32_t p0, double p1, double p2, double p3, double p4, double p5, double p6) {
+    return ::stbox_make(true, true, false, p0, p1, p2, p3, p4, p5, p6, NULL);
+}
+inline STBox * stbox_make_geodetic_hasx_hasz_srid_xmax_xmin_ymax_ymin_zmax_zmin(const Span * p0) {
+    return ::stbox_make(false, false, false, 0, 0, 0, 0, 0, 0, 0, p0);
+}
+inline STBox * stbox_make_geodetic_hasx_hasz_zmax_zmin(int32_t p0, double p1, double p2, double p3, double p4, const Span * p5) {
+    return ::stbox_make(true, false, false, p0, p1, p2, p3, p4, 0, 0, p5);
+}
+inline STBox * stbox_make_geodetic_false_hasx_true_hasz_true(int32_t p0, double p1, double p2, double p3, double p4, double p5, double p6, const Span * p7) {
+    return ::stbox_make(true, true, false, p0, p1, p2, p3, p4, p5, p6, p7);
+}
+inline STBox * stbox_make_geodetic_true_hasx_true_hasz_true_s_null(int32_t p0, double p1, double p2, double p3, double p4, double p5, double p6) {
+    return ::stbox_make(true, true, true, p0, p1, p2, p3, p4, p5, p6, NULL);
+}
+inline STBox * stbox_make_geodetic_true_hasx_true_hasz_true(int32_t p0, double p1, double p2, double p3, double p4, double p5, double p6, const Span * p7) {
+    return ::stbox_make(true, true, true, p0, p1, p2, p3, p4, p5, p6, p7);
 }
 inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
     return ::stbox_shift_scale_time(p0, p1, NULL);
@@ -2004,18 +2019,6 @@ static void Gen_npoint_ne(DataChunk &args, ExpressionState &, Vector &result) {
             Npoint *s1 = BlobToNpoint(a);
             Npoint *s2 = BlobToNpoint(b);
             bool r = npoint_ne(s1, s2);
-            free(s1); free(s2);
-            return r;
-        });
-}
-
-static void Gen_npoint_same(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a, string_t b) {
-            Npoint *s1 = BlobToNpoint(a);
-            Npoint *s2 = BlobToNpoint(b);
-            bool r = npoint_same(s1, s2);
             free(s1); free(s2);
             return r;
         });
@@ -4801,8 +4804,6 @@ void RegisterGenerated_meos_npoint_base_comp(ExtensionLoader &loader) {
     RegisterSerializedScalarFunction(loader, ScalarFunction("<", {NpointTypes::npoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_npoint_lt));
     RegisterSerializedScalarFunction(loader, ScalarFunction("ne", {NpointTypes::npoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_npoint_ne));
     RegisterSerializedScalarFunction(loader, ScalarFunction("<>", {NpointTypes::npoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_npoint_ne));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("npointSame", {NpointTypes::npoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_npoint_same));
-    RegisterSerializedScalarFunction(loader, ScalarFunction("~=", {NpointTypes::npoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_npoint_same));
 }
 
 void RegisterGenerated_meos_npoint_conversion(ExtensionLoader &loader) {
