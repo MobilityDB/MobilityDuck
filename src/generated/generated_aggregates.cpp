@@ -1036,6 +1036,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
+    return ::cbuffer_transform_pipeline(p0, p1, 0, true);
+}
 inline char * cbufferset_out_maxdd(const Set * p0) {
     return ::cbufferset_out(p0, 15);
 }
@@ -1063,8 +1066,14 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
+    return ::pose_transform_pipeline(p0, p1, 0, true);
+}
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
+    return ::posechain_transform_pipeline(p0, p1, 0, true);
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);

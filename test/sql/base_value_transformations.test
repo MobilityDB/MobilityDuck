@@ -1,0 +1,77 @@
+# name: test/sql/base_value_transformations.test
+# description: The transformations and the SRID of one circular buffer, network point,
+#              network segment, pose or pose chain, each answer MobilityDB's regression answer.
+# group: [sql]
+
+require mobilityduck
+
+# ── round ────────────────────────────────────────────────────────────────────
+
+query T
+SELECT asText(round(cbuffer 'Cbuffer(Point(1.123456789 1.123456789), 0.123456789)', 6));
+----
+Cbuffer(POINT(1.123457 1.123457),0.123457)
+
+query T
+SELECT round(npoint 'NPoint(1, 0.123456789)', 6)::VARCHAR;
+----
+NPoint(1,0.123457)
+
+query T
+SELECT round(nsegment 'NSegment(1, 0.123456789, 0.223456789)', 6)::VARCHAR;
+----
+NSegment(1,0.123457,0.223457)
+
+query T
+SELECT asText(round(pose 'Pose(Point(1.123456789 1.123456789), 0.123456789)', 6));
+----
+Pose(POINT(1.123457 1.123457),0.123457)
+
+query T
+SELECT asEWKT(round(posechain 'PoseChain(Pose(Point(1.123456789 2.123456789), 0.123456789), Pose(Point(3.123456789 0), 0))', 6));
+----
+PoseChain(Pose(POINT(1.123457 2.123457),0.123457),Pose(POINT(3.123457 0),0))
+
+# Without a number of digits, round takes MobilityDB's SQL default, 0.
+query T
+SELECT round(npoint 'NPoint(1, 0.6)')::VARCHAR;
+----
+NPoint(1,1)
+
+# ── the inverse of a pose ────────────────────────────────────────────────────
+
+query T
+SELECT asEWKT(round(poseInverse(pose 'Pose(Point(1 0), 0)'), 6));
+----
+Pose(POINT(-1 0),0)
+
+# ── SRID ─────────────────────────────────────────────────────────────────────
+
+query III
+SELECT SRID(setSRID(cbuffer 'Cbuffer(Point(1 1),0.5)', 3812)),
+  SRID(setSRID(pose 'Pose(Point(1 1),0.5)', 3812)),
+  SRID(setSRID(posechain 'PoseChain(Pose(Point(1 1),0.5))', 3812));
+----
+3812	3812	3812
+
+query T
+SELECT asEWKT(round(transform(pose 'SRID=4326;Pose(Point(0 0 0), 1, 0, 0, 0)', 4978), 6));
+----
+SRID=4978;Pose(POINT Z (6378137 0 0),0.5,0.5,0.5,0.5)
+
+query T
+SELECT asEWKT(round(transform(transform(pose 'SRID=4326;Pose(Point(8 47 0), 1, 0, 0, 0)', 4978), 4326), 6));
+----
+SRID=4326;Pose(POINT Z (8 47 0),1,0,0,0)
+
+query T
+SELECT asEWKT(round(transformPipeline(posechain 'SRID=4326;PoseChain(Pose(Point(4.35 50.85), 1))', 'urn:ogc:def:coordinateOperation:EPSG::16031', 32631), 3));
+----
+SRID=32631;PoseChain(Pose(POINT(595032.295 5634012.833),1.018))
+
+# ── the positions of a temporal network point ────────────────────────────────
+
+query T
+SELECT positions(tnpoint '{Npoint(1, 0.3)@2001-01-01, Npoint(1, 0.5)@2001-01-02, Npoint(1, 0.5)@2001-01-03}')::VARCHAR;
+----
+['NSegment(1,0.3,0.3)', 'NSegment(1,0.5,0.5)']

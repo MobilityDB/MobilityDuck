@@ -1035,6 +1035,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
+    return ::cbuffer_transform_pipeline(p0, p1, 0, true);
+}
 inline char * cbufferset_out_maxdd(const Set * p0) {
     return ::cbufferset_out(p0, 15);
 }
@@ -1062,8 +1065,14 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
+    return ::pose_transform_pipeline(p0, p1, 0, true);
+}
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
+    return ::posechain_transform_pipeline(p0, p1, 0, true);
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
@@ -1710,6 +1719,115 @@ static void Gen_posechain_srid(DataChunk &args, ExpressionState &, Vector &resul
             free(v);
             return r;
         });
+}
+
+static void Gen_posechain_set_srid(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        PoseChain *p0 = BlobToPosechain(in0[i]);
+        PoseChain *r = posechain_set_srid(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = PosechainToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_posechain_transform(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        PoseChain *p0 = BlobToPosechain(in0[i]);
+        PoseChain *r = posechain_transform(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = PosechainToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_posechain_transform_pipeline(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        PoseChain *p0 = BlobToPosechain(in0[i]);
+        std::string s1 = in1[i].GetString();
+        PoseChain *r = posechain_transform_pipeline(p0, s1.c_str(), in2[i], in3[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = PosechainToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_posechain_transform_pipeline_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        PoseChain *p0 = BlobToPosechain(in0[i]);
+        std::string s1 = in1[i].GetString();
+        PoseChain *r = posechain_transform_pipeline(p0, s1.c_str(), in2[i], true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = PosechainToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_posechain_transform_pipeline_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        PoseChain *p0 = BlobToPosechain(in0[i]);
+        std::string s1 = in1[i].GetString();
+        PoseChain *r = posechain_transform_pipeline(p0, s1.c_str(), 0, true);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = PosechainToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -2555,6 +2673,11 @@ void RegisterGenerated_meos_pose_set_inout(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_posechain_base_srid(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("SRID", {PosechainTypes::posechain()}, LogicalType::INTEGER, Gen_posechain_srid));
+    RegisterMeosFunction(loader, ScalarFunction("setSRID", {PosechainTypes::posechain(), LogicalType::INTEGER}, PosechainTypes::posechain(), Gen_posechain_set_srid));
+    RegisterMeosFunction(loader, ScalarFunction("transform", {PosechainTypes::posechain(), LogicalType::INTEGER}, PosechainTypes::posechain(), Gen_posechain_transform));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {PosechainTypes::posechain(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, PosechainTypes::posechain(), Gen_posechain_transform_pipeline));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {PosechainTypes::posechain(), LogicalType::VARCHAR, LogicalType::INTEGER}, PosechainTypes::posechain(), Gen_posechain_transform_pipeline_v1));
+    RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {PosechainTypes::posechain(), LogicalType::VARCHAR}, PosechainTypes::posechain(), Gen_posechain_transform_pipeline_v2));
 }
 
 void RegisterGenerated_meos_quadbin_comp_ever(ExtensionLoader &loader) {
