@@ -36,8 +36,6 @@ project(${TARGET_NAME} LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/cmake" ${CMAKE_MODULE_PATH})
-
 # -----------------------------
 # Endianness for WKB (MEOS flag)
 # -----------------------------
@@ -54,10 +52,7 @@ endif()
 # -----------------------------
 find_package(PROJ CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(json-c CONFIG QUIET)
-if(NOT json-c_FOUND)
-  find_package(JSON-C REQUIRED)
-endif()
+find_package(json-c CONFIG REQUIRED)
 
 # MEOS from overlay port
 find_package(MEOS CONFIG REQUIRED)
@@ -93,8 +88,8 @@ endif()
 # <h3api.h>. SIBLING-FROM MobilityDB CMakeLists.txt H3 block (find_path
 # H3_INCLUDE_DIR NAMES h3api.h PATH_SUFFIXES h3) so code compiling against
 # meos_h3.h sees the system libh3 headers, just as the meos port (-DH3=ON) does.
-# The dir is attached to the extension targets below (mirroring the json-c
-# block) because build_*_extension targets don't inherit directory includes.
+# The dir is attached to the extension targets below because
+# build_*_extension targets don't inherit directory includes.
 # SIBLING-FROM MobilityDB CMakeLists.txt H3 block; NO_CMAKE_FIND_ROOT_PATH + explicit
 # system PATHS are the binding-side adaptation: under the vcpkg toolchain find_path is
 # confined to the vcpkg root and never sees the system /usr/include/h3 that libh3-dev ships.
@@ -253,20 +248,8 @@ else()
   set(MOBILITYDUCK_COMPILE_TARGETS ${EXTENSION_NAME} ${LOADABLE_EXTENSION_NAME})
 endif()
 
-# -----------------------------
-# json-c target / include handling
-# -----------------------------
-if(TARGET json-c::json-c)
-  set(JSONC_TGT json-c::json-c)
-else()
-  foreach(_md_target ${MOBILITYDUCK_COMPILE_TARGETS})
-    target_include_directories(${_md_target} SYSTEM PRIVATE ${JSON-C_INCLUDE_DIRS})
-  endforeach()
-  set(JSONC_TGT ${JSON-C_LIBRARIES})
-endif()
-
-# H3 headers for meos_h3.h (see the find_path above) — attached per-target like
-# json-c, since build_*_extension targets don't inherit directory includes.
+# H3 headers for meos_h3.h (see the find_path above) — attached per-target,
+# since build_*_extension targets don't inherit directory includes.
 foreach(_md_target ${MOBILITYDUCK_COMPILE_TARGETS})
   target_include_directories(${_md_target} SYSTEM PRIVATE ${H3_INCLUDE_DIR})
 endforeach()
@@ -292,7 +275,7 @@ find_package(ZLIB REQUIRED)
 set(MOBILITYDUCK_LINK_LIBS
   MEOS::meos
   PROJ::proj
-  ${JSONC_TGT}
+  json-c::json-c
   OpenSSL::SSL
   OpenSSL::Crypto
   h3::h3
