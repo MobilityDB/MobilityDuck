@@ -7545,6 +7545,15 @@ def shape_sig_call(f):
             nb[k] = lits
         if nb is None:
             continue
+        # a pointer MEOS takes NULL for (`shape.nullable`, the @nullable of its @param) is passed
+        # NULL for a NULL argument, as MobilityDB's wrapper passes the value jsonbSetLax sets,
+        # rather than answering NULL; the NULL row reads it as a NULL bind is read above
+        for k, nm in enumerate(order):
+            if (nm in (shape.get("nullable") or []) and k not in nb and args[k]["kind"] == "ptr"
+                    and len(args[k]["pre"]) == 1):
+                lhs, rhs = args[k]["pre"][0].rstrip(";").split(" = ", 1)
+                args[k] = dict(args[k], pre=["%s = n%d ? nullptr : %s;" % (lhs, k, rhs)])
+                nb[k] = {nm: "nullptr"}
         ret = sig_call_ret(f, s, outs, {cn: e for a in args for cn, e in a["cexpr"].items()})
         if ret is None:
             continue
