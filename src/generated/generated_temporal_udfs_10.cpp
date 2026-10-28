@@ -401,6 +401,17 @@ inline void FreeTextArr(text **arr, int n) {
     for (int i = 0; i < n; i++) free(arr[i]);
     free(arr);
 }
+// A text SQL literal (a parameter's DEFAULT 'use_json_null') passed as the `const text *`
+// a MEOS function reads, released at the end of the call's full expression, as
+// MeosIntervalLiteral passes an interval one.
+struct MeosTextLiteral {
+    text *p;
+    explicit MeosTextLiteral(const char *s) : p(MakeText(string_t(s))) {}
+    ~MeosTextLiteral() { free(p); }
+    MeosTextLiteral(const MeosTextLiteral &) = delete;
+    MeosTextLiteral &operator=(const MeosTextLiteral &) = delete;
+    operator const text *() const { return p; }
+};
 // Convert an owned MEOS Interval* to a DuckDB interval_t and free it.
 inline interval_t TakeInterval(MeosInterval *iv) {
     interval_t out = IntervalToIntervalt(iv);
@@ -2982,6 +2993,161 @@ static void Gen_tjsonb_path_query_first_v3(DataChunk &args, ExpressionState &, V
         Temporal *r = (Temporal *) tjsonb_path_query_first(p0, p1, p2, false, true);
         free(p0);
         free(p1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tjsonb_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        Jsonb *p2 = BlobToJsonb(in2[i]);
+        Temporal *r = (Temporal *) tjsonb_set(p0, v1, (int) ne1, p2, in3[i], NULL, false);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tjsonb_set_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        Jsonb *p2 = BlobToJsonb(in2[i]);
+        Temporal *r = (Temporal *) tjsonb_set(p0, v1, (int) ne1, p2, true, NULL, false);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tjsonb_set_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto in4 = FlatVector::GetData<string_t>(args.data[4]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        Jsonb *p2 = BlobToJsonb(in2[i]);
+        text *p4 = MakeText(in4[i]);
+        Temporal *r = (Temporal *) tjsonb_set(p0, v1, (int) ne1, p2, in3[i], p4, true);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        free(p2);
+        free(p4);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tjsonb_set_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<bool>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        Jsonb *p2 = BlobToJsonb(in2[i]);
+        Temporal *r = (Temporal *) tjsonb_set(p0, v1, (int) ne1, p2, in3[i], MeosTextLiteral("use_json_null"), true);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        free(p2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TemporalToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tjsonb_set_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        Jsonb *p2 = BlobToJsonb(in2[i]);
+        Temporal *r = (Temporal *) tjsonb_set(p0, v1, (int) ne1, p2, true, MeosTextLiteral("use_json_null"), true);
+        free(p0);
+        FreeTextArr(v1, ne1);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -7669,6 +7835,11 @@ void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tjsonbPathQueryFirst", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonpath(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_path_query_first_v1));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbPathQueryFirstTz", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonpath(), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tjsonb_path_query_first_v2));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbPathQueryFirstTz", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonpath(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_path_query_first_v3));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbSet", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tjsonb_set));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbSet", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_set_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbSetLax", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN, LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_set_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbSetLax", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tjsonb_set_v3));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbSetLax", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_set_v4));
 }
 
 void RegisterGenerated_meos_pointcloud_box_inout(ExtensionLoader &loader) {

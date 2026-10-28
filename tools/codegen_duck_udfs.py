@@ -5949,7 +5949,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_cbuffer_base_transf", "meos_cbuffer_base_srid",
                   "meos_npoint_base_transf",
                   "meos_pose_base_transf", "meos_pose_base_srid",
-                  "meos_posechain_base_transf", "meos_posechain_base_srid"}
+                  "meos_posechain_base_transf", "meos_posechain_base_srid",
+                  "meos_json_base_accessor", "meos_json_base_transf"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -5975,9 +5976,7 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # setValues reads its values as a two-dimensional array whose dimensions give the width and height
 # of the block, which no SQL argument of its signature fills, so the catalog places none of
 # raster_set_values's C parameters width, height and noset; the JVM surfaces leave it out too.
-# tjsonbSet and tjsonbSetLax register nothing: tjsonb_set reads its keys as a text ** and a count
-# no marshalling fills from a text[], and tjsonbSet binds no literal for handle_null.
-RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX", "tjsonbSet",
+RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
                        "setValues"}
@@ -6933,6 +6932,15 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
             return dict(kind="bytes", dt="LogicalType::BLOB", cpp="string_t", pre=[], post=[],
                         cexpr={p["name"]: "(const uint8_t *) %s.GetData()" % v,
                                lenp["name"]: "(%s) %s.GetSize()" % (ln, v)})
+        # a list of texts (the path or the keys of jsonbExtractPathText and jsonbExistsAny), read
+        # as #emit_body_text_array reads one (ListToTextArr) and freed with its elements
+        if elem == "text *" and t == "text[]":
+            return dict(kind="textlist", dt="LogicalType::LIST(LogicalType::VARCHAR)",
+                        cpp="list_entry_t",
+                        pre=["int ne%d = 0;" % k,
+                             "text **v%d = ListToTextArr(ch%d, %s, &ne%d);" % (k, k, v, k)],
+                        post=["FreeTextArr(v%d, ne%d);" % (k, k)],
+                        cexpr={p["name"]: "v%d" % k, lenp["name"]: "(%s) ne%d" % (ln, k)})
         eb = base(elem)
         acc = BASE_LOGICAL.get(t[:-2]) if t.endswith("[]") else None
         if eb in BASEVAL_PTR_IN and elem.endswith("*") and acc and PTR_IN[eb][0] == acc:
@@ -7040,6 +7048,13 @@ def sig_call_literal(p, raw):
     if b in CELL_UINT and "*" not in n:
         lit = str(raw).strip()
         return None if lit.upper() == "NULL" else "static_cast<uint64_t>(%s)" % lit
+    # a text MEOS reads (handle_null of jsonbSetLax, DEFAULT 'use_json_null'), a NULL one the null
+    # pointer Tjsonb_set_common passes for tjsonbSet
+    if b == "text" and n.count("*") == 1 and "const" in p["canonical"]:
+        text = str(raw).strip()
+        if text.upper() == "NULL":
+            return "NULL"
+        return 'MeosTextLiteral("%s")' % text.strip("'").replace("\\", "\\\\").replace('"', '\\"')
     return forward_literal(p, raw)
 
 # The DuckDB type and the C++ type of its vector of a column of rows a set-returning signature
@@ -7163,6 +7178,83 @@ def sig_call_rows(f, s, outs):
     return ("LogicalType::LIST(LogicalType::STRUCT({%s}))" % ", ".join(members), "list_entry_t",
             ["int cnt = 0;", "%s *r = CALL;" % rb], rwrite, {lf: "&cnt"})
 
+def set_elem(t, celem):
+    """(DuckDB type, writer) of an element of C type `celem` in a column of SQL type `t` of
+    #sig_call_set: a text through TakeText, a base value through the {Base}ToBlob of PTR_RET, each
+    writing into the vector it is given and freeing the element; None for another element."""
+    b, n = base(celem), norm(celem)
+    if n.count("*") != 1:
+        return None
+    if b == "text" and t == "text":
+        return ("LogicalType::VARCHAR", "TakeText")
+    acc = BASE_LOGICAL.get(t)
+    if b in BASEVAL_PTR_RET and acc and PTR_RET[b][0] == acc:
+        return (acc, PTR_RET[b][1].split("(", 1)[0])
+    return None
+
+def sig_call_set(f, s, outs):
+    """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
+    expressions) for a set-returning signature whose rows are the elements of the C array the
+    function returns and of the arrays it writes back (`outputArrays`), all of the length
+    `arrayReturn.lengthFrom` names: a LIST of the values of its one column (jsonbArrayElements,
+    jsonbObjectKeys), or a LIST(STRUCT(columns)) of its rows (jsonbEach), a query UNNESTs into
+    the rows as it UNNESTs those of #sig_call_rows. A NULL element is a NULL value, as MobilityDB's
+    jsonb_srf_next returns it (the value of jsonbEachText for a JSON null); each element is freed
+    by its writer (#set_elem), the arrays by free, and a NULL array answers no row. None when an
+    element is of a type no writer takes."""
+    shp = f.get("shape") or {}
+    ar = shp.get("arrayReturn") or {}
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    oa = [a["param"] for a in shp.get("outputArrays") or []]
+    rn = norm(f["returnType"]["canonical"])
+    if not lf or sorted(p["name"] for p in outs) != sorted([lf] + oa) or not rn.endswith("**"):
+        return None
+    byname = {p["name"]: p for p in outs}
+    single = not s.get("columns")
+    cols = s.get("columns") or [{"name": None, "type": s.get("ret"), "from": "return"}]
+    rcall, outx, members, writes, frees = ["int cnt = 0;"], {lf: "&cnt"}, [], [], ["free(r);"]
+    for c, col in enumerate(cols):
+        src = col.get("from")
+        if col.get("field"):
+            return None
+        if src == "return":
+            celem, var = (ar.get("element") or {}).get("canonical") or "", "r"
+        elif src in oa:
+            on = norm(byname[src]["canonical"])
+            if not on.endswith("***"):
+                return None
+            celem, var = on[:-2].strip(), "o%d" % c
+            rcall.append("%s *%s = NULL;" % (celem, var))
+            outx[src] = "&%s" % var
+            frees.append("free(%s);" % var)
+        else:
+            return None
+        el = set_elem(col.get("type"), celem)
+        if el is None:
+            return None
+        dt, writer = el
+        vec = "ent" if single else "*ents[%d]" % c
+        members.append('{"%s", LogicalType(%s)}' % (col.get("name"), dt))
+        writes += ["    if (%s[j]) FlatVector::GetData<string_t>(%s)[off + j] = %s(%s, %s[j]);"
+                   % (var, vec, writer, vec, var),
+                   "    else FlatVector::SetNull(%s, off + j, true);" % vec]
+    if single:
+        dt = "LogicalType::LIST(%s)" % el[0]
+        entry = "auto &ent = ListVector::GetEntry(result);"
+    else:
+        dt = "LogicalType::LIST(LogicalType::STRUCT({%s}))" % ", ".join(members)
+        entry = "auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));"
+    rcall.append("%s r = CALL;" % rn)
+    rwrite = (["const idx_t off = ListVector::GetListSize(result);",
+               "if (!r) cnt = 0;",
+               "ListVector::Reserve(result, off + cnt);",
+               entry,
+               "for (int j = 0; j < cnt; j++) {"] + writes +
+              ["}",
+               "ListVector::SetListSize(result, off + cnt);",
+               "out[i] = list_entry_t{off, idx_t(cnt)};"] + frees)
+    return (dt, "list_entry_t", rcall, rwrite, outx)
+
 def sig_call_shaped(f, s, outs, cexpr):
     """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
     expressions) for a signature returning a SQL array of numbers its `arrayShape` lays out from
@@ -7221,7 +7313,9 @@ def sig_call_ret(f, s, outs, cexpr=None):
     None if no marshalling reaches it. `cexpr` maps each C parameter an argument fills to its C
     expression, for a result whose shape calls on one (#sig_call_shaped)."""
     if s.get("retSet") and s.get("columns"):
-        return sig_call_rows(f, s, outs)
+        return sig_call_rows(f, s, outs) or sig_call_set(f, s, outs)
+    if s.get("retSet"):
+        return sig_call_set(f, s, outs)
     if s.get("arrayShape"):
         return sig_call_shaped(f, s, outs, cexpr or {})
     rc = f["returnType"]["canonical"]
@@ -7283,6 +7377,9 @@ def sig_call_ret(f, s, outs, cexpr=None):
         if rb == "char" and sqlr == "text":
             return ("LogicalType::VARCHAR", "string_t", ["char *r = CALL;"],
                     ["if (!r) { %s }" % null, "out[i] = TakeCString(result, r);"], {})
+        if rb == "text" and sqlr == "text":
+            return ("LogicalType::VARCHAR", "string_t", ["text *r = CALL;"],
+                    ["if (!r) { %s }" % null, "out[i] = TakeText(result, r);"], {})
         return None
     if "*" in rn:
         return None
@@ -7501,6 +7598,10 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
                   f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));",
                   f"    auto ch{k}d = FlatVector::GetData<{a.get('elem_cpp', 'string_t')}>(ch{k});",
                   f"    auto &ch{k}v = FlatVector::Validity(ch{k});"]
+        elif a["kind"] == "textlist":
+            L += [f"    auto in{k} = ListVector::GetData(args.data[{k}]);",
+                  f"    auto &ch{k} = ListVector::GetEntry(args.data[{k}]);",
+                  f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));"]
         elif a["kind"] == "struct":
             # the children of a row of the fields of a structure (#struct_row)
             L.append(f"    auto &se{k} = StructVector::GetEntries(args.data[{k}]);")
@@ -9163,6 +9264,17 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "    *count = n;\n    return arr;\n}\n"
            "inline void FreeTextArr(text **arr, int n) {\n"
            "    for (int i = 0; i < n; i++) free(arr[i]);\n    free(arr);\n}\n"
+           "// A text SQL literal (a parameter's DEFAULT 'use_json_null') passed as the `const text *`\n"
+           "// a MEOS function reads, released at the end of the call's full expression, as\n"
+           "// MeosIntervalLiteral passes an interval one.\n"
+           "struct MeosTextLiteral {\n"
+           "    text *p;\n"
+           "    explicit MeosTextLiteral(const char *s) : p(MakeText(string_t(s))) {}\n"
+           "    ~MeosTextLiteral() { free(p); }\n"
+           "    MeosTextLiteral(const MeosTextLiteral &) = delete;\n"
+           "    MeosTextLiteral &operator=(const MeosTextLiteral &) = delete;\n"
+           "    operator const text *() const { return p; }\n"
+           "};\n"
            "// Convert an owned MEOS Interval* to a DuckDB interval_t and free it.\n"
            "inline interval_t TakeInterval(MeosInterval *iv) {\n"
            "    interval_t out = IntervalToIntervalt(iv);\n    free(iv);\n    return out;\n}\n"

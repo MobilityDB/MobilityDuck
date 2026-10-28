@@ -401,6 +401,17 @@ inline void FreeTextArr(text **arr, int n) {
     for (int i = 0; i < n; i++) free(arr[i]);
     free(arr);
 }
+// A text SQL literal (a parameter's DEFAULT 'use_json_null') passed as the `const text *`
+// a MEOS function reads, released at the end of the call's full expression, as
+// MeosIntervalLiteral passes an interval one.
+struct MeosTextLiteral {
+    text *p;
+    explicit MeosTextLiteral(const char *s) : p(MakeText(string_t(s))) {}
+    ~MeosTextLiteral() { free(p); }
+    MeosTextLiteral(const MeosTextLiteral &) = delete;
+    MeosTextLiteral &operator=(const MeosTextLiteral &) = delete;
+    operator const text *() const { return p; }
+};
 // Convert an owned MEOS Interval* to a DuckDB interval_t and free it.
 inline interval_t TakeInterval(MeosInterval *iv) {
     interval_t out = IntervalToIntervalt(iv);
