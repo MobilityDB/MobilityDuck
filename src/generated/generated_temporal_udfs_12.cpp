@@ -401,6 +401,17 @@ inline void FreeTextArr(text **arr, int n) {
     for (int i = 0; i < n; i++) free(arr[i]);
     free(arr);
 }
+// A text SQL literal (a parameter's DEFAULT 'use_json_null') passed as the `const text *`
+// a MEOS function reads, released at the end of the call's full expression, as
+// MeosIntervalLiteral passes an interval one.
+struct MeosTextLiteral {
+    text *p;
+    explicit MeosTextLiteral(const char *s) : p(MakeText(string_t(s))) {}
+    ~MeosTextLiteral() { free(p); }
+    MeosTextLiteral(const MeosTextLiteral &) = delete;
+    MeosTextLiteral &operator=(const MeosTextLiteral &) = delete;
+    operator const text *() const { return p; }
+};
 // Convert an owned MEOS Interval* to a DuckDB interval_t and free it.
 inline interval_t TakeInterval(MeosInterval *iv) {
     interval_t out = IntervalToIntervalt(iv);
@@ -2066,6 +2077,332 @@ static void Gen_jsonb_hash(DataChunk &args, ExpressionState &, Vector &result) {
             free(v);
             return r;
         });
+}
+
+static void Gen_jsonb_array_element(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        Jsonb *r = jsonb_array_element(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = JsonbToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_array_element_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        text *r = jsonb_array_element_text(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeText(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_array_elements(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int cnt = 0;
+        Jsonb ** r = jsonb_array_elements(p0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = JsonbToBlob(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_array_elements_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int cnt = 0;
+        text ** r = jsonb_array_elements_text(p0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeText(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_each(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int cnt = 0;
+        Jsonb * *o1 = NULL;
+        text ** r = jsonb_each(p0, &o1, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(*ents[0])[off + j] = TakeText(*ents[0], r[j]);
+            else FlatVector::SetNull(*ents[0], off + j, true);
+            if (o1[j]) FlatVector::GetData<string_t>(*ents[1])[off + j] = JsonbToBlob(*ents[1], o1[j]);
+            else FlatVector::SetNull(*ents[1], off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+        free(o1);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_each_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int cnt = 0;
+        text * *o1 = NULL;
+        text ** r = jsonb_each_text(p0, &o1, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ents = StructVector::GetEntries(ListVector::GetEntry(result));
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(*ents[0])[off + j] = TakeText(*ents[0], r[j]);
+            else FlatVector::SetNull(*ents[0], off + j, true);
+            if (o1[j]) FlatVector::GetData<string_t>(*ents[1])[off + j] = TakeText(*ents[1], o1[j]);
+            else FlatVector::SetNull(*ents[1], off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+        free(o1);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_exists(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        text *p1 = MakeText(in1[i]);
+        bool r = jsonb_exists(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_exists_array(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        bool r = jsonb_exists_array(p0, v1, (int) ne1, true);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_exists_array_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        bool r = jsonb_exists_array(p0, v1, (int) ne1, false);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_extract_path_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int ne1 = 0;
+        text **v1 = ListToTextArr(ch1, in1[i], &ne1);
+        text *r = jsonb_extract_path_text(p0, v1, (int) ne1);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeText(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_object_field(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        text *p1 = MakeText(in1[i]);
+        Jsonb *r = jsonb_object_field(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = JsonbToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_object_field_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        text *p1 = MakeText(in1[i]);
+        text *r = jsonb_object_field_text(p0, p1);
+        free(p0);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeText(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_jsonb_object_keys(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        int cnt = 0;
+        text ** r = jsonb_object_keys(p0, &cnt);
+        free(p0);
+        const idx_t off = ListVector::GetListSize(result);
+        if (!r) cnt = 0;
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeText(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 static void Gen_jsonb_contained(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5999,6 +6336,19 @@ void RegisterGenerated_meos_json_base_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("jsonbArrayLength", {TJsonbTypes::jsonb()}, LogicalType::INTEGER, Gen_jsonb_array_length));
     RegisterMeosFunction(loader, ScalarFunction("jsonbExtractPath", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, TJsonbTypes::jsonb(), Gen_jsonb_extract_path));
     RegisterMeosFunction(loader, ScalarFunction("hash", {TJsonbTypes::jsonb()}, LogicalType::UINTEGER, Gen_jsonb_hash));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbArrayElement", {TJsonbTypes::jsonb(), LogicalType::INTEGER}, TJsonbTypes::jsonb(), Gen_jsonb_array_element));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbArrayElementText", {TJsonbTypes::jsonb(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_jsonb_array_element_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbArrayElements", {TJsonbTypes::jsonb()}, LogicalType::LIST(TJsonbTypes::jsonb()), Gen_jsonb_array_elements));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbArrayElementsText", {TJsonbTypes::jsonb()}, LogicalType::LIST(LogicalType::VARCHAR), Gen_jsonb_array_elements_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbEach", {TJsonbTypes::jsonb()}, LogicalType::LIST(LogicalType::STRUCT({{"key", LogicalType(LogicalType::VARCHAR)}, {"value", LogicalType(TJsonbTypes::jsonb())}})), Gen_jsonb_each));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbEachText", {TJsonbTypes::jsonb()}, LogicalType::LIST(LogicalType::STRUCT({{"key", LogicalType(LogicalType::VARCHAR)}, {"value", LogicalType(LogicalType::VARCHAR)}})), Gen_jsonb_each_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbExists", {TJsonbTypes::jsonb(), LogicalType::VARCHAR}, LogicalType::BOOLEAN, Gen_jsonb_exists));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbExistsAny", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::BOOLEAN, Gen_jsonb_exists_array));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbExistsAll", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::BOOLEAN, Gen_jsonb_exists_array_v1));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbExtractPathText", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::VARCHAR, Gen_jsonb_extract_path_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbObjectField", {TJsonbTypes::jsonb(), LogicalType::VARCHAR}, TJsonbTypes::jsonb(), Gen_jsonb_object_field));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbObjectFieldText", {TJsonbTypes::jsonb(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_jsonb_object_field_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbObjectKeys", {TJsonbTypes::jsonb()}, LogicalType::LIST(LogicalType::VARCHAR), Gen_jsonb_object_keys));
     RegisterMeosFunction(loader, ScalarFunction("jsonbContained", {TJsonbTypes::jsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_jsonb_contained));
     RegisterMeosFunction(loader, ScalarFunction("jsonbContains", {TJsonbTypes::jsonb(), TJsonbTypes::jsonb()}, LogicalType::BOOLEAN, Gen_jsonb_contains));
     RegisterMeosFunction(loader, ScalarFunction("hashExtended", {TJsonbTypes::jsonb(), LogicalType::UBIGINT}, LogicalType::UBIGINT, Gen_jsonb_hash_extended));

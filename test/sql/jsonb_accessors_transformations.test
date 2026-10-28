@@ -1,0 +1,176 @@
+# name: test/sql/jsonb_accessors_transformations.test
+# description: The accessors and transformations of one JSONB value, and the paths a temporal
+#              JSONB value sets, each answer MobilityDB's regression answer. A set-returning
+#              function answers a list a query UNNESTs into its rows.
+# group: [sql]
+
+require mobilityduck
+
+# ── accessors ────────────────────────────────────────────────────────────────
+
+query T
+SELECT jsonbObjectField(jsonb '{"a": {"b": 1}}', 'a')::VARCHAR;
+----
+{"b": 1}
+
+query T
+SELECT jsonbObjectField(jsonb '{"a": 1}', 'z') IS NULL;
+----
+true
+
+query T
+SELECT jsonbObjectFieldText(jsonb '{"a": "x"}', 'a');
+----
+x
+
+query T
+SELECT jsonbArrayElement(jsonb '[1, [2, 3]]', 1)::VARCHAR;
+----
+[2, 3]
+
+query T
+SELECT jsonbArrayElement(jsonb '[1, 2, 3]', -1)::VARCHAR;
+----
+3
+
+query T
+SELECT jsonbArrayElementText(jsonb '["x", "y"]', 0);
+----
+x
+
+query T
+SELECT jsonbExtractPathText(jsonb '{"a": {"b": "z"}}', ['a', 'b']);
+----
+z
+
+# The line breaks of the pretty text written as '|', as value_type_sets.test reads jsonbsetPretty
+query T
+SELECT replace(jsonbPretty(jsonb '{"a": 1}'), chr(10), '|');
+----
+{|    "a": 1|}
+
+query T
+SELECT jsonbExists(jsonb '{"a": 1}', 'a');
+----
+true
+
+query T
+SELECT jsonbExists(jsonb '{"a": 1}', 'b');
+----
+false
+
+query T
+SELECT jsonbExistsAny(jsonb '{"a": 1}', ['b', 'a']);
+----
+true
+
+query T
+SELECT jsonbExistsAll(jsonb '{"a": 1}', ['b', 'a']);
+----
+false
+
+# ── set-returning accessors ──────────────────────────────────────────────────
+
+query T
+SELECT unnest(jsonbArrayElements(jsonb '[1, "two", {"three": 3}]'))::VARCHAR;
+----
+1
+"two"
+{"three": 3}
+
+query T
+SELECT unnest(jsonbArrayElementsText(jsonb '[1, "two"]'));
+----
+1
+two
+
+# A JSON null read as text is an SQL NULL.
+query T
+SELECT unnest(jsonbArrayElementsText(jsonb '[1, null]'));
+----
+1
+NULL
+
+query TT
+SELECT e.key, e.value::VARCHAR FROM (SELECT unnest(jsonbEach(jsonb '{"a": 1, "b": [2]}')) AS e)
+ORDER BY 1;
+----
+a	1
+b	[2]
+
+query TT
+SELECT e.key, e.value FROM (SELECT unnest(jsonbEachText(jsonb '{"a": 1, "b": "x"}')) AS e)
+ORDER BY 1;
+----
+a	1
+b	x
+
+query T
+SELECT k FROM (SELECT unnest(jsonbObjectKeys(jsonb '{"b": 1, "a": 2}')) AS k) ORDER BY 1;
+----
+a
+b
+
+query I
+SELECT len(jsonbArrayElements(jsonb '[]'));
+----
+0
+
+# ── transformations ──────────────────────────────────────────────────────────
+
+query T
+SELECT jsonbDelete(jsonb '{"a": 1, "b": 2}', 'a')::VARCHAR;
+----
+{"b": 2}
+
+query T
+SELECT jsonbDeleteIndex(jsonb '[1, 2, 3]', -1)::VARCHAR;
+----
+[1, 2]
+
+# Given a value, jsonbSetLax sets it as jsonbSet does, MobilityDB's answers for jsonbSet; its
+# treatment of a NULL value (handle_null) applies only to a NULL one.
+query T
+SELECT jsonbSetLax(jsonb '{"a": 1}', ['b'], jsonb '2')::VARCHAR;
+----
+{"a": 1, "b": 2}
+
+query T
+SELECT jsonbSetLax(jsonb '{"a": 1}', ['b'], jsonb '2', false)::VARCHAR;
+----
+{"a": 1}
+
+query T
+SELECT jsonbSetLax(jsonb '{"a": 1}', ['a'], jsonb '3', true, 'delete_key')::VARCHAR;
+----
+{"a": 3}
+
+query T
+SELECT jsonbStripNulls(jsonb '{"a": null, "b": [1, null]}')::VARCHAR;
+----
+{"b": [1, null]}
+
+query T
+SELECT jsonbStripNulls(jsonb '{"a": null, "b": [1, null]}', true)::VARCHAR;
+----
+{"b": [1]}
+
+# ── the paths a temporal JSONB value sets ────────────────────────────────────
+
+query T
+SELECT tjsonbSet(tjsonb '"{\"speed\": 10}"@2001-01-01', ['units'], jsonb '"km/h"')
+  = tjsonb '"{\"speed\": 10, \"units\": \"km/h\"}"@2001-01-01';
+----
+true
+
+query T
+SELECT tjsonbSet(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '1'], jsonb '2')
+  = tjsonb '{"{\"gears\": [1, 2]}"@2001-01-01}';
+----
+true
+
+query T
+SELECT tjsonbSetLax(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '1'], jsonb '2')
+  = tjsonbSet(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '1'], jsonb '2');
+----
+true
