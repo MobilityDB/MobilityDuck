@@ -4146,6 +4146,166 @@ static void Gen_union_set_quadbin(DataChunk &args, ExpressionState &, Vector &re
 
 
 // ===== @ingroup meos_raster_base_math =====
+static void Gen_add_float_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p1 = BlobToRaster(in1[i]);
+        Raster *r = add_float_raster(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_add_raster_float(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        Raster *r = add_raster_float(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_div_float_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p1 = BlobToRaster(in1[i]);
+        Raster *r = div_float_raster(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_div_raster_float(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        Raster *r = div_raster_float(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_mul_float_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p1 = BlobToRaster(in1[i]);
+        Raster *r = mul_float_raster(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_mul_raster_float(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        Raster *r = mul_raster_float(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_sub_float_raster(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<double>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p1 = BlobToRaster(in1[i]);
+        Raster *r = sub_float_raster(in0[i], p1);
+        free(p1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_sub_raster_float(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<double>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        Raster *r = sub_raster_float(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_add_raster_raster(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -4746,6 +4906,22 @@ void RegisterGenerated_meos_quadbin_set_setops(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_raster_base_math(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("rasterAdd", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_add_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("+", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_add_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("rasterAdd", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_add_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("+", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_add_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("rasterDiv", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_div_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("/", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_div_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("rasterDiv", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_div_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("/", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_div_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("rasterMul", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_mul_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("*", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_mul_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("rasterMul", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_mul_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("*", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_mul_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("rasterSub", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_sub_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("-", {LogicalType::DOUBLE, RasterTypes::raster()}, RasterTypes::raster(), Gen_sub_float_raster));
+    RegisterMeosFunction(loader, ScalarFunction("rasterSub", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_sub_raster_float));
+    RegisterMeosFunction(loader, ScalarFunction("-", {RasterTypes::raster(), LogicalType::DOUBLE}, RasterTypes::raster(), Gen_sub_raster_float));
     RegisterMeosFunction(loader, ScalarFunction("rasterAdd", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_add_raster_raster));
     RegisterMeosFunction(loader, ScalarFunction("+", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_add_raster_raster));
     RegisterMeosFunction(loader, ScalarFunction("rasterDiv", {RasterTypes::raster(), RasterTypes::raster()}, RasterTypes::raster(), Gen_div_raster_raster));
