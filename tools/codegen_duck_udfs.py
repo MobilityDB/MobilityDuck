@@ -4779,7 +4779,7 @@ SQL_BASE_TO_DUCK = {
     "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
     "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
     "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
-    "tpcbox": "TpcboxType::tpcbox()",
+    "tpcbox": "TpcboxType::tpcbox()", "nsegment": "NpointTypes::nsegment()",
 }
 
 def array_ret_duck(f, acc, tail=()):
@@ -5943,7 +5943,13 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_raster_base_conversion", "meos_raster_base_transf",
                   # The arithmetic of a raster with a raster or a number, in either order:
                   # rasterAdd, rasterSub, rasterMul, rasterDiv and the operators + - * /
-                  "meos_raster_base_math"}
+                  "meos_raster_base_math",
+                  # The transformations and the SRID of one circular buffer, network point, pose
+                  # or pose chain: round, poseInverse, setSRID, transform and transformPipeline
+                  "meos_cbuffer_base_transf", "meos_cbuffer_base_srid",
+                  "meos_npoint_base_transf",
+                  "meos_pose_base_transf", "meos_pose_base_srid",
+                  "meos_posechain_base_transf", "meos_posechain_base_srid"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

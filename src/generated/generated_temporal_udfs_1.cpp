@@ -1035,6 +1035,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
+    return ::cbuffer_transform_pipeline(p0, p1, 0, true);
+}
 inline char * cbufferset_out_maxdd(const Set * p0) {
     return ::cbufferset_out(p0, 15);
 }
@@ -1062,8 +1065,14 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
+    return ::pose_transform_pipeline(p0, p1, 0, true);
+}
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
+    return ::posechain_transform_pipeline(p0, p1, 0, true);
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
@@ -1512,6 +1521,46 @@ static void Gen_timestamptz_to_tbox(DataChunk &args, ExpressionState &, Vector &
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TboxToBlob(result, r);
     }
+}
+
+
+// ===== @ingroup meos_cbuffer_base_transf =====
+static void Gen_cbuffer_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Cbuffer *r = cbuffer_round(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = CbufferToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_cbuffer_round_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Cbuffer *p0 = BlobToCbuffer(in0[i]);
+        Cbuffer *r = cbuffer_round(p0, 0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = CbufferToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -3670,6 +3719,11 @@ void RegisterGenerated_meos_box_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("floatspan", {TboxType::tbox()}, SpanTypes::floatspan(), Gen_tbox_to_floatspan));
     RegisterMeosFunction(loader, ScalarFunction("timeSpan", {TboxType::tbox()}, SpanTypes::tstzspan(), Gen_tbox_to_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("tbox", {LogicalType::TIMESTAMP_TZ}, TboxType::tbox(), Gen_timestamptz_to_tbox));
+}
+
+void RegisterGenerated_meos_cbuffer_base_transf(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("round", {CbufferTypes::cbuffer(), LogicalType::INTEGER}, CbufferTypes::cbuffer(), Gen_cbuffer_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {CbufferTypes::cbuffer()}, CbufferTypes::cbuffer(), Gen_cbuffer_round_v1));
 }
 
 void RegisterGenerated_meos_cbuffer_set_accessor(ExtensionLoader &loader) {

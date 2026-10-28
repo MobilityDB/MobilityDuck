@@ -1035,6 +1035,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
+    return ::cbuffer_transform_pipeline(p0, p1, 0, true);
+}
 inline char * cbufferset_out_maxdd(const Set * p0) {
     return ::cbufferset_out(p0, 15);
 }
@@ -1062,8 +1065,14 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
+    return ::pose_transform_pipeline(p0, p1, 0, true);
+}
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
+    return ::posechain_transform_pipeline(p0, p1, 0, true);
 }
 inline char * posechainset_out_maxdd(const Set * p0) {
     return ::posechainset_out(p0, 15);
@@ -1551,6 +1560,84 @@ static void Gen_tnpoint_positions(DataChunk &args, ExpressionState &, Vector &re
 }
 
 
+// ===== @ingroup meos_npoint_base_transf =====
+static void Gen_npoint_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        Npoint *r = npoint_round(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NpointToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_round_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        Npoint *r = npoint_round(p0, 0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NpointToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        Nsegment *r = nsegment_round(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NsegmentToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_round_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        Nsegment *r = nsegment_round(p0, 0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NsegmentToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
 // ===== @ingroup meos_npoint_inout =====
 static void Gen_tnpoint_in(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -1977,6 +2064,14 @@ void RegisterGenerated_meos_npoint_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("trajectory", {NpointTypes::tnpoint()}, MobilityDuckGeometryType(), Gen_tnpoint_trajectory));
     RegisterMeosFunction(loader, ScalarFunction("getValue", {NpointTypes::tnpoint()}, NpointTypes::npoint(), Gen_tnpoint_value));
     RegisterMeosFunction(loader, ScalarFunction("twCentroid", {NpointTypes::tnpoint()}, MobilityDuckGeometryType(), Gen_tnpoint_twcentroid));
+    RegisterMeosFunction(loader, ScalarFunction("positions", {NpointTypes::tnpoint()}, LogicalType::LIST(NpointTypes::nsegment()), Gen_tnpoint_positions));
+}
+
+void RegisterGenerated_meos_npoint_base_transf(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("round", {NpointTypes::npoint(), LogicalType::INTEGER}, NpointTypes::npoint(), Gen_npoint_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {NpointTypes::npoint()}, NpointTypes::npoint(), Gen_npoint_round_v1));
+    RegisterMeosFunction(loader, ScalarFunction("round", {NpointTypes::nsegment(), LogicalType::INTEGER}, NpointTypes::nsegment(), Gen_nsegment_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {NpointTypes::nsegment()}, NpointTypes::nsegment(), Gen_nsegment_round_v1));
 }
 
 void RegisterGenerated_meos_npoint_inout(ExtensionLoader &loader) {
