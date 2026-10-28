@@ -5940,7 +5940,10 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   # trajectory, over the signatures MobilityDB declares for raquet
                   "meos_raster", "meos_raster_base_accessor", "meos_raster_base_constructor",
                   "meos_raster_base_inout", "meos_raster_base_comp",
-                  "meos_raster_base_conversion", "meos_raster_base_transf"}
+                  "meos_raster_base_conversion", "meos_raster_base_transf",
+                  # The arithmetic of a raster with a raster or a number, in either order:
+                  # rasterAdd, rasterSub, rasterMul, rasterDiv and the operators + - * /
+                  "meos_raster_base_math"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).

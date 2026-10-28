@@ -49,11 +49,10 @@ true
 # ── the value of a raster along a trajectory ─────────────────────────────────
 
 # The clearance of a vessel of draught 8.5, as MobilityDB answers
-# rasterValue(trip, depth - 8.5) in its raster regression test, the draught
-# taken as a raster of the grid of the depth whose every pixel is 8.5.
+# rasterValue(trip, depth - 8.5) in its raster regression test.
 query I
 SELECT asText(rasterValue(tgeompoint 'SRID=4326;[POINT(0.5 2.5)@2001-01-01, POINT(2.5 2.5)@2001-01-02, POINT(0.5 0.5)@2001-01-03]',
-  rasterSub(r, rasterFromHexWKB('0100000100000000000000F03F000000000000F0BF0000000000000000000000000000084000000000000000000000000000000000E6100000030003000A00000000000008410000084100000841000008410000084100000841000008410000084100000841'))))
+  r - 8.5))
 FROM depth;
 ----
 Interp=Step;[1.5@2001-01-01 00:00:00+00, 11.5@2001-01-01 06:00:00+00, 21.5@2001-01-01 18:00:00+00, 41.5@2001-01-02 06:00:00+00, 61.5@2001-01-02 18:00:00+00, 61.5@2001-01-03 00:00:00+00]
@@ -100,6 +99,48 @@ SELECT numBands(addBand(r, r)), numBands(addBand(addBand(r, r), r, 1, 1)),
 FROM depth;
 ----
 2	3	true	float32
+
+# ── arithmetic ───────────────────────────────────────────────────────────────
+
+# The raster of MobilityDB's raster regression test for the arithmetic of a
+# raster and a number, nodata -9999: 10, -9999, 30 / 40, 50, 60 / 70, 80, 90.
+statement ok
+CREATE TABLE nodata_depth AS
+SELECT raster(from_hex('00002041003C1CC60000F04100002042000048420000704200008C420000A0420000B442'),
+  3, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 4326, '32BF', -9999.0) AS r;
+
+# A raster and a number, the number on either side; an integer literal is read
+# as the float it stands for. The nodata pixel stays nodata, with the nodata
+# value of the raster. MobilityDB answers the same values.
+query TTTTTR
+SELECT dumpValues(r - 10, 1)::VARCHAR, dumpValues(100 - r, 1)::VARCHAR,
+  dumpValues(r * 0.5, 1)::VARCHAR, dumpValues(2520.0 / r, 1)::VARCHAR,
+  dumpValues(r + r, 1)::VARCHAR, bandNoDataValue(r - 10, 1)
+FROM nodata_depth;
+----
+[[0.0, NULL, 20.0], [30.0, 40.0, 50.0], [60.0, 70.0, 80.0]]	[[90.0, NULL, 70.0], [60.0, 50.0, 40.0], [30.0, 20.0, 10.0]]	[[5.0, NULL, 15.0], [20.0, 25.0, 30.0], [35.0, 40.0, 45.0]]	[[252.0, NULL, 84.0], [63.0, 50.4, 42.0], [36.0, 31.5, 28.0]]	[[20.0, NULL, 60.0], [80.0, 100.0, 120.0], [140.0, 160.0, 180.0]]	-9999.0
+
+# Each operator is its function, the number on either side.
+query IIIIIIII
+SELECT rasterAdd(r, 2.0) = r + 2, rasterAdd(2.0, r) = 2 + r,
+  rasterSub(r, 2.0) = r - 2, rasterSub(2.0, r) = 2 - r,
+  rasterMul(r, 2.0) = r * 2, rasterMul(2.0, r) = 2 * r,
+  rasterDiv(r, 2.0) = r / 2, rasterDiv(2.0, r) = 2 / r
+FROM nodata_depth;
+----
+true	true	true	true	true	true	true	true
+
+# A NULL number answers NULL.
+query II
+SELECT (r + NULL::DOUBLE) IS NULL, (NULL::DOUBLE * r) IS NULL FROM nodata_depth;
+----
+true	true
+
+# A division by zero is an error.
+statement error
+SELECT r / 0 FROM nodata_depth;
+----
+Division by zero
 
 # ── processing ───────────────────────────────────────────────────────────────
 
