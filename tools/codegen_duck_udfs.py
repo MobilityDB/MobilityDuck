@@ -46,6 +46,15 @@ import collections
 import json, sys, re, os, zlib
 from collections import defaultdict, Counter
 
+def catalog_path():
+    """The catalog the generator reads, as #main resolves it: the first positional argument, else
+    the staged tools/catalog/meos-idl.json."""
+    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return pos[0] if pos else os.path.join(root, "tools/catalog/meos-idl.json")
+
+CATALOG = json.load(open(catalog_path()))
+
 # The licence banner, copied from tools/license/banner.txt; a generated file
 # opens with it and one empty line, as MobilityDB's h3pg_import/extract.py
 # writes its MDB_LICENSE
@@ -593,8 +602,18 @@ CORE_TYPES = {
     "tfloat": ["TemporalTypes::tfloat()"],
     "tbool":  ["TemporalTypes::tbool()"],
     "ttext":  ["TemporalTypes::ttext()"],
-    "tnumber":["TemporalTypes::tint()", "TemporalTypes::tfloat()"],
 }
+
+def lattice_members(cls):
+    """The temporal types of the class `cls` of the catalog's object model, as their catalog names
+    in MeosType order: `objectModel.lattice[cls].temptypes`, which MEOS-API reads from the
+    predicate the class names (`tnumber_type` for TNumber), as #catalog_collection_bases reads the
+    collection types from the type relations."""
+    name_of = {"T_" + t.upper(): t for t in CATALOG["temporalTypes"]}
+    return [name_of[t] for t in CATALOG["objectModel"]["lattice"][cls]["temptypes"]]
+
+# The temporal numbers are the members of the TNumber class
+CORE_TYPES["tnumber"] = [CORE_TYPES[t][0] for t in lattice_members("TNumber")]
 # Geo TEMPORAL types are Temporal* blobs (BlobToTemporal works). Accessor class names
 # are inconsistent in the hand binding (verified live: TgeompointType/TgeogpointType/
 # TGeometryTypes/TGeographyTypes) — used as-is; canonical type names from meos_catalog.c.
@@ -605,18 +624,35 @@ GEO_TYPES = {
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
 }
 GEO_ALLTYPES = list(GEO_TYPES.values())
-# The TSpatial<T> subtypes = the geo types PLUS the other spatial temporal families
-# (tcbuffer first; tnpoint/tpose/trgeometry/th3index/tpcpoint follow). A spatial family
-# inherits the abstract `tspatial_*` surface (SRID/setSRID/transform/asText/asEWKT/atStbox)
-# and the generic Temporal<T> surface by BEING IN THIS LIST — it is looped alongside the geo
-# types by the `tspatial_*` scope and the generic-temporal "all" writer. Distinct from
-# GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
-# geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
-SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
-                                   "QuadbinTypes::tquadbin()", "S2cellTypes::ts2cell()",
-                                   "NpointTypes::tnpoint()",
-                                   "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()",
-                                   "PosechainTypes::tposechain()"]
+# The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
+# SQL type name: the 5 core types (TemporalTypes::AllTypes()) plus the 4 geo types (the
+# second emit loop). Ordered so the generated registrations come out canonically (core
+# order, then geo). Accessor strings reuse GEO_TYPES / TO_TYPE verbatim.
+SIG_TEMPORAL_ACC = {
+    "tint":       "TemporalTypes::tint()",     "tbigint":    "TemporalTypes::tbigint()",
+    "tbool":      "TemporalTypes::tbool()",     "tfloat":     "TemporalTypes::tfloat()",
+    "ttext":      "TemporalTypes::ttext()",
+    "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
+    "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
+    "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
+    "tquadbin":   "QuadbinTypes::tquadbin()",      "ts2cell":    "S2cellTypes::ts2cell()",
+    "tjsonb":     "TJsonbTypes::tjsonb()",
+    "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
+    "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
+    "trgeometry": "TrgeometryTypes::trgeometry()",
+    "tposechain": "PosechainTypes::tposechain()",
+}
+
+# The TSpatial<T> subtypes whose box is an STBox: the members of the TSpatial class of the
+# catalog's object model that `temporalTypes` gives the `stbox` bounding box. The point clouds
+# are spatial and carry a TPCBox, so the STBox surface looped over this list is not theirs. A
+# family in this list inherits the abstract `tspatial_*` surface (SRID/setSRID/transform/asText/
+# asEWKT/atStbox) and the generic Temporal<T> surface: it is looped alongside the geo types by the
+# `tspatial_*` scope and the generic-temporal "all" writer, and a new spatial family MEOS adds
+# reaches it from the catalog. Distinct from GEO_ALLTYPES, which stays geo-only for the `tgeo`
+# supertype (geometry+geography) and the geometry-argument spatial relationships.
+SPATIAL_ALLTYPES = [SIG_TEMPORAL_ACC[t] for t in lattice_members("TSpatial")
+                    if CATALOG["temporalTypes"][t]["bbox"] == "stbox"]
 
 # The catalog entry for a function name, so a NAME-keyed scope rule can still consult the
 # catalog's own `sqlSignatures` -- populated in main() from the same catalog the surface is
@@ -651,7 +687,7 @@ def reg_scope(name):
         if base == "temporal_temporal":
             return ("types", CORE_TYPES["tbool"] + CORE_TYPES["ttext"])
         if base == "tnumber_tnumber":
-            return ("types", CORE_TYPES["tint"] + CORE_TYPES["tfloat"] + CORE_TYPES["tbigint"])
+            return ("types", CORE_TYPES["tnumber"])
     # A subtype accessor (tinstant_timestamptz behind getTimestamp) is generic over the temporal
     # types as a temporal_* one is; the catalog's sqlSignatures then narrow it to the declared set
     # (#sig_declared_accs), and MEOS checks the subtype itself.
@@ -845,24 +881,6 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose|trgeometry|tposechain)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
-# The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
-# SQL type name: the 5 core types (TemporalTypes::AllTypes()) plus the 4 geo types (the
-# second emit loop). Ordered so the generated registrations come out canonically (core
-# order, then geo). Accessor strings reuse GEO_TYPES / TO_TYPE verbatim.
-SIG_TEMPORAL_ACC = {
-    "tint":       "TemporalTypes::tint()",     "tbigint":    "TemporalTypes::tbigint()",
-    "tbool":      "TemporalTypes::tbool()",     "tfloat":     "TemporalTypes::tfloat()",
-    "ttext":      "TemporalTypes::ttext()",
-    "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
-    "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
-    "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
-    "tquadbin":   "QuadbinTypes::tquadbin()",      "ts2cell":    "S2cellTypes::ts2cell()",
-    "tjsonb":     "TJsonbTypes::tjsonb()",
-    "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
-    "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
-    "trgeometry": "TrgeometryTypes::trgeometry()",
-    "tposechain": "PosechainTypes::tposechain()",
-}
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
     FUNCTION'd for, read from the catalog's per-overload `sqlSignatures` (the SoT) — so the
@@ -974,22 +992,40 @@ def sig_geo_accs(f, geo_first):
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
 # Self-contained Blob<->Set marshalling reuses the hand binding's exact method
 # (malloc+memcpy in; set_mem_size out). Per-element accessors mirror CORE_TYPES.
-# The base values whose collection types the binding registers, in canonical order. ONE list
-# serves both the type registration below (SetTypes/SpanTypes/SpansetTypes, filtered per family by
-# T_<BASE><SUFFIX> membership in the catalog MeosType enum) and the name-scoping maps here, so a
-# base can never be registered as a type while its family functions stay unscoped. geom and geog
-# are absent on purpose: their set types carry a hand-written function surface of their own.
-BASE_ORDER = ["int", "bigint", "float", "text", "date", "tstz",
-              "jsonb", "cbuffer", "npoint", "h3index", "quadbin", "s2cell", "pose", "posechain",
-              "pcpoint", "pcpatch"]
+# The bases whose set types carry a hand-written function surface of their own (SpatialSetType),
+# registered per declared signature rather than by the set loops
+HAND_SET_BASES = ("geom", "geog")
+
+def catalog_collection_bases(cat, role):
+    """The base values whose `role` collection types (set, span or spanset) the binding registers,
+    in the order of those collection types in the catalog's MeosType enum: every base to which the
+    catalog's type relations give one (`typeRelations.byBase[<base>].<role>`, which MEOS-API reads
+    from MEOS_RELTYPE_CATALOG), named as its collection type is named less the role suffix
+    (intset -> int, tstzspanset -> tstz), so a base MEOS gives a collection type reaches the
+    binding with no edit here. It answers per role what #typereg_members answered by filtering the
+    set bases on the enum."""
+    enum = next(e for e in cat["enums"] if e["name"] == "MeosType")
+    order = {v["name"]: v["value"] for v in enum["values"]}
+    types = [r[role] for r in cat["typeRelations"]["byBase"].values() if r.get(role)]
+    bases = [t[:-len(role)] for t in sorted(types, key=lambda t: order["T_" + t.upper()])]
+    return [b for b in bases if role != "set" or b not in HAND_SET_BASES]
+
+# The base values whose set types the binding registers, in canonical order. ONE list serves both
+# the set type registration below and the name-scoping maps here, so a base can never be
+# registered as a type while its family functions stay unscoped; the span and span set families
+# read their own relations (SPAN_BASES, SPANSET_BASES).
+BASE_ORDER = catalog_collection_bases(CATALOG, "set")
 SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
+SPAN_BASES = catalog_collection_bases(CATALOG, "span")
+SPAN_TYPES = {b + "span": "SpanTypes::%sspan()" % b for b in SPAN_BASES}
+SPANSET_BASES = catalog_collection_bases(CATALOG, "spanset")
+SPANSET_TYPES = {b + "spanset": "SpansetTypes::%sspanset()" % b for b in SPANSET_BASES}
 
 # The element LogicalType per base value. A core base names a DuckDB built-in; a base the binding
 # registers itself names that type's accessor, and BASE_HEADER states the header declaring it so the
-# generated file includes exactly the ones the admitted bases need. A base absent from this map has
-# no element type the binding can name, so the derivation below does not admit it — which is how
-# geom and geog, whose set types carry a hand-written function surface of their own, stay
-# out of the generated registration and register exactly once.
+# generated file includes exactly the ones the admitted bases need. Every base the catalog gives a
+# set (#catalog_set_bases) needs its entry here, and the check below this map refuses one that has
+# none rather than leave its set unregistered.
 BASE_LOGICAL = {
     "int": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT",
     "float": "LogicalType::DOUBLE", "text": "LogicalType::VARCHAR",
@@ -1003,6 +1039,10 @@ BASE_LOGICAL = {
     "raquet": "RaquetTypes::raquet()",
     "raster": "RasterTypes::raster()",
 }
+_UNNAMED_BASES = [b for b in BASE_ORDER if b not in BASE_LOGICAL]
+if _UNNAMED_BASES:
+    raise SystemExit("the catalog gives a set to %s, whose element type BASE_LOGICAL does not name"
+                     % ", ".join(_UNNAMED_BASES))
 # The base values no set type holds: MEOS declares no T_<BASE>SET for them, so they stay out of
 # BASE_ORDER, which SET_TYPES and the set type registration read, and take the base-value arms
 # alone. raquet, the raster tile, is one, and raster, MEOS's raster, another.
@@ -1027,7 +1067,7 @@ def ret_set_type(name, arg_acc):
                     and SET_SIG_ACC.get(s.get("ret"))):
                 return SET_SIG_ACC[s["ret"]]
     # `*_to_<settype>` conversion CHANGES type -> target; else preserve the arg's set type.
-    m = re.search(r'_to_(intset|bigintset|floatset|textset|dateset|tstzset)$', name)
+    m = re.search(r'_to_(%s)$' % '|'.join(SET_TYPES), name)
     return SET_TYPES[m.group(1)] if m else arg_acc
 
 # The geometry and geography sets, whose element GSERIALIZED has no base value marshaller of the
@@ -4776,9 +4816,7 @@ SQL_BASE_TO_DUCK = {
     "integer": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT", "float": "LogicalType::DOUBLE",
     "boolean": "LogicalType::BOOLEAN", "text": "LogicalType::VARCHAR", "date": "LogicalType::DATE",
     "timestamptz": "LogicalType::TIMESTAMP_TZ", "interval": "LogicalType::INTERVAL",
-    "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
-    "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
-    "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
+    **SPAN_TYPES, "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()", "nsegment": "NpointTypes::nsegment()",
 }
 
@@ -5136,12 +5174,7 @@ def emit_temporal_span(f, kind):
 # straight from the catalog, so no name is read to decide it. The container return
 # marshals via PTR_RET (SpanToBlob/TboxToBlob/...), already present.
 SQL_CONTAINER_ACC = {
-    "tstzspan": "SpanTypes::tstzspan()", "intspan": "SpanTypes::intspan()",
-    "bigintspan": "SpanTypes::bigintspan()", "floatspan": "SpanTypes::floatspan()",
-    "datespan": "SpanTypes::datespan()",
-    "tstzspanset": "SpansetTypes::tstzspanset()", "intspanset": "SpansetTypes::intspanset()",
-    "bigintspanset": "SpansetTypes::bigintspanset()", "floatspanset": "SpansetTypes::floatspanset()",
-    "datespanset": "SpansetTypes::datespanset()",
+    **SPAN_TYPES, **SPANSET_TYPES,
     "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()",
 }
@@ -5259,28 +5292,18 @@ ELEM_TO_SPAN = {
     "int64_t": "SpanTypes::bigintspan()", "double": "SpanTypes::floatspan()",
     "DateADT": "SpanTypes::datespan()", "TimestampTz": "SpanTypes::tstzspan()",
 }
-SPAN_TYPES = {
-    "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
-    "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
-    "tstzspan": "SpanTypes::tstzspan()",
-}
 def span_reg_scope(name):
     if name.startswith("span_"): return ("all", None)
     for pre, acc in SPAN_TYPES.items():
         if name.startswith(pre + "_") or name == pre: return ("types", [acc])
     return None
 def ret_span_type(name, arg_acc):
-    m = re.search(r'_to_(intspan|bigintspan|floatspan|datespan|tstzspan)$', name)
+    m = re.search(r'_to_(%s)$' % '|'.join(SPAN_TYPES), name)
     return SPAN_TYPES[m.group(1)] if m else arg_acc
 
 # SpanSet mirrors Span (varlena -> spanset_mem_size; SpansetTypes accessors verified
 # lowercase spanset.hpp + meos_catalog.c). Same shapes -> handled by the SAME collection
 # machinery (shape_coll/emit_coll) via a descriptor, so SpanSet is added without duplication.
-SPANSET_TYPES = {
-    "intspanset": "SpansetTypes::intspanset()", "bigintspanset": "SpansetTypes::bigintspanset()",
-    "floatspanset": "SpansetTypes::floatspanset()",
-    "datespanset": "SpansetTypes::datespanset()", "tstzspanset": "SpansetTypes::tstzspanset()",
-}
 ELEM_TO_SPANSET = {
     "int": "SpansetTypes::intspanset()", "int32_t": "SpansetTypes::intspanset()",
     "int64_t": "SpansetTypes::bigintspanset()", "double": "SpansetTypes::floatspanset()",
@@ -5292,7 +5315,7 @@ def spanset_reg_scope(name):
         if name.startswith(pre + "_") or name == pre: return ("types", [acc])
     return None
 def ret_spanset_type(name, arg_acc):
-    m = re.search(r'_to_(intspanset|bigintspanset|floatspanset|datespanset|tstzspanset)$', name)
+    m = re.search(r'_to_(%s)$' % '|'.join(SPANSET_TYPES), name)
     return SPANSET_TYPES[m.group(1)] if m else arg_acc
 
 # Collection-family descriptors (Span + SpanSet share ALL shape logic).
@@ -6535,28 +6558,33 @@ def emit_container_from_wkb(f, cont):
             "        }});\n"
             "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
 
-def shape_h3_prefilter(f):
-    """The static H3 cell shapes the generic paths miss (all family=H3; the Set
-    operand/return is an h3indexset, registered as its own BLOB alias):
-      - geoToH3IndexSet  (GSERIALIZED*, int) -> Set*   : geometry->cells, marshalled @ 4326
-        (h3 is geographic). The generic arg_type has no GSERIALIZED marshaller, and the
-        Temporal-sibling geo path (shape_geo_temporal) sources the SRID from a temporal arg
-        this function lacks, so a dedicated fixed-SRID emit is needed.
-      - geoToH3Cell  (GSERIALIZED*, int) -> uint64_t   : geometry->single cell, same GSERIALIZED
-        marshalling as geoToH3IndexSet but a scalar h3index (BIGINT-backed) return instead of
-        a Set.
-      - eEq(h3indexset,th3index)  (Set*, Temporal*) -> int  : the trip-in-cells prefilter,
-        an `int` tri-state (ret<0 -> SQL NULL) that shape_set does not match (it keys on
-        rb==bool and (Set,scalar)/(Set,Set), not (Set,Temporal)).
-      - eEq/eNe/aEq/aNe(h3index,th3index) and the (th3index,h3index) mirror  (uint64_t,
-        Temporal*) -> int tri-state : the bare-cell-vs-temporal-cell comparison family.
-        arg_type has no uint64_t scalar mapping (it is not a plain integer — it is the
-        family's BIGINT-backed cell id, same as the CELL_UINT/CELL_BASEVAL return-side
-        path for startValue/endValue), so this marshals it directly via the cell type
-        reg_scope(name) resolves to.
-    Keyed on SHAPE + H3 family, not the literal name, so any future such H3 fn generates."""
-    if (f.get("family") or "") != "H3":
-        return None
+def prefilter_signature(f):
+    """(DuckDB argument types, DuckDB result type, whether the geometry operand is a geography) of
+    the first signature the catalog declares for `f` whose every type names a registered type: a
+    geometry or geography, a set or a cell (#ctor_duck_type), a temporal (SIG_TEMPORAL_ACC) or a
+    boolean; None when it declares none."""
+    acc = lambda t: (ctor_duck_type(t) or SIG_TEMPORAL_ACC.get(t)
+                     or ("LogicalType::BOOLEAN" if t == "boolean" else None))
+    for s in f.get("sqlSignatures") or []:
+        args = [acc(t) for t in s.get("args") or []]
+        ret = acc(s.get("ret") or "")
+        if args and all(args) and ret:
+            return args, ret, "geography" in s["args"]
+    return None
+
+def shape_cell_prefilter(f):
+    """The cell-set prefilter shapes the generic paths miss, for every cell family alike, keyed on
+    the C shape and typed by the function's declared signature (#prefilter_signature):
+      - (GSERIALIZED*, int) -> Set*: the cells covering a geometry or a geography
+        (geoToH3IndexSet, geoToQuadbinSet, geoToS2CellSet). The generic arg_type has no
+        GSERIALIZED marshaller, and the geo-temporal path (shape_geo_temporal) sources the SRID
+        from a temporal argument these lack.
+      - (GSERIALIZED*, int) -> uint64_t: the one cell of a geometry, the same marshalling with a
+        BIGINT-backed cell result.
+      - (Set*, Temporal*) -> int and its (Temporal*, Set*) mirror: eEqual of a cell set and a
+        temporal cell, the trip-in-cells prefilter, an `int` tri-state (ret < 0 -> SQL NULL) that
+        shape_set does not match (it keys on (Set, scalar) and (Set, Set)).
+    Returns (kind, argument types, result type, geography) or None."""
     if not f.get("sqlfn"):
         return None
     # geoToH3IndexSet is rejected by supported() ONLY on its GSERIALIZED arg (marshalled here);
@@ -6575,77 +6603,65 @@ def shape_h3_prefilter(f):
     ptr = lambda p: norm(p["canonical"]).endswith("*")
     # The resolution is a 32-bit integer however MEOS spells it (`int` or the `int32` of the
     # SQL-exposed integer convention), as the integer return check of this file reads it.
+    kind = None
     if (b0 == "GSERIALIZED" and ptr(ins[0]) and b1 in ("int", "int32_t")
             and "*" not in norm(ins[1]["canonical"])):
         if rb == "Set" and rn.endswith("*"):
-            return "geo2set"
-        if rb == "uint64_t" and "*" not in rn:
-            return "geo2scalar"
-    if (b0 == "Set" and ptr(ins[0]) and b1 == "Temporal" and ptr(ins[1])
+            kind = "geo2set"
+        elif rb == "uint64_t" and "*" not in rn:
+            kind = "geo2scalar"
+    elif (ptr(ins[0]) and ptr(ins[1]) and {b0, b1} == {"Set", "Temporal"}
             and rb in ("int", "int32_t") and "*" not in rn):
-        return "settemp_ebool"
+        kind = "settemp_ebool" if b0 == "Set" else "tempset_ebool"
     # The cell-vs-temporal comparisons belong to the GENERIC binary shape, which reaches
     # them now that `arg_type` resolves a by-value cell id from the function's own scope.
     # Claiming them here too emits a second body under the same name, and the compiler is
-    # what says so: `redefinition of Gen_ever_eq_h3index_th3index`. Yielding them also
-    # widens the surface, since this pass fires for H3 alone while the generic shape serves
-    # quadbin and s2cell on the same rule.
-    return None
+    # what says so: `redefinition of Gen_ever_eq_h3index_th3index`.
+    if kind is None:
+        return None
+    sig = prefilter_signature(f)
+    return (kind,) + sig if sig else None
 
-def emit_h3_prefilter(f, kind):
+def emit_cell_prefilter(f, kind, geog):
     name = f["name"]
-    if kind == "geo2set":   # (geometry, int) -> h3indexset ; geometry marshalled @ 4326
+    # a geography is the DuckDB GEOMETRY read as geodetic, as #base_operand reads one; a geometry
+    # takes the SRID its type states, else WGS84, the system every cell grid is defined in
+    gs = ("GeogFromGeometry(in_g)" if geog
+          else "GeometryToGSerialized(in_g, crs_g ? crs_g : 4326)")
+    crs = ("" if geog else
+           "    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());\n")
+    if kind == "geo2set":   # (geometry or geography, int) -> cell set
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());\n"
+                f"{crs}"
                 f"    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in_g, int32_t res) {{\n"
-                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);\n"
+                f"            GSERIALIZED *gs = {gs};\n"
                 f"            Set *r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return SetToBlob(result, r);\n"
                 f"        }});\n}}\n")
-    if kind == "geo2scalar":   # (geometry, int) -> h3index (BIGINT, bit-preserving) @ 4326
+    if kind == "geo2scalar":   # (geometry or geography, int) -> cell (BIGINT, bit-preserving)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());\n"
+                f"{crs}"
                 f"    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in_g, int32_t res) {{\n"
-                f"            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);\n"
+                f"            GSERIALIZED *gs = {gs};\n"
                 f"            uint64_t r = {name}(gs, res);\n"
                 f"            free(gs);\n"
                 f"            return (int64_t) r;\n"
                 f"        }});\n}}\n")
-    if kind.startswith("cell_l:"):   # (h3index, th3index) -> int tri-state -> nullable BOOLEAN
-        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
-                f"    EnsureMeosThreadInitialized();\n"
-                f"    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
-                f"        [&](int64_t a1, string_t in_t, ValidityMask &mask, idx_t idx) {{\n"
-                f"            Temporal *t = BlobToTemporal(in_t);\n"
-                f"            int r = {name}((uint64_t) a1, t);\n"
-                f"            free(t);\n"
-                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
-                f"            return r != 0;\n"
-                f"        }});\n}}\n")
-    if kind.startswith("cell_r:"):   # (th3index, h3index) -> int tri-state -> nullable BOOLEAN
-        return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
-                f"    EnsureMeosThreadInitialized();\n"
-                f"    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
-                f"        [&](string_t in_t, int64_t a2, ValidityMask &mask, idx_t idx) {{\n"
-                f"            Temporal *t = BlobToTemporal(in_t);\n"
-                f"            int r = {name}(t, (uint64_t) a2);\n"
-                f"            free(t);\n"
-                f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
-                f"            return r != 0;\n"
-                f"        }});\n}}\n")
-    # settemp_ebool: (h3indexset, th3index) -> int tri-state -> nullable BOOLEAN
+    # (cell set, temporal cell) or its mirror -> int tri-state -> nullable BOOLEAN
+    first, second = ("in_s", "in_t") if kind == "settemp_ebool" else ("in_t", "in_s")
+    call = "s, t" if kind == "settemp_ebool" else "t, s"
     return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             f"    EnsureMeosThreadInitialized();\n"
             f"    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),\n"
-            f"        [&](string_t in_s, string_t in_t, ValidityMask &mask, idx_t idx) {{\n"
+            f"        [&](string_t {first}, string_t {second}, ValidityMask &mask, idx_t idx) {{\n"
             f"            Set *s = BlobToSet(in_s);\n"
             f"            Temporal *t = BlobToTemporal(in_t);\n"
-            f"            int r = {name}(s, t);\n"
+            f"            int r = {name}({call});\n"
             f"            free(s); free(t);\n"
             f"            if (r < 0) {{ mask.SetInvalid(idx); return false; }}\n"
             f"            return r != 0;\n"
@@ -9373,29 +9389,20 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 spec_sink.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                  f'"{reg_name(nm, f)}", {{{acc}{sig_tail}}}, {ret}, Gen_{fn}));')
 
-    # ---- H3 cell-set prefilter: geoToH3IndexSet + eEq(h3indexset,th3index) ----
-    # Two static H3 shapes the generic paths miss (geometry-arg fixed-SRID; (Set,Temporal)
-    # tri-state); emitted with a dedicated shape like the geo-temporal spatial rels.
+    # ---- cell-set prefilter: geoTo<Cell>Set, geoTo<Cell>, eEqual(<cell>set, t<cell>) ----
+    # The shapes the generic paths miss (geometry argument read in a fixed system; (Set, Temporal)
+    # tri-state), for every cell family alike, each registered over the types its declared
+    # signature names.
     for f in fns:
-        hpk = shape_h3_prefilter(f)
-        if hpk is None:
+        cpf = shape_cell_prefilter(f)
+        if cpf is None:
             continue
+        kind, args, rett, geog = cpf
         STATE["grp"] = f.get("group") or "meos_ungrouped"
-        set_bodies.append(emit_h3_prefilter(f, hpk)); n_set += 1
+        set_bodies.append(emit_cell_prefilter(f, kind, geog)); n_set += 1
         fn = f["name"]
         names = reg_names(f, f["sqlfn"], aliases)
-        if hpk == "geo2set":
-            sig, rett = "{MobilityDuckGeometryType(), LogicalType::INTEGER}", "SetTypes::h3indexset()"
-        elif hpk == "geo2scalar":
-            sig, rett = "{MobilityDuckGeometryType(), LogicalType::INTEGER}", "H3indexTypes::h3index()"
-        elif hpk.startswith("cell_l:"):
-            temp_acc = hpk.split(":", 1)[1]
-            sig, rett = "{%s, %s}" % (CELL_BASEVAL[temp_acc], temp_acc), "LogicalType::BOOLEAN"
-        elif hpk.startswith("cell_r:"):
-            temp_acc = hpk.split(":", 1)[1]
-            sig, rett = "{%s, %s}" % (temp_acc, CELL_BASEVAL[temp_acc]), "LogicalType::BOOLEAN"
-        else:   # settemp_ebool
-            sig, rett = "{SetTypes::h3indexset(), H3indexTypes::th3index()}", "LogicalType::BOOLEAN"
+        sig = "{%s}" % ", ".join(args)
         for nm in names:
             set_specific_regs.append(f'    RegisterMeosFunction(loader, ScalarFunction('
                                      f'"{reg_name(nm, f)}", {sig}, {rett}, Gen_{fn}));')
@@ -9646,8 +9653,10 @@ TYPEREG_FAMILIES = [
 ]
 
 def typereg_members(enum_names, suffix):
-    """Bases (in canonical order) for which T_<BASE><SUFFIX> exists in the enum."""
-    return [b for b in BASE_ORDER if ("T_" + (b + suffix).upper()) in enum_names]
+    """Bases (in canonical order) whose `suffix` collection type the catalog's type relations
+    state (#catalog_collection_bases) and the enum declares."""
+    bases = {"set": BASE_ORDER, "span": SPAN_BASES, "spanset": SPANSET_BASES}[suffix]
+    return [b for b in bases if ("T_" + (b + suffix).upper()) in enum_names]
 
 def emit_typereg_family(fam, enum_names):
     cls, mp, suf, macro = fam["cls"], fam["mapping"], fam["suffix"], fam["macro"]
@@ -9726,8 +9735,8 @@ def gen_type_registration(catalog, out_path):
     ] + [
         # The headers stating the element accessors the admitted bases name.
         '#include "%s"' % BASE_HEADER[b]
-        for b in BASE_ORDER
-        if b in BASE_HEADER and any(("T_" + (b + f["suffix"]).upper()) in enum_names
+        for b in dict.fromkeys(BASE_ORDER + SPAN_BASES + SPANSET_BASES)
+        if b in BASE_HEADER and any(b in typereg_members(enum_names, f["suffix"])
                                     for f in TYPEREG_FAMILIES)
     ] + [
         '#include "duckdb/main/extension/extension_loader.hpp"',
@@ -10182,10 +10191,8 @@ def main():
     # codegen/input/meos-idl.json, overwritten in place on each base refresh — no
     # per-SHA filename, no PIN marker). Provenance is the vcpkg portfile REF + the
     # regen commit message, never a versioned catalog copy.
-    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cat = pos[0] if len(pos) > 0 else os.path.join(_repo_root, "tools/catalog/meos-idl.json")
     out = pos[1] if len(pos) > 1 else None
-    d = json.load(open(cat))
+    d = CATALOG
     fns = d["functions"]
     # BASE_CBASE names each base value type's C struct, the one datum the lowercase base does not
     # spell. Read it back from the catalog rather than trusting the spelling: the struct a base's

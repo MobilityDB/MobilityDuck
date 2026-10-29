@@ -700,3 +700,18 @@ SELECT nearestApproachDistance(tint '[1@2000-01-01, 5@2000-01-02]', 8),
        nearestApproachDistance(8, tint '[1@2000-01-01, 5@2000-01-02]');
 ----
 3.0	3.0
+
+# The temporal numbers are the members of the catalog's TNumber class, tbigint among them, so the
+# arithmetic, the distance and the box operations of a temporal number serve a tbigint
+query II
+SELECT startValue(tAdd(tbigint '1@2000-01-01', tbigint '2@2000-01-01')),
+       startValue(tDistance(tbigint '1@2000-01-01', tbigint '5@2000-01-01'));
+----
+3	4
+
+query II
+SELECT tboxOverlaps(tbigint '[1@2000-01-01, 2@2000-01-02]',
+                    tbox 'TBOXBIGINT XT([1,2],[2000-01-01,2000-01-02])'),
+       tboxLeft(tbigint '1@2000-01-01', tbigint '5@2000-01-01');
+----
+true	true

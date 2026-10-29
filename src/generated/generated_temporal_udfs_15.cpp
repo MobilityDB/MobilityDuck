@@ -2874,6 +2874,56 @@ static void Gen_quadbin_cell_to_tile(DataChunk &args, ExpressionState &, Vector 
     }
 }
 
+static void Gen_geo_to_quadbin_cell(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
+    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, int32_t res) {
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);
+            uint64_t r = geo_to_quadbin_cell(gs, res);
+            free(gs);
+            return (int64_t) r;
+        });
+}
+
+static void Gen_geo_to_quadbin_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, int32_t res) {
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);
+            Set *r = geo_to_quadbin_set(gs, res);
+            free(gs);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_ever_eq_quadbinset_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_s, string_t in_t, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_quadbinset_tquadbin(s, t);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_ever_eq_tquadbin_quadbinset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_s, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_tquadbin_quadbinset(t, s);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 
 // ===== @ingroup meos_quadbin_inout =====
 static void Gen_tquadbin_in(DataChunk &args, ExpressionState &, Vector &result) {
@@ -5761,6 +5811,12 @@ void RegisterGenerated_meos_quadbin(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("cellArea", {QuadbinTypes::quadbin()}, LogicalType::DOUBLE, Gen_quadbin_cell_area));
     RegisterMeosFunction(loader, ScalarFunction("quadbinCellToQuadkey", {QuadbinTypes::quadbin()}, LogicalType::VARCHAR, Gen_quadbin_cell_to_quadkey));
     RegisterMeosFunction(loader, ScalarFunction("quadbinCellToTile", {QuadbinTypes::quadbin()}, LogicalType::LIST(LogicalType::INTEGER), Gen_quadbin_cell_to_tile));
+    RegisterMeosFunction(loader, ScalarFunction("geoToQuadbinCell", {MobilityDuckGeometryType(), LogicalType::INTEGER}, QuadbinTypes::quadbin(), Gen_geo_to_quadbin_cell));
+    RegisterMeosFunction(loader, ScalarFunction("geoToQuadbinSet", {MobilityDuckGeometryType(), LogicalType::INTEGER}, SetTypes::quadbinset(), Gen_geo_to_quadbin_set));
+    RegisterMeosFunction(loader, ScalarFunction("eEqual", {SetTypes::quadbinset(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_ever_eq_quadbinset_tquadbin));
+    RegisterMeosFunction(loader, ScalarFunction("?=", {SetTypes::quadbinset(), QuadbinTypes::tquadbin()}, LogicalType::BOOLEAN, Gen_ever_eq_quadbinset_tquadbin));
+    RegisterMeosFunction(loader, ScalarFunction("eEqual", {QuadbinTypes::tquadbin(), SetTypes::quadbinset()}, LogicalType::BOOLEAN, Gen_ever_eq_tquadbin_quadbinset));
+    RegisterMeosFunction(loader, ScalarFunction("?=", {QuadbinTypes::tquadbin(), SetTypes::quadbinset()}, LogicalType::BOOLEAN, Gen_ever_eq_tquadbin_quadbinset));
 }
 
 void RegisterGenerated_meos_quadbin_inout(ExtensionLoader &loader) {
