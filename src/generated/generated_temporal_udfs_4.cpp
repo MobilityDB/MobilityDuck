@@ -2906,6 +2906,82 @@ static void Gen_pose_round_v1(DataChunk &args, ExpressionState &, Vector &result
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_posearr_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Pose *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j))
+                v0.push_back(BlobToPose(ch0d[le0.offset + j]));
+        const int cnt = (int) v0.size();
+        Pose ** r = cnt > 0 ? posearr_round((const Pose **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = PoseToBlob(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_posearr_round_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Pose *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j))
+                v0.push_back(BlobToPose(ch0d[le0.offset + j]));
+        const int cnt = (int) v0.size();
+        Pose ** r = cnt > 0 ? posearr_round((const Pose **) v0.data(), (int) v0.size(), 0) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = PoseToBlob(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_pose_compose(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -6135,6 +6211,8 @@ void RegisterGenerated_meos_pose_base_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("poseInverse", {PoseTypes::pose()}, PoseTypes::pose(), Gen_pose_inverse));
     RegisterMeosFunction(loader, ScalarFunction("round", {PoseTypes::pose(), LogicalType::INTEGER}, PoseTypes::pose(), Gen_pose_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {PoseTypes::pose()}, PoseTypes::pose(), Gen_pose_round_v1));
+    RegisterMeosFunction(loader, ScalarFunction("round", {LogicalType::LIST(PoseTypes::pose()), LogicalType::INTEGER}, LogicalType::LIST(PoseTypes::pose()), Gen_posearr_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {LogicalType::LIST(PoseTypes::pose())}, LogicalType::LIST(PoseTypes::pose()), Gen_posearr_round_v1));
     RegisterMeosFunction(loader, ScalarFunction("applyPose", {PoseTypes::pose(), PoseTypes::pose()}, PoseTypes::pose(), Gen_pose_compose));
 }
 

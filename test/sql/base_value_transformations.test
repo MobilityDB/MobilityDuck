@@ -32,6 +32,35 @@ SELECT asEWKT(round(posechain 'PoseChain(Pose(Point(1.123456789 2.123456789), 0.
 ----
 PoseChain(Pose(POINT(1.123457 2.123457),0.123457),Pose(POINT(3.123457 0),0))
 
+# An array of circular buffers or of poses rounds value by value, and an empty one answers
+# NULL (cbuffer/expected/200_cbuffer.test.out:171-181, pose/expected/100_pose.test.out:229-239).
+query T
+SELECT list_transform(round([cbuffer 'Cbuffer(Point(1.123456789 1.123456789), 0.123456789)',
+  cbuffer 'Cbuffer(Point(2.987654321 2.987654321), 0.987654321)'], 6), lambda x: asText(x));
+----
+['Cbuffer(POINT(1.123457 1.123457),0.123457)', 'Cbuffer(POINT(2.987654 2.987654),0.987654)']
+
+query T
+SELECT round([]::cbuffer[], 6);
+----
+NULL
+
+query T
+SELECT list_transform(round([pose 'Pose(Point(1.123456789 1.123456789), 0.123456789)',
+  pose 'Pose(Point Z(2.987654321 2.987654321 2.987654321), 1, 0, 0, 0)'], 6), lambda x: asText(x));
+----
+['Pose(POINT(1.123457 1.123457),0.123457)', 'Pose(POINT Z (2.987654 2.987654 2.987654),1,0,0,0)']
+
+query T
+SELECT round([]::pose[], 6);
+----
+NULL
+
+query T
+SELECT list_transform(round([cbuffer 'Cbuffer(Point(1.6 1.4), 0.5)']), lambda x: asText(x));
+----
+['Cbuffer(POINT(2 1),1)']
+
 # Without a number of digits, round takes MobilityDB's SQL default, 0.
 query T
 SELECT round(npoint 'NPoint(1, 0.6)')::VARCHAR;
