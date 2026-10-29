@@ -5796,6 +5796,57 @@ struct AggOps_119 {
 struct AggOps_120 {
     struct Row {
         Temporal *a0;
+        interpType a1;
+        double a2;
+        MeosInterval a3;
+        bool a3_set;
+    };
+    static constexpr idx_t ARITY = 4;
+    static constexpr bool GATHERS = true;
+    static constexpr bool HAS_FINAL = true;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        idx_t j1 = fmt[1].sel->get_index(i);
+        bool n1 = !fmt[1].validity.RowIsValid(j1);
+        if (n1) return false;
+        idx_t j2 = fmt[2].sel->get_index(i);
+        bool n2 = !fmt[2].validity.RowIsValid(j2);
+        if (n2) return false;
+        idx_t j3 = fmt[3].sel->get_index(i);
+        bool n3 = !fmt[3].validity.RowIsValid(j3);
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[1])[j1]; row.a1 = interptype_from_string(v.GetString().c_str()); }
+        { auto &v = UnifiedVectorFormat::GetData<double>(fmt[2])[j2]; row.a2 = v; }
+        if (n3) { row.a3_set = false; } else { auto &v = UnifiedVectorFormat::GetData<interval_t>(fmt[3])[j3]; row.a3 = IntervaltToInterval(v); row.a3_set = true; }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return temporal_app_tinst_transfn(static_cast<Temporal *>(s), (const TInstant *) row.a0, row.a1, row.a2, (row.a3_set ? &row.a3 : nullptr));
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *, void *) {
+        return nullptr;
+    }
+    static void *Final(void *s) {
+        return temporal_append_finalfn(static_cast<Temporal *>(s));
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        return temporal_start_timestamptz(row.a0);
+    }
+};
+
+struct AggOps_121 {
+    struct Row {
+        Temporal *a0;
     };
     static constexpr idx_t ARITY = 1;
     static constexpr bool GATHERS = true;
@@ -5829,7 +5880,7 @@ struct AggOps_120 {
     }
 };
 
-struct AggOps_121 {
+struct AggOps_122 {
     struct Row {
         uint64_t a0;
     };
@@ -5865,7 +5916,7 @@ struct AggOps_121 {
     }
 };
 
-struct AggOps_122 {
+struct AggOps_123 {
     struct Row {
         Set *a0;
     };
@@ -5902,7 +5953,7 @@ struct AggOps_122 {
     }
 };
 
-struct AggOps_123 {
+struct AggOps_124 {
     struct Row {
         Temporal *a0;
     };
@@ -5939,7 +5990,7 @@ struct AggOps_123 {
     }
 };
 
-struct AggOps_124 {
+struct AggOps_125 {
     struct Row {
         Temporal *a0;
     };
@@ -5976,7 +6027,7 @@ struct AggOps_124 {
     }
 };
 
-struct AggOps_125 {
+struct AggOps_126 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -6019,7 +6070,7 @@ struct AggOps_125 {
     }
 };
 
-struct AggOps_126 {
+struct AggOps_127 {
     struct Row {
         Temporal *a0;
     };
@@ -6056,7 +6107,7 @@ struct AggOps_126 {
     }
 };
 
-struct AggOps_127 {
+struct AggOps_128 {
     struct Row {
         Temporal *a0;
     };
@@ -6092,7 +6143,7 @@ struct AggOps_127 {
     }
 };
 
-struct AggOps_128 {
+struct AggOps_129 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -6133,7 +6184,7 @@ struct AggOps_128 {
     }
 };
 
-struct AggOps_129 {
+struct AggOps_130 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -6179,7 +6230,7 @@ struct AggOps_129 {
     }
 };
 
-struct AggOps_130 {
+struct AggOps_131 {
     struct Row {
         Temporal *a0;
     };
@@ -6215,7 +6266,7 @@ struct AggOps_130 {
     }
 };
 
-struct AggOps_131 {
+struct AggOps_132 {
     struct Row {
         Raster *a0;
     };
@@ -6252,7 +6303,7 @@ struct AggOps_131 {
     }
 };
 
-struct AggOps_132 {
+struct AggOps_133 {
     struct Row {
         Raster *a0;
         int32_t a1;
@@ -6294,7 +6345,7 @@ struct AggOps_132 {
     }
 };
 
-struct AggOps_133 {
+struct AggOps_134 {
     struct Row {
         Raster *a0;
         int32_t a1;
@@ -6356,7 +6407,7 @@ struct AggOps_133 {
     }
 };
 
-struct AggOps_134 {
+struct AggOps_135 {
     struct Row {
         Raster *a0;
         bool a1;
@@ -6413,7 +6464,7 @@ struct AggOps_134 {
     }
 };
 
-struct AggOps_135 {
+struct AggOps_136 {
     struct Row {
         Temporal *a0;
     };
@@ -6450,7 +6501,7 @@ struct AggOps_135 {
     }
 };
 
-struct AggOps_136 {
+struct AggOps_137 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -6493,7 +6544,7 @@ struct AggOps_136 {
     }
 };
 
-struct AggOps_137 {
+struct AggOps_138 {
     struct Row {
         Temporal *a0;
     };
@@ -6530,7 +6581,7 @@ struct AggOps_137 {
     }
 };
 
-struct AggOps_138 {
+struct AggOps_139 {
     struct Row {
         Temporal *a0;
     };
@@ -6566,7 +6617,7 @@ struct AggOps_138 {
     }
 };
 
-struct AggOps_139 {
+struct AggOps_140 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -6607,7 +6658,7 @@ struct AggOps_139 {
     }
 };
 
-struct AggOps_140 {
+struct AggOps_141 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -6658,7 +6709,7 @@ struct AggOps_140 {
     }
 };
 
-struct AggOps_141 {
+struct AggOps_142 {
     struct Row {
         Temporal *a0;
     };
@@ -6694,7 +6745,7 @@ struct AggOps_141 {
     }
 };
 
-struct AggOps_142 {
+struct AggOps_143 {
     struct Row {
         Temporal *a0;
     };
@@ -6731,7 +6782,7 @@ struct AggOps_142 {
     }
 };
 
-struct AggOps_143 {
+struct AggOps_144 {
     struct Row {
         uint64_t a0;
     };
@@ -6767,7 +6818,7 @@ struct AggOps_143 {
     }
 };
 
-struct AggOps_144 {
+struct AggOps_145 {
     struct Row {
         Set *a0;
     };
@@ -6804,7 +6855,7 @@ struct AggOps_144 {
     }
 };
 
-struct AggOps_145 {
+struct AggOps_146 {
     struct Row {
         Temporal *a0;
     };
@@ -6841,7 +6892,7 @@ struct AggOps_145 {
     }
 };
 
-struct AggOps_146 {
+struct AggOps_147 {
     struct Row {
         Temporal *a0;
     };
@@ -6878,7 +6929,7 @@ struct AggOps_146 {
     }
 };
 
-struct AggOps_147 {
+struct AggOps_148 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -6921,7 +6972,7 @@ struct AggOps_147 {
     }
 };
 
-struct AggOps_148 {
+struct AggOps_149 {
     struct Row {
         Temporal *a0;
     };
@@ -6958,7 +7009,7 @@ struct AggOps_148 {
     }
 };
 
-struct AggOps_149 {
+struct AggOps_150 {
     struct Row {
         Temporal *a0;
     };
@@ -6994,7 +7045,7 @@ struct AggOps_149 {
     }
 };
 
-struct AggOps_150 {
+struct AggOps_151 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -7035,7 +7086,7 @@ struct AggOps_150 {
     }
 };
 
-struct AggOps_151 {
+struct AggOps_152 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -7081,7 +7132,7 @@ struct AggOps_151 {
     }
 };
 
-struct AggOps_152 {
+struct AggOps_153 {
     struct Row {
         Temporal *a0;
     };
@@ -7117,7 +7168,7 @@ struct AggOps_152 {
     }
 };
 
-struct AggOps_153 {
+struct AggOps_154 {
     struct Row {
         int32_t a0;
     };
@@ -7153,7 +7204,7 @@ struct AggOps_153 {
     }
 };
 
-struct AggOps_154 {
+struct AggOps_155 {
     struct Row {
         int64_t a0;
     };
@@ -7189,7 +7240,7 @@ struct AggOps_154 {
     }
 };
 
-struct AggOps_155 {
+struct AggOps_156 {
     struct Row {
         double a0;
     };
@@ -7225,7 +7276,7 @@ struct AggOps_155 {
     }
 };
 
-struct AggOps_156 {
+struct AggOps_157 {
     struct Row {
         text *a0;
     };
@@ -7262,7 +7313,7 @@ struct AggOps_156 {
     }
 };
 
-struct AggOps_157 {
+struct AggOps_158 {
     struct Row {
         DateADT a0;
     };
@@ -7298,7 +7349,7 @@ struct AggOps_157 {
     }
 };
 
-struct AggOps_158 {
+struct AggOps_159 {
     struct Row {
         TimestampTz a0;
     };
@@ -7317,43 +7368,6 @@ struct AggOps_158 {
         return timestamptz_union_transfn(static_cast<Set *>(s), row.a0);
     }
     static void Free(Row &row) {
-        (void) row;
-    }
-    static void *Combine(void *a, void *b) {
-        return set_union_combinefn(static_cast<Set *>(a), static_cast<Set *>(b));
-    }
-    static void *Final(void *s) {
-        return set_union_finalfn(static_cast<Set *>(s));
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = SetToBlob(result, static_cast<Set *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        (void) row;
-        return 0;
-    }
-};
-
-struct AggOps_159 {
-    struct Row {
-        Set *a0;
-    };
-    static constexpr idx_t ARITY = 1;
-    static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = true;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSet(v); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return set_union_transfn(static_cast<Set *>(s), row.a0);
-    }
-    static void Free(Row &row) {
-        free(row.a0);
         (void) row;
     }
     static void *Combine(void *a, void *b) {
@@ -7558,34 +7572,34 @@ struct AggOps_164 {
 
 struct AggOps_165 {
     struct Row {
-        Span *a0;
+        Set *a0;
     };
     static constexpr idx_t ARITY = 1;
     static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = false;
+    static constexpr bool HAS_FINAL = true;
     static constexpr bool KEEPS = false;
     static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpan(v); }
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSet(v); }
         return true;
     }
     static void *Transition(void *s, Row &row) {
-        return span_extent_transfn(static_cast<Span *>(s), row.a0);
+        return set_union_transfn(static_cast<Set *>(s), row.a0);
     }
     static void Free(Row &row) {
         free(row.a0);
         (void) row;
     }
     static void *Combine(void *a, void *b) {
-        return span_extent_transfn(static_cast<Span *>(a), static_cast<Span *>(b));
+        return set_union_combinefn(static_cast<Set *>(a), static_cast<Set *>(b));
     }
     static void *Final(void *s) {
-        return s;
+        return set_union_finalfn(static_cast<Set *>(s));
     }
     static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = SpanToBlob(result, static_cast<Span *>(r));
+        FlatVector::GetData<string_t>(result)[i] = SetToBlob(result, static_cast<Set *>(r));
     }
     static TimestampTz Order(const Row &row) {
         (void) row;
@@ -7743,6 +7757,43 @@ struct AggOps_169 {
 
 struct AggOps_170 {
     struct Row {
+        Span *a0;
+    };
+    static constexpr idx_t ARITY = 1;
+    static constexpr bool GATHERS = false;
+    static constexpr bool HAS_FINAL = false;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpan(v); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return span_extent_transfn(static_cast<Span *>(s), row.a0);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *a, void *b) {
+        return span_extent_transfn(static_cast<Span *>(a), static_cast<Span *>(b));
+    }
+    static void *Final(void *s) {
+        return s;
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = SpanToBlob(result, static_cast<Span *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        (void) row;
+        return 0;
+    }
+};
+
+struct AggOps_171 {
+    struct Row {
         int32_t a0;
     };
     static constexpr idx_t ARITY = 1;
@@ -7777,7 +7828,7 @@ struct AggOps_170 {
     }
 };
 
-struct AggOps_171 {
+struct AggOps_172 {
     struct Row {
         int64_t a0;
     };
@@ -7813,7 +7864,7 @@ struct AggOps_171 {
     }
 };
 
-struct AggOps_172 {
+struct AggOps_173 {
     struct Row {
         double a0;
     };
@@ -7849,7 +7900,7 @@ struct AggOps_172 {
     }
 };
 
-struct AggOps_173 {
+struct AggOps_174 {
     struct Row {
         DateADT a0;
     };
@@ -7885,7 +7936,7 @@ struct AggOps_173 {
     }
 };
 
-struct AggOps_174 {
+struct AggOps_175 {
     struct Row {
         TimestampTz a0;
     };
@@ -7904,43 +7955,6 @@ struct AggOps_174 {
         return timestamptz_extent_transfn(static_cast<Span *>(s), row.a0);
     }
     static void Free(Row &row) {
-        (void) row;
-    }
-    static void *Combine(void *a, void *b) {
-        return span_extent_transfn(static_cast<Span *>(a), static_cast<Span *>(b));
-    }
-    static void *Final(void *s) {
-        return s;
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = SpanToBlob(result, static_cast<Span *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        (void) row;
-        return 0;
-    }
-};
-
-struct AggOps_175 {
-    struct Row {
-        Set *a0;
-    };
-    static constexpr idx_t ARITY = 1;
-    static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = false;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSet(v); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return set_extent_transfn(static_cast<Span *>(s), row.a0);
-    }
-    static void Free(Row &row) {
-        free(row.a0);
         (void) row;
     }
     static void *Combine(void *a, void *b) {
@@ -8108,7 +8122,7 @@ struct AggOps_179 {
 
 struct AggOps_180 {
     struct Row {
-        SpanSet *a0;
+        Set *a0;
     };
     static constexpr idx_t ARITY = 1;
     static constexpr bool GATHERS = false;
@@ -8118,11 +8132,11 @@ struct AggOps_180 {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpanSet(v); }
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSet(v); }
         return true;
     }
     static void *Transition(void *s, Row &row) {
-        return spanset_extent_transfn(static_cast<Span *>(s), row.a0);
+        return set_extent_transfn(static_cast<Span *>(s), row.a0);
     }
     static void Free(Row &row) {
         free(row.a0);
@@ -8293,34 +8307,34 @@ struct AggOps_184 {
 
 struct AggOps_185 {
     struct Row {
-        Span *a0;
+        SpanSet *a0;
     };
     static constexpr idx_t ARITY = 1;
     static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = true;
+    static constexpr bool HAS_FINAL = false;
     static constexpr bool KEEPS = false;
     static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpan(v); }
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpanSet(v); }
         return true;
     }
     static void *Transition(void *s, Row &row) {
-        return span_union_transfn(static_cast<SpanSet *>(s), row.a0);
+        return spanset_extent_transfn(static_cast<Span *>(s), row.a0);
     }
     static void Free(Row &row) {
         free(row.a0);
         (void) row;
     }
     static void *Combine(void *a, void *b) {
-        return spanset_union_combinefn(static_cast<SpanSet *>(a), static_cast<SpanSet *>(b));
+        return span_extent_transfn(static_cast<Span *>(a), static_cast<Span *>(b));
     }
     static void *Final(void *s) {
-        return spanset_union_finalfn(static_cast<SpanSet *>(s));
+        return s;
     }
     static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = SpanSetToBlob(result, static_cast<SpanSet *>(r));
+        FlatVector::GetData<string_t>(result)[i] = SpanToBlob(result, static_cast<Span *>(r));
     }
     static TimestampTz Order(const Row &row) {
         (void) row;
@@ -8478,7 +8492,7 @@ struct AggOps_189 {
 
 struct AggOps_190 {
     struct Row {
-        SpanSet *a0;
+        Span *a0;
     };
     static constexpr idx_t ARITY = 1;
     static constexpr bool GATHERS = false;
@@ -8488,11 +8502,11 @@ struct AggOps_190 {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpanSet(v); }
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpan(v); }
         return true;
     }
     static void *Transition(void *s, Row &row) {
-        return spanset_union_transfn(static_cast<SpanSet *>(s), row.a0);
+        return span_union_transfn(static_cast<SpanSet *>(s), row.a0);
     }
     static void Free(Row &row) {
         free(row.a0);
@@ -8663,6 +8677,43 @@ struct AggOps_194 {
 
 struct AggOps_195 {
     struct Row {
+        SpanSet *a0;
+    };
+    static constexpr idx_t ARITY = 1;
+    static constexpr bool GATHERS = false;
+    static constexpr bool HAS_FINAL = true;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToSpanSet(v); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return spanset_union_transfn(static_cast<SpanSet *>(s), row.a0);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *a, void *b) {
+        return spanset_union_combinefn(static_cast<SpanSet *>(a), static_cast<SpanSet *>(b));
+    }
+    static void *Final(void *s) {
+        return spanset_union_finalfn(static_cast<SpanSet *>(s));
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = SpanSetToBlob(result, static_cast<SpanSet *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        (void) row;
+        return 0;
+    }
+};
+
+struct AggOps_196 {
+    struct Row {
         TBox *a0;
     };
     static constexpr idx_t ARITY = 1;
@@ -8691,43 +8742,6 @@ struct AggOps_195 {
     }
     static void Write(Vector &result, idx_t i, void *r) {
         FlatVector::GetData<string_t>(result)[i] = TboxToBlob(result, static_cast<TBox *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        (void) row;
-        return 0;
-    }
-};
-
-struct AggOps_196 {
-    struct Row {
-        Temporal *a0;
-    };
-    static constexpr idx_t ARITY = 1;
-    static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = false;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return temporal_extent_transfn(static_cast<Span *>(s), row.a0);
-    }
-    static void Free(Row &row) {
-        free(row.a0);
-        (void) row;
-    }
-    static void *Combine(void *a, void *b) {
-        return span_extent_transfn(static_cast<Span *>(a), static_cast<Span *>(b));
-    }
-    static void *Final(void *s) {
-        return s;
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = SpanToBlob(result, static_cast<Span *>(r));
     }
     static TimestampTz Order(const Row &row) {
         (void) row;
@@ -8788,20 +8802,20 @@ struct AggOps_198 {
         return true;
     }
     static void *Transition(void *s, Row &row) {
-        return tnumber_extent_transfn(static_cast<TBox *>(s), row.a0);
+        return temporal_extent_transfn(static_cast<Span *>(s), row.a0);
     }
     static void Free(Row &row) {
         free(row.a0);
         (void) row;
     }
     static void *Combine(void *a, void *b) {
-        return tbox_extent_transfn(static_cast<TBox *>(a), static_cast<TBox *>(b));
+        return span_extent_transfn(static_cast<Span *>(a), static_cast<Span *>(b));
     }
     static void *Final(void *s) {
         return s;
     }
     static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = TboxToBlob(result, static_cast<TBox *>(r));
+        FlatVector::GetData<string_t>(result)[i] = SpanToBlob(result, static_cast<Span *>(r));
     }
     static TimestampTz Order(const Row &row) {
         (void) row;
@@ -8885,6 +8899,43 @@ struct AggOps_200 {
 
 struct AggOps_201 {
     struct Row {
+        Temporal *a0;
+    };
+    static constexpr idx_t ARITY = 1;
+    static constexpr bool GATHERS = false;
+    static constexpr bool HAS_FINAL = false;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return tnumber_extent_transfn(static_cast<TBox *>(s), row.a0);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *a, void *b) {
+        return tbox_extent_transfn(static_cast<TBox *>(a), static_cast<TBox *>(b));
+    }
+    static void *Final(void *s) {
+        return s;
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = TboxToBlob(result, static_cast<TBox *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        (void) row;
+        return 0;
+    }
+};
+
+struct AggOps_202 {
+    struct Row {
         TimestampTz a0;
     };
     static constexpr idx_t ARITY = 1;
@@ -8919,7 +8970,7 @@ struct AggOps_201 {
     }
 };
 
-struct AggOps_202 {
+struct AggOps_203 {
     struct Row {
         Set *a0;
     };
@@ -8956,7 +9007,7 @@ struct AggOps_202 {
     }
 };
 
-struct AggOps_203 {
+struct AggOps_204 {
     struct Row {
         Span *a0;
     };
@@ -8993,7 +9044,7 @@ struct AggOps_203 {
     }
 };
 
-struct AggOps_204 {
+struct AggOps_205 {
     struct Row {
         SpanSet *a0;
     };
@@ -9030,7 +9081,7 @@ struct AggOps_204 {
     }
 };
 
-struct AggOps_205 {
+struct AggOps_206 {
     struct Row {
         Temporal *a0;
     };
@@ -9067,7 +9118,7 @@ struct AggOps_205 {
     }
 };
 
-struct AggOps_206 {
+struct AggOps_207 {
     struct Row {
         Temporal *a0;
     };
@@ -9104,7 +9155,7 @@ struct AggOps_206 {
     }
 };
 
-struct AggOps_207 {
+struct AggOps_208 {
     struct Row {
         Temporal *a0;
     };
@@ -9128,43 +9179,6 @@ struct AggOps_207 {
     }
     static void *Combine(void *a, void *b) {
         return tbool_tor_combinefn(static_cast<SkipList *>(a), static_cast<SkipList *>(b));
-    }
-    static void *Final(void *s) {
-        return temporal_tagg_finalfn(static_cast<SkipList *>(s));
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        (void) row;
-        return 0;
-    }
-};
-
-struct AggOps_208 {
-    struct Row {
-        Temporal *a0;
-    };
-    static constexpr idx_t ARITY = 1;
-    static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = true;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return temporal_tcount_transfn(static_cast<SkipList *>(s), row.a0);
-    }
-    static void Free(Row &row) {
-        free(row.a0);
-        (void) row;
-    }
-    static void *Combine(void *a, void *b) {
-        return temporal_tcount_combinefn(static_cast<SkipList *>(a), static_cast<SkipList *>(b));
     }
     static void *Final(void *s) {
         return temporal_tagg_finalfn(static_cast<SkipList *>(s));
@@ -9231,6 +9245,43 @@ struct AggOps_210 {
         return true;
     }
     static void *Transition(void *s, Row &row) {
+        return temporal_tcount_transfn(static_cast<SkipList *>(s), row.a0);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *a, void *b) {
+        return temporal_tcount_combinefn(static_cast<SkipList *>(a), static_cast<SkipList *>(b));
+    }
+    static void *Final(void *s) {
+        return temporal_tagg_finalfn(static_cast<SkipList *>(s));
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        (void) row;
+        return 0;
+    }
+};
+
+struct AggOps_211 {
+    struct Row {
+        Temporal *a0;
+    };
+    static constexpr idx_t ARITY = 1;
+    static constexpr bool GATHERS = false;
+    static constexpr bool HAS_FINAL = true;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
         return tint_tmin_transfn(static_cast<SkipList *>(s), row.a0);
     }
     static void Free(Row &row) {
@@ -9252,7 +9303,7 @@ struct AggOps_210 {
     }
 };
 
-struct AggOps_211 {
+struct AggOps_212 {
     struct Row {
         Temporal *a0;
     };
@@ -9289,7 +9340,7 @@ struct AggOps_211 {
     }
 };
 
-struct AggOps_212 {
+struct AggOps_213 {
     struct Row {
         Temporal *a0;
     };
@@ -9326,7 +9377,7 @@ struct AggOps_212 {
     }
 };
 
-struct AggOps_213 {
+struct AggOps_214 {
     struct Row {
         Temporal *a0;
     };
@@ -9363,7 +9414,7 @@ struct AggOps_213 {
     }
 };
 
-struct AggOps_214 {
+struct AggOps_215 {
     struct Row {
         Temporal *a0;
     };
@@ -9400,7 +9451,7 @@ struct AggOps_214 {
     }
 };
 
-struct AggOps_215 {
+struct AggOps_216 {
     struct Row {
         Temporal *a0;
     };
@@ -9437,7 +9488,7 @@ struct AggOps_215 {
     }
 };
 
-struct AggOps_216 {
+struct AggOps_217 {
     struct Row {
         Temporal *a0;
     };
@@ -9474,7 +9525,7 @@ struct AggOps_216 {
     }
 };
 
-struct AggOps_217 {
+struct AggOps_218 {
     struct Row {
         Temporal *a0;
     };
@@ -9511,7 +9562,7 @@ struct AggOps_217 {
     }
 };
 
-struct AggOps_218 {
+struct AggOps_219 {
     struct Row {
         Temporal *a0;
     };
@@ -9548,7 +9599,7 @@ struct AggOps_218 {
     }
 };
 
-struct AggOps_219 {
+struct AggOps_220 {
     struct Row {
         Temporal *a0;
     };
@@ -9585,7 +9636,7 @@ struct AggOps_219 {
     }
 };
 
-struct AggOps_220 {
+struct AggOps_221 {
     struct Row {
         Temporal *a0;
     };
@@ -9622,7 +9673,7 @@ struct AggOps_220 {
     }
 };
 
-struct AggOps_221 {
+struct AggOps_222 {
     struct Row {
         Temporal *a0;
     };
@@ -9659,7 +9710,7 @@ struct AggOps_221 {
     }
 };
 
-struct AggOps_222 {
+struct AggOps_223 {
     struct Row {
         Temporal *a0;
     };
@@ -9696,7 +9747,7 @@ struct AggOps_222 {
     }
 };
 
-struct AggOps_223 {
+struct AggOps_224 {
     struct Row {
         Temporal *a0;
     };
@@ -9733,7 +9784,7 @@ struct AggOps_223 {
     }
 };
 
-struct AggOps_224 {
+struct AggOps_225 {
     struct Row {
         Temporal *a0;
     };
@@ -9770,7 +9821,7 @@ struct AggOps_224 {
     }
 };
 
-struct AggOps_225 {
+struct AggOps_226 {
     struct Row {
         Temporal *a0;
     };
@@ -9794,43 +9845,6 @@ struct AggOps_225 {
     }
     static void *Combine(void *a, void *b) {
         return temporal_tmax_combinefn(static_cast<SkipList *>(a), static_cast<SkipList *>(b));
-    }
-    static void *Final(void *s) {
-        return temporal_tagg_finalfn(static_cast<SkipList *>(s));
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        (void) row;
-        return 0;
-    }
-};
-
-struct AggOps_226 {
-    struct Row {
-        Temporal *a0;
-    };
-    static constexpr idx_t ARITY = 1;
-    static constexpr bool GATHERS = false;
-    static constexpr bool HAS_FINAL = true;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return temporal_merge_transfn(static_cast<SkipList *>(s), row.a0);
-    }
-    static void Free(Row &row) {
-        free(row.a0);
-        (void) row;
-    }
-    static void *Combine(void *a, void *b) {
-        return temporal_merge_combinefn(static_cast<SkipList *>(a), static_cast<SkipList *>(b));
     }
     static void *Final(void *s) {
         return temporal_tagg_finalfn(static_cast<SkipList *>(s));
@@ -9997,6 +10011,43 @@ struct AggOps_231 {
         Temporal *a0;
     };
     static constexpr idx_t ARITY = 1;
+    static constexpr bool GATHERS = false;
+    static constexpr bool HAS_FINAL = true;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return temporal_merge_transfn(static_cast<SkipList *>(s), row.a0);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *a, void *b) {
+        return temporal_merge_combinefn(static_cast<SkipList *>(a), static_cast<SkipList *>(b));
+    }
+    static void *Final(void *s) {
+        return temporal_tagg_finalfn(static_cast<SkipList *>(s));
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        (void) row;
+        return 0;
+    }
+};
+
+struct AggOps_232 {
+    struct Row {
+        Temporal *a0;
+    };
+    static constexpr idx_t ARITY = 1;
     static constexpr bool GATHERS = true;
     static constexpr bool HAS_FINAL = true;
     static constexpr bool KEEPS = false;
@@ -10028,7 +10079,7 @@ struct AggOps_231 {
     }
 };
 
-struct AggOps_232 {
+struct AggOps_233 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10069,7 +10120,7 @@ struct AggOps_232 {
     }
 };
 
-struct AggOps_233 {
+struct AggOps_234 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10115,7 +10166,7 @@ struct AggOps_233 {
     }
 };
 
-struct AggOps_234 {
+struct AggOps_235 {
     struct Row {
         Temporal *a0;
     };
@@ -10132,47 +10183,6 @@ struct AggOps_234 {
     }
     static void *Transition(void *s, Row &row) {
         return temporal_app_tinst_transfn(static_cast<Temporal *>(s), (const TInstant *) row.a0, STEP, -1.0, nullptr);
-    }
-    static void Free(Row &row) {
-        free(row.a0);
-        (void) row;
-    }
-    static void *Combine(void *, void *) {
-        return nullptr;
-    }
-    static void *Final(void *s) {
-        return temporal_append_finalfn(static_cast<Temporal *>(s));
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        return temporal_start_timestamptz(row.a0);
-    }
-};
-
-struct AggOps_235 {
-    struct Row {
-        Temporal *a0;
-        interpType a1;
-    };
-    static constexpr idx_t ARITY = 2;
-    static constexpr bool GATHERS = true;
-    static constexpr bool HAS_FINAL = true;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        idx_t j1 = fmt[1].sel->get_index(i);
-        bool n1 = !fmt[1].validity.RowIsValid(j1);
-        if (n1) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[1])[j1]; row.a1 = interptype_from_string(v.GetString().c_str()); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return temporal_app_tinst_transfn(static_cast<Temporal *>(s), (const TInstant *) row.a0, row.a1, -1.0, nullptr);
     }
     static void Free(Row &row) {
         free(row.a0);
@@ -10196,6 +10206,47 @@ struct AggOps_236 {
     struct Row {
         Temporal *a0;
         interpType a1;
+    };
+    static constexpr idx_t ARITY = 2;
+    static constexpr bool GATHERS = true;
+    static constexpr bool HAS_FINAL = true;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        idx_t j1 = fmt[1].sel->get_index(i);
+        bool n1 = !fmt[1].validity.RowIsValid(j1);
+        if (n1) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[1])[j1]; row.a1 = interptype_from_string(v.GetString().c_str()); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return temporal_app_tinst_transfn(static_cast<Temporal *>(s), (const TInstant *) row.a0, row.a1, -1.0, nullptr);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *, void *) {
+        return nullptr;
+    }
+    static void *Final(void *s) {
+        return temporal_append_finalfn(static_cast<Temporal *>(s));
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        return temporal_start_timestamptz(row.a0);
+    }
+};
+
+struct AggOps_237 {
+    struct Row {
+        Temporal *a0;
+        interpType a1;
         double a2;
         MeosInterval a3;
         bool a3_set;
@@ -10243,7 +10294,7 @@ struct AggOps_236 {
     }
 };
 
-struct AggOps_237 {
+struct AggOps_238 {
     struct Row {
         Temporal *a0;
     };
@@ -10279,7 +10330,7 @@ struct AggOps_237 {
     }
 };
 
-struct AggOps_238 {
+struct AggOps_239 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10320,7 +10371,7 @@ struct AggOps_238 {
     }
 };
 
-struct AggOps_239 {
+struct AggOps_240 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10371,7 +10422,7 @@ struct AggOps_239 {
     }
 };
 
-struct AggOps_240 {
+struct AggOps_241 {
     struct Row {
         Temporal *a0;
     };
@@ -10407,7 +10458,7 @@ struct AggOps_240 {
     }
 };
 
-struct AggOps_241 {
+struct AggOps_242 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10448,7 +10499,7 @@ struct AggOps_241 {
     }
 };
 
-struct AggOps_242 {
+struct AggOps_243 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10499,7 +10550,7 @@ struct AggOps_242 {
     }
 };
 
-struct AggOps_243 {
+struct AggOps_244 {
     struct Row {
         Temporal *a0;
     };
@@ -10535,7 +10586,7 @@ struct AggOps_243 {
     }
 };
 
-struct AggOps_244 {
+struct AggOps_245 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10576,7 +10627,7 @@ struct AggOps_244 {
     }
 };
 
-struct AggOps_245 {
+struct AggOps_246 {
     struct Row {
         Temporal *a0;
         interpType a1;
@@ -10603,42 +10654,6 @@ struct AggOps_245 {
     }
     static void *Transition(void *s, Row &row) {
         return temporal_app_tinst_transfn(static_cast<Temporal *>(s), (const TInstant *) row.a0, row.a1, -1.0, (row.a2_set ? &row.a2 : nullptr));
-    }
-    static void Free(Row &row) {
-        free(row.a0);
-        (void) row;
-    }
-    static void *Combine(void *, void *) {
-        return nullptr;
-    }
-    static void *Final(void *s) {
-        return temporal_append_finalfn(static_cast<Temporal *>(s));
-    }
-    static void Write(Vector &result, idx_t i, void *r) {
-        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
-    }
-    static TimestampTz Order(const Row &row) {
-        return temporal_start_timestamptz(row.a0);
-    }
-};
-
-struct AggOps_246 {
-    struct Row {
-        Temporal *a0;
-    };
-    static constexpr idx_t ARITY = 1;
-    static constexpr bool GATHERS = true;
-    static constexpr bool HAS_FINAL = true;
-    static constexpr bool KEEPS = false;
-    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
-        idx_t j0 = fmt[0].sel->get_index(i);
-        bool n0 = !fmt[0].validity.RowIsValid(j0);
-        if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
-        return true;
-    }
-    static void *Transition(void *s, Row &row) {
-        return temporal_app_tseq_transfn(static_cast<Temporal *>(s), (const TSequence *) row.a0);
     }
     static void Free(Row &row) {
         free(row.a0);
@@ -10805,6 +10820,42 @@ struct AggOps_250 {
 struct AggOps_251 {
     struct Row {
         Temporal *a0;
+    };
+    static constexpr idx_t ARITY = 1;
+    static constexpr bool GATHERS = true;
+    static constexpr bool HAS_FINAL = true;
+    static constexpr bool KEEPS = false;
+    static bool Read(UnifiedVectorFormat fmt[], idx_t i, Row &row) {
+        idx_t j0 = fmt[0].sel->get_index(i);
+        bool n0 = !fmt[0].validity.RowIsValid(j0);
+        if (n0) return false;
+        { auto &v = UnifiedVectorFormat::GetData<string_t>(fmt[0])[j0]; row.a0 = BlobToTemporal(v); }
+        return true;
+    }
+    static void *Transition(void *s, Row &row) {
+        return temporal_app_tseq_transfn(static_cast<Temporal *>(s), (const TSequence *) row.a0);
+    }
+    static void Free(Row &row) {
+        free(row.a0);
+        (void) row;
+    }
+    static void *Combine(void *, void *) {
+        return nullptr;
+    }
+    static void *Final(void *s) {
+        return temporal_append_finalfn(static_cast<Temporal *>(s));
+    }
+    static void Write(Vector &result, idx_t i, void *r) {
+        FlatVector::GetData<string_t>(result)[i] = TemporalToBlob(result, static_cast<Temporal *>(r));
+    }
+    static TimestampTz Order(const Row &row) {
+        return temporal_start_timestamptz(row.a0);
+    }
+};
+
+struct AggOps_252 {
+    struct Row {
+        Temporal *a0;
         MeosInterval a1;
         bool a1_set;
     };
@@ -10845,7 +10896,7 @@ struct AggOps_251 {
     }
 };
 
-struct AggOps_252 {
+struct AggOps_253 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -10888,7 +10939,7 @@ struct AggOps_252 {
     }
 };
 
-struct AggOps_253 {
+struct AggOps_254 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -10931,7 +10982,7 @@ struct AggOps_253 {
     }
 };
 
-struct AggOps_254 {
+struct AggOps_255 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -10974,7 +11025,7 @@ struct AggOps_254 {
     }
 };
 
-struct AggOps_255 {
+struct AggOps_256 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11017,7 +11068,7 @@ struct AggOps_255 {
     }
 };
 
-struct AggOps_256 {
+struct AggOps_257 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11060,7 +11111,7 @@ struct AggOps_256 {
     }
 };
 
-struct AggOps_257 {
+struct AggOps_258 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11103,7 +11154,7 @@ struct AggOps_257 {
     }
 };
 
-struct AggOps_258 {
+struct AggOps_259 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11146,7 +11197,7 @@ struct AggOps_258 {
     }
 };
 
-struct AggOps_259 {
+struct AggOps_260 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11189,7 +11240,7 @@ struct AggOps_259 {
     }
 };
 
-struct AggOps_260 {
+struct AggOps_261 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11232,7 +11283,7 @@ struct AggOps_260 {
     }
 };
 
-struct AggOps_261 {
+struct AggOps_262 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11275,7 +11326,7 @@ struct AggOps_261 {
     }
 };
 
-struct AggOps_262 {
+struct AggOps_263 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11318,7 +11369,7 @@ struct AggOps_262 {
     }
 };
 
-struct AggOps_263 {
+struct AggOps_264 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11361,7 +11412,7 @@ struct AggOps_263 {
     }
 };
 
-struct AggOps_264 {
+struct AggOps_265 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11404,7 +11455,7 @@ struct AggOps_264 {
     }
 };
 
-struct AggOps_265 {
+struct AggOps_266 {
     struct Row {
         Temporal *a0;
         MeosInterval a1;
@@ -11488,30 +11539,31 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_117>::Function({PosechainTypes::tposechain()}, PosechainTypes::tposechain()));
         set.AddFunction(MeosAggregate<AggOps_118>::Function({PosechainTypes::tposechain(), LogicalType::VARCHAR}, PosechainTypes::tposechain()));
         set.AddFunction(MeosAggregate<AggOps_119>::Function({PosechainTypes::tposechain(), LogicalType::VARCHAR, LogicalType::INTERVAL}, PosechainTypes::tposechain()));
-        set.AddFunction(MeosAggregate<AggOps_127>::Function({QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin()));
-        set.AddFunction(MeosAggregate<AggOps_128>::Function({QuadbinTypes::tquadbin(), LogicalType::VARCHAR}, QuadbinTypes::tquadbin()));
-        set.AddFunction(MeosAggregate<AggOps_129>::Function({QuadbinTypes::tquadbin(), LogicalType::VARCHAR, LogicalType::INTERVAL}, QuadbinTypes::tquadbin()));
-        set.AddFunction(MeosAggregate<AggOps_138>::Function({TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry()));
-        set.AddFunction(MeosAggregate<AggOps_139>::Function({TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry()));
-        set.AddFunction(MeosAggregate<AggOps_140>::Function({TrgeometryTypes::trgeometry(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TrgeometryTypes::trgeometry()));
-        set.AddFunction(MeosAggregate<AggOps_149>::Function({S2cellTypes::ts2cell()}, S2cellTypes::ts2cell()));
-        set.AddFunction(MeosAggregate<AggOps_150>::Function({S2cellTypes::ts2cell(), LogicalType::VARCHAR}, S2cellTypes::ts2cell()));
-        set.AddFunction(MeosAggregate<AggOps_151>::Function({S2cellTypes::ts2cell(), LogicalType::VARCHAR, LogicalType::INTERVAL}, S2cellTypes::ts2cell()));
-        set.AddFunction(MeosAggregate<AggOps_231>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
-        set.AddFunction(MeosAggregate<AggOps_232>::Function({TemporalTypes::tbool(), LogicalType::VARCHAR}, TemporalTypes::tbool()));
-        set.AddFunction(MeosAggregate<AggOps_233>::Function({TemporalTypes::tbool(), LogicalType::VARCHAR, LogicalType::INTERVAL}, TemporalTypes::tbool()));
-        set.AddFunction(MeosAggregate<AggOps_234>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_235>::Function({TemporalTypes::tint(), LogicalType::VARCHAR}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_236>::Function({TemporalTypes::tint(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_237>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_238>::Function({TemporalTypes::tbigint(), LogicalType::VARCHAR}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_239>::Function({TemporalTypes::tbigint(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_240>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_241>::Function({TemporalTypes::tfloat(), LogicalType::VARCHAR}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_242>::Function({TemporalTypes::tfloat(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_243>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
-        set.AddFunction(MeosAggregate<AggOps_244>::Function({TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext()));
-        set.AddFunction(MeosAggregate<AggOps_245>::Function({TemporalTypes::ttext(), LogicalType::VARCHAR, LogicalType::INTERVAL}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_120>::Function({PosechainTypes::tposechain(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, PosechainTypes::tposechain()));
+        set.AddFunction(MeosAggregate<AggOps_128>::Function({QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin()));
+        set.AddFunction(MeosAggregate<AggOps_129>::Function({QuadbinTypes::tquadbin(), LogicalType::VARCHAR}, QuadbinTypes::tquadbin()));
+        set.AddFunction(MeosAggregate<AggOps_130>::Function({QuadbinTypes::tquadbin(), LogicalType::VARCHAR, LogicalType::INTERVAL}, QuadbinTypes::tquadbin()));
+        set.AddFunction(MeosAggregate<AggOps_139>::Function({TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry()));
+        set.AddFunction(MeosAggregate<AggOps_140>::Function({TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry()));
+        set.AddFunction(MeosAggregate<AggOps_141>::Function({TrgeometryTypes::trgeometry(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TrgeometryTypes::trgeometry()));
+        set.AddFunction(MeosAggregate<AggOps_150>::Function({S2cellTypes::ts2cell()}, S2cellTypes::ts2cell()));
+        set.AddFunction(MeosAggregate<AggOps_151>::Function({S2cellTypes::ts2cell(), LogicalType::VARCHAR}, S2cellTypes::ts2cell()));
+        set.AddFunction(MeosAggregate<AggOps_152>::Function({S2cellTypes::ts2cell(), LogicalType::VARCHAR, LogicalType::INTERVAL}, S2cellTypes::ts2cell()));
+        set.AddFunction(MeosAggregate<AggOps_232>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_233>::Function({TemporalTypes::tbool(), LogicalType::VARCHAR}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_234>::Function({TemporalTypes::tbool(), LogicalType::VARCHAR, LogicalType::INTERVAL}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_235>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_236>::Function({TemporalTypes::tint(), LogicalType::VARCHAR}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_237>::Function({TemporalTypes::tint(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_238>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_239>::Function({TemporalTypes::tbigint(), LogicalType::VARCHAR}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_240>::Function({TemporalTypes::tbigint(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_241>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_242>::Function({TemporalTypes::tfloat(), LogicalType::VARCHAR}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_243>::Function({TemporalTypes::tfloat(), LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::INTERVAL}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_244>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_245>::Function({TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_246>::Function({TemporalTypes::ttext(), LogicalType::VARCHAR, LogicalType::INTERVAL}, TemporalTypes::ttext()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11527,15 +11579,15 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_99>::Function({TPcpointTypes::tpcpoint()}, TPcpointTypes::tpcpoint()));
         set.AddFunction(MeosAggregate<AggOps_100>::Function({TPcpatchTypes::tpcpatch()}, TPcpatchTypes::tpcpatch()));
         set.AddFunction(MeosAggregate<AggOps_110>::Function({PoseTypes::tpose()}, PoseTypes::tpose()));
-        set.AddFunction(MeosAggregate<AggOps_120>::Function({PosechainTypes::tposechain()}, PosechainTypes::tposechain()));
-        set.AddFunction(MeosAggregate<AggOps_130>::Function({QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin()));
-        set.AddFunction(MeosAggregate<AggOps_141>::Function({TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry()));
-        set.AddFunction(MeosAggregate<AggOps_152>::Function({S2cellTypes::ts2cell()}, S2cellTypes::ts2cell()));
-        set.AddFunction(MeosAggregate<AggOps_246>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
-        set.AddFunction(MeosAggregate<AggOps_247>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_248>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_249>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_250>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_121>::Function({PosechainTypes::tposechain()}, PosechainTypes::tposechain()));
+        set.AddFunction(MeosAggregate<AggOps_131>::Function({QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin()));
+        set.AddFunction(MeosAggregate<AggOps_142>::Function({TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry()));
+        set.AddFunction(MeosAggregate<AggOps_153>::Function({S2cellTypes::ts2cell()}, S2cellTypes::ts2cell()));
+        set.AddFunction(MeosAggregate<AggOps_247>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_248>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_249>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_250>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_251>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11554,35 +11606,35 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_84>::Function({TPcpatchTypes::tpcpatch()}, TpcboxType::tpcbox()));
         set.AddFunction(MeosAggregate<AggOps_104>::Function({PoseTypes::tpose()}, StboxType::stbox()));
         set.AddFunction(MeosAggregate<AggOps_114>::Function({PosechainTypes::tposechain()}, StboxType::stbox()));
-        set.AddFunction(MeosAggregate<AggOps_123>::Function({QuadbinTypes::tquadbin()}, StboxType::stbox()));
-        set.AddFunction(MeosAggregate<AggOps_142>::Function({TrgeometryTypes::trgeometry()}, StboxType::stbox()));
-        set.AddFunction(MeosAggregate<AggOps_145>::Function({S2cellTypes::ts2cell()}, StboxType::stbox()));
-        set.AddFunction(MeosAggregate<AggOps_165>::Function({SpanTypes::intspan()}, SpanTypes::intspan()));
-        set.AddFunction(MeosAggregate<AggOps_166>::Function({SpanTypes::bigintspan()}, SpanTypes::bigintspan()));
-        set.AddFunction(MeosAggregate<AggOps_167>::Function({SpanTypes::floatspan()}, SpanTypes::floatspan()));
-        set.AddFunction(MeosAggregate<AggOps_168>::Function({SpanTypes::datespan()}, SpanTypes::datespan()));
-        set.AddFunction(MeosAggregate<AggOps_169>::Function({SpanTypes::tstzspan()}, SpanTypes::tstzspan()));
-        set.AddFunction(MeosAggregate<AggOps_170>::Function({LogicalType::INTEGER}, SpanTypes::intspan()));
-        set.AddFunction(MeosAggregate<AggOps_171>::Function({LogicalType::BIGINT}, SpanTypes::bigintspan()));
-        set.AddFunction(MeosAggregate<AggOps_172>::Function({LogicalType::DOUBLE}, SpanTypes::floatspan()));
-        set.AddFunction(MeosAggregate<AggOps_173>::Function({LogicalType::DATE}, SpanTypes::datespan()));
-        set.AddFunction(MeosAggregate<AggOps_174>::Function({LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan()));
-        set.AddFunction(MeosAggregate<AggOps_175>::Function({SetTypes::intset()}, SpanTypes::intspan()));
-        set.AddFunction(MeosAggregate<AggOps_176>::Function({SetTypes::bigintset()}, SpanTypes::bigintspan()));
-        set.AddFunction(MeosAggregate<AggOps_177>::Function({SetTypes::floatset()}, SpanTypes::floatspan()));
-        set.AddFunction(MeosAggregate<AggOps_178>::Function({SetTypes::dateset()}, SpanTypes::datespan()));
-        set.AddFunction(MeosAggregate<AggOps_179>::Function({SetTypes::tstzset()}, SpanTypes::tstzspan()));
-        set.AddFunction(MeosAggregate<AggOps_180>::Function({SpansetTypes::intspanset()}, SpanTypes::intspan()));
-        set.AddFunction(MeosAggregate<AggOps_181>::Function({SpansetTypes::bigintspanset()}, SpanTypes::bigintspan()));
-        set.AddFunction(MeosAggregate<AggOps_182>::Function({SpansetTypes::floatspanset()}, SpanTypes::floatspan()));
-        set.AddFunction(MeosAggregate<AggOps_183>::Function({SpansetTypes::datespanset()}, SpanTypes::datespan()));
-        set.AddFunction(MeosAggregate<AggOps_184>::Function({SpansetTypes::tstzspanset()}, SpanTypes::tstzspan()));
-        set.AddFunction(MeosAggregate<AggOps_195>::Function({TboxType::tbox()}, TboxType::tbox()));
-        set.AddFunction(MeosAggregate<AggOps_196>::Function({TemporalTypes::tbool()}, SpanTypes::tstzspan()));
-        set.AddFunction(MeosAggregate<AggOps_197>::Function({TemporalTypes::ttext()}, SpanTypes::tstzspan()));
-        set.AddFunction(MeosAggregate<AggOps_198>::Function({TemporalTypes::tint()}, TboxType::tbox()));
-        set.AddFunction(MeosAggregate<AggOps_199>::Function({TemporalTypes::tbigint()}, TboxType::tbox()));
-        set.AddFunction(MeosAggregate<AggOps_200>::Function({TemporalTypes::tfloat()}, TboxType::tbox()));
+        set.AddFunction(MeosAggregate<AggOps_124>::Function({QuadbinTypes::tquadbin()}, StboxType::stbox()));
+        set.AddFunction(MeosAggregate<AggOps_143>::Function({TrgeometryTypes::trgeometry()}, StboxType::stbox()));
+        set.AddFunction(MeosAggregate<AggOps_146>::Function({S2cellTypes::ts2cell()}, StboxType::stbox()));
+        set.AddFunction(MeosAggregate<AggOps_166>::Function({SpanTypes::intspan()}, SpanTypes::intspan()));
+        set.AddFunction(MeosAggregate<AggOps_167>::Function({SpanTypes::bigintspan()}, SpanTypes::bigintspan()));
+        set.AddFunction(MeosAggregate<AggOps_168>::Function({SpanTypes::floatspan()}, SpanTypes::floatspan()));
+        set.AddFunction(MeosAggregate<AggOps_169>::Function({SpanTypes::datespan()}, SpanTypes::datespan()));
+        set.AddFunction(MeosAggregate<AggOps_170>::Function({SpanTypes::tstzspan()}, SpanTypes::tstzspan()));
+        set.AddFunction(MeosAggregate<AggOps_171>::Function({LogicalType::INTEGER}, SpanTypes::intspan()));
+        set.AddFunction(MeosAggregate<AggOps_172>::Function({LogicalType::BIGINT}, SpanTypes::bigintspan()));
+        set.AddFunction(MeosAggregate<AggOps_173>::Function({LogicalType::DOUBLE}, SpanTypes::floatspan()));
+        set.AddFunction(MeosAggregate<AggOps_174>::Function({LogicalType::DATE}, SpanTypes::datespan()));
+        set.AddFunction(MeosAggregate<AggOps_175>::Function({LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan()));
+        set.AddFunction(MeosAggregate<AggOps_176>::Function({SetTypes::intset()}, SpanTypes::intspan()));
+        set.AddFunction(MeosAggregate<AggOps_177>::Function({SetTypes::bigintset()}, SpanTypes::bigintspan()));
+        set.AddFunction(MeosAggregate<AggOps_178>::Function({SetTypes::floatset()}, SpanTypes::floatspan()));
+        set.AddFunction(MeosAggregate<AggOps_179>::Function({SetTypes::dateset()}, SpanTypes::datespan()));
+        set.AddFunction(MeosAggregate<AggOps_180>::Function({SetTypes::tstzset()}, SpanTypes::tstzspan()));
+        set.AddFunction(MeosAggregate<AggOps_181>::Function({SpansetTypes::intspanset()}, SpanTypes::intspan()));
+        set.AddFunction(MeosAggregate<AggOps_182>::Function({SpansetTypes::bigintspanset()}, SpanTypes::bigintspan()));
+        set.AddFunction(MeosAggregate<AggOps_183>::Function({SpansetTypes::floatspanset()}, SpanTypes::floatspan()));
+        set.AddFunction(MeosAggregate<AggOps_184>::Function({SpansetTypes::datespanset()}, SpanTypes::datespan()));
+        set.AddFunction(MeosAggregate<AggOps_185>::Function({SpansetTypes::tstzspanset()}, SpanTypes::tstzspan()));
+        set.AddFunction(MeosAggregate<AggOps_196>::Function({TboxType::tbox()}, TboxType::tbox()));
+        set.AddFunction(MeosAggregate<AggOps_197>::Function({TemporalTypes::tbool()}, SpanTypes::tstzspan()));
+        set.AddFunction(MeosAggregate<AggOps_198>::Function({TemporalTypes::ttext()}, SpanTypes::tstzspan()));
+        set.AddFunction(MeosAggregate<AggOps_199>::Function({TemporalTypes::tint()}, TboxType::tbox()));
+        set.AddFunction(MeosAggregate<AggOps_200>::Function({TemporalTypes::tbigint()}, TboxType::tbox()));
+        set.AddFunction(MeosAggregate<AggOps_201>::Function({TemporalTypes::tfloat()}, TboxType::tbox()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11599,20 +11651,20 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_92>::Function({TPcpatchTypes::tpcpatch()}, TPcpatchTypes::tpcpatch()));
         set.AddFunction(MeosAggregate<AggOps_106>::Function({PoseTypes::tpose()}, PoseTypes::tpose()));
         set.AddFunction(MeosAggregate<AggOps_116>::Function({PosechainTypes::tposechain()}, PosechainTypes::tposechain()));
-        set.AddFunction(MeosAggregate<AggOps_126>::Function({QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin()));
-        set.AddFunction(MeosAggregate<AggOps_137>::Function({TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry()));
-        set.AddFunction(MeosAggregate<AggOps_148>::Function({S2cellTypes::ts2cell()}, S2cellTypes::ts2cell()));
-        set.AddFunction(MeosAggregate<AggOps_226>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
-        set.AddFunction(MeosAggregate<AggOps_227>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_228>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_229>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_230>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_127>::Function({QuadbinTypes::tquadbin()}, QuadbinTypes::tquadbin()));
+        set.AddFunction(MeosAggregate<AggOps_138>::Function({TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry()));
+        set.AddFunction(MeosAggregate<AggOps_149>::Function({S2cellTypes::ts2cell()}, S2cellTypes::ts2cell()));
+        set.AddFunction(MeosAggregate<AggOps_227>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_228>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_229>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_230>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_231>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("rasterUnion");
-        set.AddFunction(MeosAggregate<AggOps_131>::Function({RasterTypes::raster()}, RasterTypes::raster()));
-        set.AddFunction(MeosAggregate<AggOps_132>::Function({RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster()));
+        set.AddFunction(MeosAggregate<AggOps_132>::Function({RasterTypes::raster()}, RasterTypes::raster()));
+        set.AddFunction(MeosAggregate<AggOps_133>::Function({RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11636,58 +11688,58 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_102>::Function({SetTypes::poseset()}, SetTypes::poseset()));
         set.AddFunction(MeosAggregate<AggOps_111>::Function({PosechainTypes::posechain()}, SetTypes::posechainset()));
         set.AddFunction(MeosAggregate<AggOps_112>::Function({SetTypes::posechainset()}, SetTypes::posechainset()));
-        set.AddFunction(MeosAggregate<AggOps_121>::Function({QuadbinTypes::quadbin()}, SetTypes::quadbinset()));
-        set.AddFunction(MeosAggregate<AggOps_122>::Function({SetTypes::quadbinset()}, SetTypes::quadbinset()));
-        set.AddFunction(MeosAggregate<AggOps_143>::Function({S2cellTypes::s2cell()}, SetTypes::s2cellset()));
-        set.AddFunction(MeosAggregate<AggOps_144>::Function({SetTypes::s2cellset()}, SetTypes::s2cellset()));
-        set.AddFunction(MeosAggregate<AggOps_153>::Function({LogicalType::INTEGER}, SetTypes::intset()));
-        set.AddFunction(MeosAggregate<AggOps_154>::Function({LogicalType::BIGINT}, SetTypes::bigintset()));
-        set.AddFunction(MeosAggregate<AggOps_155>::Function({LogicalType::DOUBLE}, SetTypes::floatset()));
-        set.AddFunction(MeosAggregate<AggOps_156>::Function({LogicalType::VARCHAR}, SetTypes::textset()));
-        set.AddFunction(MeosAggregate<AggOps_157>::Function({LogicalType::DATE}, SetTypes::dateset()));
-        set.AddFunction(MeosAggregate<AggOps_158>::Function({LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset()));
-        set.AddFunction(MeosAggregate<AggOps_159>::Function({SetTypes::intset()}, SetTypes::intset()));
-        set.AddFunction(MeosAggregate<AggOps_160>::Function({SetTypes::bigintset()}, SetTypes::bigintset()));
-        set.AddFunction(MeosAggregate<AggOps_161>::Function({SetTypes::floatset()}, SetTypes::floatset()));
-        set.AddFunction(MeosAggregate<AggOps_162>::Function({SetTypes::textset()}, SetTypes::textset()));
-        set.AddFunction(MeosAggregate<AggOps_163>::Function({SetTypes::dateset()}, SetTypes::dateset()));
-        set.AddFunction(MeosAggregate<AggOps_164>::Function({SetTypes::tstzset()}, SetTypes::tstzset()));
+        set.AddFunction(MeosAggregate<AggOps_122>::Function({QuadbinTypes::quadbin()}, SetTypes::quadbinset()));
+        set.AddFunction(MeosAggregate<AggOps_123>::Function({SetTypes::quadbinset()}, SetTypes::quadbinset()));
+        set.AddFunction(MeosAggregate<AggOps_144>::Function({S2cellTypes::s2cell()}, SetTypes::s2cellset()));
+        set.AddFunction(MeosAggregate<AggOps_145>::Function({SetTypes::s2cellset()}, SetTypes::s2cellset()));
+        set.AddFunction(MeosAggregate<AggOps_154>::Function({LogicalType::INTEGER}, SetTypes::intset()));
+        set.AddFunction(MeosAggregate<AggOps_155>::Function({LogicalType::BIGINT}, SetTypes::bigintset()));
+        set.AddFunction(MeosAggregate<AggOps_156>::Function({LogicalType::DOUBLE}, SetTypes::floatset()));
+        set.AddFunction(MeosAggregate<AggOps_157>::Function({LogicalType::VARCHAR}, SetTypes::textset()));
+        set.AddFunction(MeosAggregate<AggOps_158>::Function({LogicalType::DATE}, SetTypes::dateset()));
+        set.AddFunction(MeosAggregate<AggOps_159>::Function({LogicalType::TIMESTAMP_TZ}, SetTypes::tstzset()));
+        set.AddFunction(MeosAggregate<AggOps_160>::Function({SetTypes::intset()}, SetTypes::intset()));
+        set.AddFunction(MeosAggregate<AggOps_161>::Function({SetTypes::bigintset()}, SetTypes::bigintset()));
+        set.AddFunction(MeosAggregate<AggOps_162>::Function({SetTypes::floatset()}, SetTypes::floatset()));
+        set.AddFunction(MeosAggregate<AggOps_163>::Function({SetTypes::textset()}, SetTypes::textset()));
+        set.AddFunction(MeosAggregate<AggOps_164>::Function({SetTypes::dateset()}, SetTypes::dateset()));
+        set.AddFunction(MeosAggregate<AggOps_165>::Function({SetTypes::tstzset()}, SetTypes::tstzset()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("spansetUnionAgg");
-        set.AddFunction(MeosAggregate<AggOps_190>::Function({SpansetTypes::intspanset()}, SpansetTypes::intspanset()));
-        set.AddFunction(MeosAggregate<AggOps_191>::Function({SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset()));
-        set.AddFunction(MeosAggregate<AggOps_192>::Function({SpansetTypes::floatspanset()}, SpansetTypes::floatspanset()));
-        set.AddFunction(MeosAggregate<AggOps_193>::Function({SpansetTypes::datespanset()}, SpansetTypes::datespanset()));
-        set.AddFunction(MeosAggregate<AggOps_194>::Function({SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset()));
+        set.AddFunction(MeosAggregate<AggOps_191>::Function({SpansetTypes::intspanset()}, SpansetTypes::intspanset()));
+        set.AddFunction(MeosAggregate<AggOps_192>::Function({SpansetTypes::bigintspanset()}, SpansetTypes::bigintspanset()));
+        set.AddFunction(MeosAggregate<AggOps_193>::Function({SpansetTypes::floatspanset()}, SpansetTypes::floatspanset()));
+        set.AddFunction(MeosAggregate<AggOps_194>::Function({SpansetTypes::datespanset()}, SpansetTypes::datespanset()));
+        set.AddFunction(MeosAggregate<AggOps_195>::Function({SpansetTypes::tstzspanset()}, SpansetTypes::tstzspanset()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("spanUnionAgg");
-        set.AddFunction(MeosAggregate<AggOps_185>::Function({SpanTypes::intspan()}, SpansetTypes::intspanset()));
-        set.AddFunction(MeosAggregate<AggOps_186>::Function({SpanTypes::bigintspan()}, SpansetTypes::bigintspanset()));
-        set.AddFunction(MeosAggregate<AggOps_187>::Function({SpanTypes::floatspan()}, SpansetTypes::floatspanset()));
-        set.AddFunction(MeosAggregate<AggOps_188>::Function({SpanTypes::datespan()}, SpansetTypes::datespanset()));
-        set.AddFunction(MeosAggregate<AggOps_189>::Function({SpanTypes::tstzspan()}, SpansetTypes::tstzspanset()));
+        set.AddFunction(MeosAggregate<AggOps_186>::Function({SpanTypes::intspan()}, SpansetTypes::intspanset()));
+        set.AddFunction(MeosAggregate<AggOps_187>::Function({SpanTypes::bigintspan()}, SpansetTypes::bigintspanset()));
+        set.AddFunction(MeosAggregate<AggOps_188>::Function({SpanTypes::floatspan()}, SpansetTypes::floatspanset()));
+        set.AddFunction(MeosAggregate<AggOps_189>::Function({SpanTypes::datespan()}, SpansetTypes::datespanset()));
+        set.AddFunction(MeosAggregate<AggOps_190>::Function({SpanTypes::tstzspan()}, SpansetTypes::tstzspanset()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("summaryStatsAgg");
-        set.AddFunction(MeosAggregate<AggOps_133>::Function({RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})));
-        set.AddFunction(MeosAggregate<AggOps_134>::Function({RasterTypes::raster(), LogicalType::BOOLEAN}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})));
+        set.AddFunction(MeosAggregate<AggOps_134>::Function({RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})));
+        set.AddFunction(MeosAggregate<AggOps_135>::Function({RasterTypes::raster(), LogicalType::BOOLEAN}, LogicalType::STRUCT({{"count", LogicalType(LogicalType::BIGINT)}, {"sum", LogicalType(LogicalType::DOUBLE)}, {"mean", LogicalType(LogicalType::DOUBLE)}, {"stddev", LogicalType(LogicalType::DOUBLE)}, {"min", LogicalType(LogicalType::DOUBLE)}, {"max", LogicalType(LogicalType::DOUBLE)}})));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("tAndAgg");
-        set.AddFunction(MeosAggregate<AggOps_206>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_207>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("tAvg");
-        set.AddFunction(MeosAggregate<AggOps_213>::Function({TemporalTypes::tint()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_217>::Function({TemporalTypes::tbigint()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_222>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_214>::Function({TemporalTypes::tint()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_218>::Function({TemporalTypes::tbigint()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_223>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11710,18 +11762,18 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_86>::Function({TPcpatchTypes::tpcpatch()}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_103>::Function({PoseTypes::tpose()}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_113>::Function({PosechainTypes::tposechain()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_124>::Function({QuadbinTypes::tquadbin()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_135>::Function({TrgeometryTypes::trgeometry()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_146>::Function({S2cellTypes::ts2cell()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_201>::Function({LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_202>::Function({SetTypes::tstzset()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_203>::Function({SpanTypes::tstzspan()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_204>::Function({SpansetTypes::tstzspanset()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_205>::Function({TemporalTypes::tbool()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_208>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_209>::Function({TemporalTypes::tbigint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_218>::Function({TemporalTypes::tfloat()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_223>::Function({TemporalTypes::ttext()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_125>::Function({QuadbinTypes::tquadbin()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_136>::Function({TrgeometryTypes::trgeometry()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_147>::Function({S2cellTypes::ts2cell()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_202>::Function({LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_203>::Function({SetTypes::tstzset()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_204>::Function({SpanTypes::tstzspan()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_205>::Function({SpansetTypes::tstzspanset()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_206>::Function({TemporalTypes::tbool()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_209>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_210>::Function({TemporalTypes::tbigint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_219>::Function({TemporalTypes::tfloat()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_224>::Function({TemporalTypes::ttext()}, TemporalTypes::tint()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11731,18 +11783,18 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
     }
     {
         AggregateFunctionSet set("tMaxAgg");
-        set.AddFunction(MeosAggregate<AggOps_211>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_215>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_220>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_225>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_212>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_216>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_221>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_226>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("tMinAgg");
-        set.AddFunction(MeosAggregate<AggOps_210>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_214>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_219>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_224>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
+        set.AddFunction(MeosAggregate<AggOps_211>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_215>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_220>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_225>::Function({TemporalTypes::ttext()}, TemporalTypes::ttext()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11752,21 +11804,21 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
     }
     {
         AggregateFunctionSet set("tOrAgg");
-        set.AddFunction(MeosAggregate<AggOps_207>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
+        set.AddFunction(MeosAggregate<AggOps_208>::Function({TemporalTypes::tbool()}, TemporalTypes::tbool()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("tSum");
-        set.AddFunction(MeosAggregate<AggOps_212>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_216>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_221>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_213>::Function({TemporalTypes::tint()}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_217>::Function({TemporalTypes::tbigint()}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_222>::Function({TemporalTypes::tfloat()}, TemporalTypes::tfloat()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("wAvgAgg");
-        set.AddFunction(MeosAggregate<AggOps_255>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_260>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
-        set.AddFunction(MeosAggregate<AggOps_265>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_256>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_261>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_266>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
@@ -11783,33 +11835,33 @@ void RegisterGeneratedAggregates(ExtensionLoader &loader) {
         set.AddFunction(MeosAggregate<AggOps_90>::Function({TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_105>::Function({PoseTypes::tpose(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_115>::Function({PosechainTypes::tposechain(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_125>::Function({QuadbinTypes::tquadbin(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_136>::Function({TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_147>::Function({S2cellTypes::ts2cell(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_254>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_259>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_264>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_126>::Function({QuadbinTypes::tquadbin(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_137>::Function({TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_148>::Function({S2cellTypes::ts2cell(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_255>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_260>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_265>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
         AggregateFunctionSet set("wMax");
+        set.AddFunction(MeosAggregate<AggOps_253>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_258>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_263>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
+        RegisterMeosFunction(loader, std::move(set));
+    }
+    {
+        AggregateFunctionSet set("wMin");
         set.AddFunction(MeosAggregate<AggOps_252>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
         set.AddFunction(MeosAggregate<AggOps_257>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint()));
         set.AddFunction(MeosAggregate<AggOps_262>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
         RegisterMeosFunction(loader, std::move(set));
     }
     {
-        AggregateFunctionSet set("wMin");
-        set.AddFunction(MeosAggregate<AggOps_251>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_256>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_261>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
-        RegisterMeosFunction(loader, std::move(set));
-    }
-    {
         AggregateFunctionSet set("wSum");
-        set.AddFunction(MeosAggregate<AggOps_253>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
-        set.AddFunction(MeosAggregate<AggOps_258>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint()));
-        set.AddFunction(MeosAggregate<AggOps_263>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
+        set.AddFunction(MeosAggregate<AggOps_254>::Function({TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint()));
+        set.AddFunction(MeosAggregate<AggOps_259>::Function({TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint()));
+        set.AddFunction(MeosAggregate<AggOps_264>::Function({TemporalTypes::tfloat(), LogicalType::INTERVAL}, TemporalTypes::tfloat()));
         RegisterMeosFunction(loader, std::move(set));
     }
 }

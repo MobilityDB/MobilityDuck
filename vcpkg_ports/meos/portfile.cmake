@@ -41,7 +41,7 @@
 # libmeos recompile per build) and makes two runs of the same commit build different
 # sources. A recorded SHA keeps builds reproducible and the cache warm between
 # advances.
-set(_MEOS_REF "a23e01a60b02148a46bbfc222018d1037aba434d")
+set(_MEOS_REF "72bd1812617e0add38e23a89ad29a5b9759ad007")
 message(STATUS "MEOS port: building MobilityDB at recorded ${_MEOS_REF}")
 
 # FETCH_REF names the branch (always advertised) so the fetch works even when the
