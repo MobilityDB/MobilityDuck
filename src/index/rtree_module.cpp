@@ -827,7 +827,6 @@ idx_t TRTreeIndex::GetInMemorySize(IndexLock &state) {
     return rtree_ ? 1024 : 0;
 }
 
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 void TRTreeIndex::Verify(IndexLock &state) {}
 
 string TRTreeIndex::ToString(IndexLock &state, bool display_ascii) {
@@ -837,15 +836,6 @@ string TRTreeIndex::ToString(IndexLock &state, bool display_ascii) {
 
     return "Stbox R-tree Index (MEOS-based)";
 }
-#else
-string TRTreeIndex::VerifyAndToString(IndexLock &state, const bool only_verify) {
-    if (!rtree_) {
-        return "Stbox R-tree Index (not initialized)";
-    }
-    
-    return "Stbox R-tree Index (MEOS-based)";
-}
-#endif
 
 void TRTreeIndex::VerifyAllocations(IndexLock &lock) {}
 

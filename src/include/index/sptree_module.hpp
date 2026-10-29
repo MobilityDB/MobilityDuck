@@ -92,13 +92,9 @@ public:
 
     idx_t GetInMemorySize(IndexLock &state) override;
 
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
-    // BoundIndex splits the one entry point in two from v1.5.
+    // BoundIndex states verification and description as two entry points.
     void Verify(IndexLock &state) override;
     string ToString(IndexLock &state, bool display_ascii = false) override;
-#else
-    string VerifyAndToString(IndexLock &state, const bool only_verify) override;
-#endif
 
     void VerifyAllocations(IndexLock &lock) override;
 

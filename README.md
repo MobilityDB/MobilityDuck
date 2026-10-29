@@ -107,7 +107,7 @@ MobilityDuck$ ./build/release/duckdb [name of db].db
 
 ### 3.2. DuckDB shell without built-in extension
 
-If DuckDB is available on your machine ([installed independently](https://duckdb.org/install/), unrelated to MobilityDuck) and can be called by ```duckdb```, the MobilityDuck extension binary can be loaded later. **Prerequisite**: the independent DuckDB version and the DuckDB version of the build must be identical. The latest version of MobilityDuck is built with DuckDB v1.5.5, the binaries for which can be obtained from [the v1.5.5 release](https://github.com/duckdb/duckdb/releases/tag/v1.5.5).
+If DuckDB is available on your machine ([installed independently](https://duckdb.org/install/), unrelated to MobilityDuck) and can be called by ```duckdb```, the MobilityDuck extension binary can be loaded later. **Prerequisite**: the independent DuckDB version and the DuckDB version of the build must be identical. MobilityDuck is built with DuckDB v1.5.6, the one version its CI builds and tests, the binaries for which can be obtained from [the v1.5.6 release](https://github.com/duckdb/duckdb/releases/tag/v1.5.6).
 
 If you build MobilityDuck from source code, the loadable extension binary is available at ```./build/release/extension/mobilityduck/mobilityduck.duckdb_extension```.
 

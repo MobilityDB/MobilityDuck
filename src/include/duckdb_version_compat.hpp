@@ -29,14 +29,12 @@
 
 #pragma once
 
-// The DuckDB line being built decides the entry points this extension calls.
+// MobilityDuck builds against DuckDB v1.5.6, the version its CI builds and tests.
 //
-// GEOMETRY is a core DuckDB LogicalTypeId from v1.5.0
-// (duckdb/common/types/geometry.hpp records "Added to core in DuckDB v1.5.0"),
-// with its WKB conversion `Geometry::ToBinary`; before v1.5 it is a type of the
-// spatial extension, which MobilityDuck does not build, so v1.5 is the oldest
-// line MobilityDuck builds against. The boundary that hands a geometry to MEOS
-// is written once here rather than at each call site.
+// GEOMETRY is a core DuckDB LogicalTypeId (duckdb/common/types/geometry.hpp),
+// with its WKB conversion `Geometry::ToBinary`; a DuckDB older than v1.5 has no
+// such type and is refused below. The boundary that hands a geometry to MEOS is
+// written once here rather than at each call site.
 //
 // MOBILITYDUCK_DUCKDB_MAJOR / _MINOR come from CMakeLists.txt, which reads the
 // DUCKDB_MAJOR_VERSION / DUCKDB_MINOR_VERSION variables DuckDB's own build sets.
@@ -94,33 +92,23 @@ inline void MobilityDuckGeometryToWKB(const string_t &geometry, vector<data_t> &
 
 //! Every index of a table, stopping when the callback answers true.
 //!
-//! TableIndexList::Scan takes this callback on the v1.4 line; from v1.5 the list
-//! is walked as a range through Indexes(), which duckdb-spatial's own rtree does
+//! The list is walked as a range through Indexes(), which duckdb-spatial's own rtree does
 //! (see duckdb-spatial/src/spatial/index/rtree/rtree_index_pragmas.cpp).
 template <class FN>
 inline void MobilityDuckScanIndexes(TableIndexList &indexes, FN &&callback) {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	for (auto &index : indexes.Indexes()) {
 		if (callback(index)) {
 			break;
 		}
 	}
-#else
-	indexes.Scan(std::forward<FN>(callback));
-#endif
 }
 
 //! Registers one optimizer extension with the database.
 //!
-//! The v1.4 line appends to DBConfig::optimizer_extensions; from v1.5 the entry
-//! point is the static OptimizerExtension::Register, which is what
+//! The entry point is the static OptimizerExtension::Register, which is what
 //! duckdb-spatial's SpatialJoinOptimizer::Register calls.
 inline void MobilityDuckRegisterOptimizer(DBConfig &config, OptimizerExtension extension) {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	OptimizerExtension::Register(config, std::move(extension));
-#else
-	config.optimizer_extensions.push_back(std::move(extension));
-#endif
 }
 
 } // namespace duckdb

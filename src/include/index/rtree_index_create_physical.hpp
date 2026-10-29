@@ -53,18 +53,12 @@ public:
 	const bool sorted;
 
 public:
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
-	// PhysicalOperator::GetData is a non-virtual wrapper from v1.5; the virtual
+	// PhysicalOperator::GetData is a non-virtual wrapper; the virtual
 	// an operator implements is GetDataInternal.
 	SourceResultType GetDataInternal(ExecutionContext &context, DataChunk &chunk,
 	                                 OperatorSourceInput &input) const override {
 		return SourceResultType::FINISHED;
 	}
-#else
-	SourceResultType GetData(ExecutionContext &context, DataChunk &chunk, OperatorSourceInput &input) const override {
-		return SourceResultType::FINISHED;
-	}
-#endif
 	bool IsSource() const override {
 		return true;
 	}

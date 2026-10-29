@@ -49,7 +49,6 @@ namespace duckdb {
  * type of its argument, as DuckDB's own ST_CRS binds its parameter, keeps the CRS on the vector the
  * function reads, where GeometryCrsSrid (geo_util.hpp) reads it.
  */
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 //! A GEOMETRY, or a list of them, whose CRS a parameter of the type keeps
 inline bool IsGeometryOrGeometryList(const LogicalType &t) {
 	return t.id() == LogicalTypeId::GEOMETRY ||
@@ -68,7 +67,6 @@ inline unique_ptr<FunctionData> BindGeometryArgumentTypes(ClientContext &, Scala
 	}
 	return nullptr;
 }
-#endif
 
 /**
  * A scalar MobilityDuck registers runs on whichever DuckDB worker thread runs the
@@ -83,12 +81,10 @@ inline unique_ptr<FunctionData> BindGeometryArgumentTypes(ClientContext &, Scala
  * tiles read their default time origin and divide time by a duration there.
  */
 inline ScalarFunction FollowingSessionTimezone(ScalarFunction sf) {
-#if MOBILITYDUCK_DUCKDB_AT_LEAST(1, 5)
 	if (!sf.HasBindCallback() &&
 	    std::any_of(sf.arguments.begin(), sf.arguments.end(), IsGeometryOrGeometryList)) {
 		sf.SetBindCallback(BindGeometryArgumentTypes);
 	}
-#endif
 	scalar_function_t orig = std::move(sf.function);
 	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
 		EnsureMeosThreadInitialized(state.GetContext());
