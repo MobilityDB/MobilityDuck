@@ -174,3 +174,92 @@ SELECT tjsonbSetLax(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '1'], jso
   = tjsonbSet(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '1'], jsonb '2');
 ----
 true
+
+# ── a NULL element of a path or of the keys ──────────────────────────────────
+# A NULL element of the list reaches MEOS as the NULL of the SQL array, and each function
+# answers MobilityDB's regression answer (453_jsonb_jsonfuncs, 454_tjsonb_jsonfuncs), which is
+# PostgreSQL's: an extraction answers NULL, an existence test skips the NULL key, and a path
+# modification raises at the NULL element the walk reaches and leaves the value as it is when
+# the walk does not reach it.
+
+query T
+SELECT jsonbExtractPath(jsonb '{"a": {"b": 1}}', ['a', NULL]) IS NULL;
+----
+true
+
+query T
+SELECT jsonbExtractPath(jsonb '{"a": {"b": 1}}', [NULL, 'a']) IS NULL;
+----
+true
+
+query T
+SELECT jsonbExtractPathText(jsonb '{"a": {"b": 1}}', ['a', NULL]) IS NULL;
+----
+true
+
+query TTTT
+SELECT jsonbExistsAny(jsonb '{"a": 1}', ['a', NULL]), jsonbExistsAny(jsonb '{"a": 1}', ['b', NULL]),
+  jsonbExistsAll(jsonb '{"a": 1}', ['a', NULL]), jsonbExistsAll(jsonb '{"a": 1}', [NULL::VARCHAR]);
+----
+true	false	true	true
+
+query T
+SELECT jsonbDeleteArray(jsonb '{"a": 1, "b": 2}', ['a', NULL])::VARCHAR;
+----
+{"b": 2}
+
+query T
+SELECT jsonbDeletePath(jsonb '{"a": {"b": 1}}', ['x', NULL])::VARCHAR;
+----
+{"a": {"b": 1}}
+
+statement error
+SELECT jsonbDeletePath(jsonb '{"a": {"b": 1}}', ['a', NULL]);
+----
+path element at position 2 is null
+
+statement error
+SELECT jsonbDeletePath(jsonb '{"a": {"b": 1}}', [NULL::VARCHAR]);
+----
+path element at position 1 is null
+
+query T
+SELECT jsonbSet(jsonb '{"a": {"b": 1}}', ['x', NULL], jsonb '3', true)::VARCHAR;
+----
+{"a": {"b": 1}}
+
+statement error
+SELECT jsonbSet(jsonb '{"a": {"b": 1}}', ['a', NULL], jsonb '3', true);
+----
+path element at position 2 is null
+
+statement error
+SELECT jsonbSet(jsonb '{"d": [1, 2]}', ['d', NULL], jsonb '3', true);
+----
+path element at position 2 is null
+
+statement error
+SELECT jsonbSetLax(jsonb '{"a": {"b": 1}}', ['a', NULL], jsonb '3');
+----
+path element at position 2 is null
+
+query T
+SELECT jsonbInsert(jsonb '{"a": {"b": 1}}', ['x', NULL], jsonb '3', false)::VARCHAR;
+----
+{"a": {"b": 1}}
+
+statement error
+SELECT jsonbInsert(jsonb '{"d": [1, 2]}', ['d', NULL], jsonb '3', false);
+----
+path element at position 2 is null
+
+statement error
+SELECT tjsonbSet(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', NULL], jsonb '2');
+----
+path element at position 2 is null
+
+query T
+SELECT tjsonbSet(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['x', NULL], jsonb '2')
+  = tjsonb '{{"gears": [1, 3]}@2001-01-01}';
+----
+true

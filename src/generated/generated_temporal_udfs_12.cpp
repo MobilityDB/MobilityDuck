@@ -388,12 +388,15 @@ inline GSERIALIZED *GeogFromGeometry(string_t blob) {
     free(gs);
     return geog;
 }
-// text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr.
+// text** from a DuckDB LIST(VARCHAR); the caller frees via FreeTextArr. A NULL
+// element is a NULL text*, the NULL of the SQL array MEOS reads as PostgreSQL does.
 inline text **ListToTextArr(Vector &child, list_entry_t le, int *count) {
     auto data = FlatVector::GetData<string_t>(child);
+    auto &valid = FlatVector::Validity(child);
     int n = (int) le.length;
     text **arr = (text **) malloc(sizeof(text *) * (n > 0 ? n : 1));
-    for (idx_t i = 0; i < le.length; i++) arr[i] = MakeText(data[le.offset + i]);
+    for (idx_t i = 0; i < le.length; i++)
+        arr[i] = valid.RowIsValid(le.offset + i) ? MakeText(data[le.offset + i]) : nullptr;
     *count = n;
     return arr;
 }
