@@ -7307,6 +7307,39 @@ def sig_call_shaped(f, s, outs, cexpr):
     return ("LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE))", "list_entry_t",
             rcall, rwrite, outx)
 
+def sig_call_mapped(f, s, outs, cexpr):
+    """(DuckDB type, C++ type of the result vector, the call and result lines, out-parameter
+    expressions) for a signature answering a SQL array of base values from the C array of pointers
+    the function returns, of the length `arrayReturn.lengthFrom` names when that is a parameter an
+    argument fills rather than one MEOS writes back: the count of the list it reads, as
+    round(cbuffer[], integer) answers one value per value given. A LIST of the elements, each
+    written by its {Base}ToBlob (#set_elem) and a NULL element a NULL value; an empty list answers
+    NULL without the call, as MobilityDB's wrapper answers an empty array, and so does a NULL
+    array. None for another result."""
+    ar = (f.get("shape") or {}).get("arrayReturn") or {}
+    lf = (ar.get("lengthFrom") or {}).get("name")
+    sqlr, rn = s.get("ret") or "", norm(f["returnType"]["canonical"])
+    if outs or not lf or lf not in cexpr or not sqlr.endswith("[]") or not rn.endswith("**"):
+        return None
+    el = set_elem(sqlr[:-2], (ar.get("element") or {}).get("canonical") or "")
+    if el is None:
+        return None
+    dt, writer = el
+    rcall = ["const int cnt = %s;" % cexpr[lf],
+             "%s r = cnt > 0 ? CALL : NULL;" % rn]
+    rwrite = ["if (!r) { outv.SetInvalid(i); continue; }",
+              "const idx_t off = ListVector::GetListSize(result);",
+              "ListVector::Reserve(result, off + cnt);",
+              "auto &ent = ListVector::GetEntry(result);",
+              "for (int j = 0; j < cnt; j++) {",
+              "    if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = %s(ent, r[j]);" % writer,
+              "    else FlatVector::SetNull(ent, off + j, true);",
+              "}",
+              "ListVector::SetListSize(result, off + cnt);",
+              "out[i] = list_entry_t{off, idx_t(cnt)};",
+              "free(r);"]
+    return ("LogicalType::LIST(%s)" % dt, "list_entry_t", rcall, rwrite, {})
+
 def sig_call_ret(f, s, outs, cexpr=None):
     """(DuckDB type, C++ type of the result vector, the call and result lines, where `CALL` stands
     for the call) for the result of `f` declared as `s["ret"]`, its out-parameters `outs` read back;
@@ -7318,6 +7351,9 @@ def sig_call_ret(f, s, outs, cexpr=None):
         return sig_call_set(f, s, outs)
     if s.get("arrayShape"):
         return sig_call_shaped(f, s, outs, cexpr or {})
+    mapped = sig_call_mapped(f, s, outs, cexpr or {})
+    if mapped:
+        return mapped
     rc = f["returnType"]["canonical"]
     rb, rn, sqlr = base(rc), norm(rc), s.get("ret")
     sizes = [p for p in outs if norm(p["canonical"]) == "size_t *"]
