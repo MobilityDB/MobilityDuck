@@ -252,6 +252,7 @@ void RegisterGenerated_meos_posechain_base_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_posechain_comp_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_posechain_comp_temp(ExtensionLoader &loader);
 void RegisterGenerated_meos_posechain_conversion(ExtensionLoader &loader);
+void RegisterGenerated_meos_posechain_dist(ExtensionLoader &loader);
 void RegisterGenerated_meos_posechain_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_posechain_restrict(ExtensionLoader &loader);
 void RegisterGenerated_meos_posechain_set_accessor(ExtensionLoader &loader);
@@ -525,6 +526,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_posechain_comp_ever(loader);
     RegisterGenerated_meos_posechain_comp_temp(loader);
     RegisterGenerated_meos_posechain_conversion(loader);
+    RegisterGenerated_meos_posechain_dist(loader);
     RegisterGenerated_meos_posechain_inout(loader);
     RegisterGenerated_meos_posechain_restrict(loader);
     RegisterGenerated_meos_posechain_set_accessor(loader);

@@ -97,6 +97,7 @@ appendInstantAgg(tpose,VARCHAR)
 appendInstantAgg(tpose,VARCHAR,DOUBLE,INTERVAL)
 appendInstantAgg(tposechain)
 appendInstantAgg(tposechain,VARCHAR)
+appendInstantAgg(tposechain,VARCHAR,DOUBLE,INTERVAL)
 appendInstantAgg(tposechain,VARCHAR,INTERVAL)
 appendInstantAgg(tquadbin)
 appendInstantAgg(tquadbin,VARCHAR)
@@ -596,6 +597,12 @@ SELECT asText(appendInstantAgg(v), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0
 # appendInstantAgg(tposechain, VARCHAR)
 query I
 SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
+----
+Interp=Step;[PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-02 00:00:00+00]
+
+# appendInstantAgg(tposechain, VARCHAR, DOUBLE, INTERVAL)
+query I
+SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('PoseChain(Pose(Point(0 0),0),Pose(Point(10 0),0))@2020-01-01'::tposechain), ('PoseChain(Pose(Point(1 2),0.1),Pose(Point(11 2),0.1))@2020-01-02'::tposechain)) t(v);
 ----
 Interp=Step;[PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2020-01-01 00:00:00+00, PoseChain(Pose(POINT(1 2),0.1),Pose(POINT(11 2),0.1))@2020-01-02 00:00:00+00]
 

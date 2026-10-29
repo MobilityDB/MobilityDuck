@@ -1842,6 +1842,117 @@ static void Gen_posechain_transform_pipeline_v2(DataChunk &args, ExpressionState
 }
 
 
+// ===== @ingroup meos_posechain_dist =====
+static void Gen_tdistance_tposechain_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) tdistance_tposechain_geo(t, gs);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tdistance_tposechain_geo_rev(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) tdistance_tposechain_geo(t, gs);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tdistance_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            Temporal *r = tdistance_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tdistance_tposechain_tposechain(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = (Temporal *) tdistance_tposechain_tposechain(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_nad_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            double r = nad_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
+static void Gen_nad_tposechain_tposechain(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            double r = nad_tposechain_tposechain(t1, t2);
+            free(t1); free(t2);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
+static void Gen_nai_tposechain_posechain(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            PoseChain *a2p = BlobToPosechain(a2);
+            Temporal *r = (Temporal *) nai_tposechain_posechain(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_nad_tposechain_stbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t b, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = BlobToTemporal(a);
+            STBox *bx = BlobToStbox(b);
+            double r = nad_tposechain_stbox(t, bx);
+            free(t); free(bx);
+            if (r == std::numeric_limits<double>::max()) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
+
 // ===== @ingroup meos_quadbin_comp_ever =====
 static void Gen_ever_eq_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -2689,6 +2800,24 @@ void RegisterGenerated_meos_posechain_base_srid(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {PosechainTypes::posechain(), LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::BOOLEAN}, PosechainTypes::posechain(), Gen_posechain_transform_pipeline));
     RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {PosechainTypes::posechain(), LogicalType::VARCHAR, LogicalType::INTEGER}, PosechainTypes::posechain(), Gen_posechain_transform_pipeline_v1));
     RegisterMeosFunction(loader, ScalarFunction("transformPipeline", {PosechainTypes::posechain(), LogicalType::VARCHAR}, PosechainTypes::posechain(), Gen_posechain_transform_pipeline_v2));
+}
+
+void RegisterGenerated_meos_posechain_dist(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("tDistance", {PosechainTypes::tposechain(), MobilityDuckGeometryType()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_geo));
+    RegisterMeosFunction(loader, ScalarFunction("<->", {PosechainTypes::tposechain(), MobilityDuckGeometryType()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_geo));
+    RegisterMeosFunction(loader, ScalarFunction("tDistance", {MobilityDuckGeometryType(), PosechainTypes::tposechain()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_geo_rev));
+    RegisterMeosFunction(loader, ScalarFunction("<->", {MobilityDuckGeometryType(), PosechainTypes::tposechain()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_geo_rev));
+    RegisterMeosFunction(loader, ScalarFunction("tDistance", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_posechain));
+    RegisterMeosFunction(loader, ScalarFunction("<->", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_posechain));
+    RegisterMeosFunction(loader, ScalarFunction("tDistance", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_tposechain));
+    RegisterMeosFunction(loader, ScalarFunction("<->", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, TemporalTypes::tfloat(), Gen_tdistance_tposechain_tposechain));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, LogicalType::DOUBLE, Gen_nad_tposechain_posechain));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, LogicalType::DOUBLE, Gen_nad_tposechain_posechain));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::DOUBLE, Gen_nad_tposechain_tposechain));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {PosechainTypes::tposechain(), PosechainTypes::tposechain()}, LogicalType::DOUBLE, Gen_nad_tposechain_tposechain));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachInstant", {PosechainTypes::tposechain(), PosechainTypes::posechain()}, PosechainTypes::tposechain(), Gen_nai_tposechain_posechain));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_tposechain_stbox));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {PosechainTypes::tposechain(), StboxType::stbox()}, LogicalType::DOUBLE, Gen_nad_tposechain_stbox));
 }
 
 void RegisterGenerated_meos_quadbin_comp_ever(ExtensionLoader &loader) {

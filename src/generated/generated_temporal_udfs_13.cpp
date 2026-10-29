@@ -1763,6 +1763,34 @@ static void Gen_tpcpatch_npoints(DataChunk &args, ExpressionState &, Vector &res
         });
 }
 
+static void Gen_tpcpatch_swath(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, interval_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, interval_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            GSERIALIZED *r = tpcpatch_swath(t, MeosIntervalArg(a2));
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
+static void Gen_tpcpatch_swath_d(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            GSERIALIZED *r = tpcpatch_swath(t, nullptr);
+            free(t);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
 
 // ===== @ingroup meos_pointcloud_schema_cache =====
 static void Gen_meos_pc_schema_srid(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3222,6 +3250,8 @@ void RegisterGenerated_meos_pointcloud_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("startNumPoints", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_tpcpatch_start_npoints));
     RegisterMeosFunction(loader, ScalarFunction("endNumPoints", {TPcpatchTypes::tpcpatch()}, LogicalType::UINTEGER, Gen_tpcpatch_end_npoints));
     RegisterMeosFunction(loader, ScalarFunction("numPoints", {TPcpatchTypes::tpcpatch()}, LogicalType::BIGINT, Gen_tpcpatch_npoints));
+    RegisterMeosFunction(loader, ScalarFunction("swath", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL}, MobilityDuckGeometryType(), Gen_tpcpatch_swath));
+    RegisterMeosFunction(loader, ScalarFunction("swath", {TPcpatchTypes::tpcpatch()}, MobilityDuckGeometryType(), Gen_tpcpatch_swath_d));
 }
 
 void RegisterGenerated_meos_pointcloud_schema_cache(ExtensionLoader &loader) {
