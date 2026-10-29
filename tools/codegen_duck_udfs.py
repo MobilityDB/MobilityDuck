@@ -46,6 +46,15 @@ import collections
 import json, sys, re, os, zlib
 from collections import defaultdict, Counter
 
+def catalog_path():
+    """The catalog the generator reads, as #main resolves it: the first positional argument, else
+    the staged tools/catalog/meos-idl.json."""
+    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return pos[0] if pos else os.path.join(root, "tools/catalog/meos-idl.json")
+
+CATALOG = json.load(open(catalog_path()))
+
 # The licence banner, copied from tools/license/banner.txt; a generated file
 # opens with it and one empty line, as MobilityDB's h3pg_import/extract.py
 # writes its MDB_LICENSE
@@ -593,8 +602,18 @@ CORE_TYPES = {
     "tfloat": ["TemporalTypes::tfloat()"],
     "tbool":  ["TemporalTypes::tbool()"],
     "ttext":  ["TemporalTypes::ttext()"],
-    "tnumber":["TemporalTypes::tint()", "TemporalTypes::tfloat()"],
 }
+
+def lattice_members(cls):
+    """The temporal types of the class `cls` of the catalog's object model, as their catalog names
+    in MeosType order: `objectModel.lattice[cls].temptypes`, which MEOS-API reads from the
+    predicate the class names (`tnumber_type` for TNumber), as #catalog_collection_bases reads the
+    collection types from the type relations."""
+    name_of = {"T_" + t.upper(): t for t in CATALOG["temporalTypes"]}
+    return [name_of[t] for t in CATALOG["objectModel"]["lattice"][cls]["temptypes"]]
+
+# The temporal numbers are the members of the TNumber class
+CORE_TYPES["tnumber"] = [CORE_TYPES[t][0] for t in lattice_members("TNumber")]
 # Geo TEMPORAL types are Temporal* blobs (BlobToTemporal works). Accessor class names
 # are inconsistent in the hand binding (verified live: TgeompointType/TgeogpointType/
 # TGeometryTypes/TGeographyTypes) — used as-is; canonical type names from meos_catalog.c.
@@ -605,18 +624,35 @@ GEO_TYPES = {
     "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
 }
 GEO_ALLTYPES = list(GEO_TYPES.values())
-# The TSpatial<T> subtypes = the geo types PLUS the other spatial temporal families
-# (tcbuffer first; tnpoint/tpose/trgeometry/th3index/tpcpoint follow). A spatial family
-# inherits the abstract `tspatial_*` surface (SRID/setSRID/transform/asText/asEWKT/atStbox)
-# and the generic Temporal<T> surface by BEING IN THIS LIST — it is looped alongside the geo
-# types by the `tspatial_*` scope and the generic-temporal "all" writer. Distinct from
-# GEO_ALLTYPES, which stays geo-only for the `tgeo` supertype (geometry+geography) and the
-# geometry-argument spatial relationships. Add a new spatial family here to inherit the surface.
-SPATIAL_ALLTYPES = GEO_ALLTYPES + ["CbufferTypes::tcbuffer()", "H3indexTypes::th3index()",
-                                   "QuadbinTypes::tquadbin()", "S2cellTypes::ts2cell()",
-                                   "NpointTypes::tnpoint()",
-                                   "PoseTypes::tpose()", "TrgeometryTypes::trgeometry()",
-                                   "PosechainTypes::tposechain()"]
+# The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
+# SQL type name: the 5 core types (TemporalTypes::AllTypes()) plus the 4 geo types (the
+# second emit loop). Ordered so the generated registrations come out canonically (core
+# order, then geo). Accessor strings reuse GEO_TYPES / TO_TYPE verbatim.
+SIG_TEMPORAL_ACC = {
+    "tint":       "TemporalTypes::tint()",     "tbigint":    "TemporalTypes::tbigint()",
+    "tbool":      "TemporalTypes::tbool()",     "tfloat":     "TemporalTypes::tfloat()",
+    "ttext":      "TemporalTypes::ttext()",
+    "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
+    "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
+    "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
+    "tquadbin":   "QuadbinTypes::tquadbin()",      "ts2cell":    "S2cellTypes::ts2cell()",
+    "tjsonb":     "TJsonbTypes::tjsonb()",
+    "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
+    "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
+    "trgeometry": "TrgeometryTypes::trgeometry()",
+    "tposechain": "PosechainTypes::tposechain()",
+}
+
+# The TSpatial<T> subtypes whose box is an STBox: the members of the TSpatial class of the
+# catalog's object model that `temporalTypes` gives the `stbox` bounding box. The point clouds
+# are spatial and carry a TPCBox, so the STBox surface looped over this list is not theirs. A
+# family in this list inherits the abstract `tspatial_*` surface (SRID/setSRID/transform/asText/
+# asEWKT/atStbox) and the generic Temporal<T> surface: it is looped alongside the geo types by the
+# `tspatial_*` scope and the generic-temporal "all" writer, and a new spatial family MEOS adds
+# reaches it from the catalog. Distinct from GEO_ALLTYPES, which stays geo-only for the `tgeo`
+# supertype (geometry+geography) and the geometry-argument spatial relationships.
+SPATIAL_ALLTYPES = [SIG_TEMPORAL_ACC[t] for t in lattice_members("TSpatial")
+                    if CATALOG["temporalTypes"][t]["bbox"] == "stbox"]
 
 # The catalog entry for a function name, so a NAME-keyed scope rule can still consult the
 # catalog's own `sqlSignatures` -- populated in main() from the same catalog the surface is
@@ -651,7 +687,7 @@ def reg_scope(name):
         if base == "temporal_temporal":
             return ("types", CORE_TYPES["tbool"] + CORE_TYPES["ttext"])
         if base == "tnumber_tnumber":
-            return ("types", CORE_TYPES["tint"] + CORE_TYPES["tfloat"] + CORE_TYPES["tbigint"])
+            return ("types", CORE_TYPES["tnumber"])
     # A subtype accessor (tinstant_timestamptz behind getTimestamp) is generic over the temporal
     # types as a temporal_* one is; the catalog's sqlSignatures then narrow it to the declared set
     # (#sig_declared_accs), and MEOS checks the subtype itself.
@@ -845,24 +881,6 @@ def ret_temporal_type(name, arg_acc, group="", sql_ret=None):
     m = re.search(r'_to_(tint|tbigint|tfloat|tbool|ttext|tgeometry|tgeography|tgeompoint|tgeogpoint|tcbuffer|tpose|trgeometry|tposechain)$', name)
     return TO_TYPE[m.group(1)] if m else arg_acc
 
-# The concrete DuckDB accessors the generic temporal track can emit, keyed by the catalog
-# SQL type name: the 5 core types (TemporalTypes::AllTypes()) plus the 4 geo types (the
-# second emit loop). Ordered so the generated registrations come out canonically (core
-# order, then geo). Accessor strings reuse GEO_TYPES / TO_TYPE verbatim.
-SIG_TEMPORAL_ACC = {
-    "tint":       "TemporalTypes::tint()",     "tbigint":    "TemporalTypes::tbigint()",
-    "tbool":      "TemporalTypes::tbool()",     "tfloat":     "TemporalTypes::tfloat()",
-    "ttext":      "TemporalTypes::ttext()",
-    "tgeompoint": "TgeompointType::tgeompoint()", "tgeogpoint": "TgeogpointType::tgeogpoint()",
-    "tgeometry":  "TGeometryTypes::tgeometry()",  "tgeography": "TGeographyTypes::tgeography()",
-    "tcbuffer":   "CbufferTypes::tcbuffer()",      "th3index":   "H3indexTypes::th3index()",
-    "tquadbin":   "QuadbinTypes::tquadbin()",      "ts2cell":    "S2cellTypes::ts2cell()",
-    "tjsonb":     "TJsonbTypes::tjsonb()",
-    "tpcpoint":   "TPcpointTypes::tpcpoint()",     "tpcpatch":   "TPcpatchTypes::tpcpatch()",
-    "tnpoint":    "NpointTypes::tnpoint()",      "tpose":      "PoseTypes::tpose()",
-    "trgeometry": "TrgeometryTypes::trgeometry()",
-    "tposechain": "PosechainTypes::tposechain()",
-}
 def sig_declared_accs(f):
     """The exact temporal-operand types this GENERIC (`Temporal *`) function is CREATE
     FUNCTION'd for, read from the catalog's per-overload `sqlSignatures` (the SoT) — so the
@@ -974,15 +992,6 @@ def sig_geo_accs(f, geo_first):
 # ---------------- SET family (additive; the temporal path is left untouched) ----------------
 # Self-contained Blob<->Set marshalling reuses the hand binding's exact method
 # (malloc+memcpy in; set_mem_size out). Per-element accessors mirror CORE_TYPES.
-def catalog_path():
-    """The catalog the generator reads, as #main resolves it: the first positional argument, else
-    the staged tools/catalog/meos-idl.json."""
-    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return pos[0] if pos else os.path.join(root, "tools/catalog/meos-idl.json")
-
-CATALOG = json.load(open(catalog_path()))
-
 # The bases whose set types carry a hand-written function surface of their own (SpatialSetType),
 # registered per declared signature rather than by the set loops
 HAND_SET_BASES = ("geom", "geog")
