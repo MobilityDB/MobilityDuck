@@ -1616,10 +1616,10 @@ static void Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin(DataChunk &args, Express
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n4 = !FlatVector::Validity(args.data[4]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p4 = BlobToSpan(in4[i]);
-        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(in5[i], in0[i], in2[i], in1[i], in3[i], p4);
+        Span *p4 = n4 ? nullptr : BlobToSpan(in4[i]);
+        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(in5[i], in0[i], in2[i], in1[i], in3[i], (n4 ? nullptr : p4));
         free(p4);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1643,9 +1643,9 @@ static void Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v1(DataChunk &args, Expr
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p4 = BlobToSpan(in4[i]);
-        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(0, in0[i], in2[i], in1[i], in3[i], p4);
+        const bool n4 = !FlatVector::Validity(args.data[4]).RowIsValid(i);
+        Span *p4 = n4 ? nullptr : BlobToSpan(in4[i]);
+        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(0, in0[i], in2[i], in1[i], in3[i], (n4 ? nullptr : p4));
         free(p4);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1670,10 +1670,10 @@ static void Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v2(DataChunk &args, Expr
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n4 = !FlatVector::Validity(args.data[4]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p4 = BlobToSpan(in4[i]);
-        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(in5[i], in0[i], in2[i], in1[i], in3[i], p4);
+        Span *p4 = n4 ? nullptr : BlobToSpan(in4[i]);
+        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(in5[i], in0[i], in2[i], in1[i], in3[i], (n4 ? nullptr : p4));
         free(p4);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1697,9 +1697,9 @@ static void Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v3(DataChunk &args, Expr
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p4 = BlobToSpan(in4[i]);
-        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(0, in0[i], in2[i], in1[i], in3[i], p4);
+        const bool n4 = !FlatVector::Validity(args.data[4]).RowIsValid(i);
+        Span *p4 = n4 ? nullptr : BlobToSpan(in4[i]);
+        STBox *r = stbox_make_geodetic_hasx_hasz_zmax_zmin(0, in0[i], in2[i], in1[i], in3[i], (n4 ? nullptr : p4));
         free(p4);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1728,10 +1728,10 @@ static void Gen_stbox_make_geodetic_false_hasx_true_hasz_true(DataChunk &args, E
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1759,9 +1759,9 @@ static void Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v1(DataChunk &args
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(0, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(0, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1790,10 +1790,10 @@ static void Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v2(DataChunk &args
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1821,9 +1821,9 @@ static void Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v3(DataChunk &args
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(0, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_false_hasx_true_hasz_true(0, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1852,10 +1852,10 @@ static void Gen_stbox_make_geodetic_true_hasx_true_hasz_true(DataChunk &args, Ex
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1883,9 +1883,9 @@ static void Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v1(DataChunk &args,
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(4326, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(4326, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1914,10 +1914,10 @@ static void Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v2(DataChunk &args,
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[7]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(in7[i], in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -1945,9 +1945,9 @@ static void Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v3(DataChunk &args,
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p6 = BlobToSpan(in6[i]);
-        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(4326, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], p6);
+        const bool n6 = !FlatVector::Validity(args.data[6]).RowIsValid(i);
+        Span *p6 = n6 ? nullptr : BlobToSpan(in6[i]);
+        STBox *r = stbox_make_geodetic_true_hasx_true_hasz_true(4326, in0[i], in3[i], in1[i], in4[i], in2[i], in5[i], (n6 ? nullptr : p6));
         free(p6);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -2168,15 +2168,15 @@ static void Gen_jsonb_set_lax(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Jsonb *p0 = BlobToJsonb(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Jsonb *p2 = BlobToJsonb(in2[i]);
+        Jsonb *p2 = n2 ? nullptr : BlobToJsonb(in2[i]);
         text *p4 = MakeText(in4[i]);
-        Jsonb *r = jsonb_set_lax(p0, v1, (int) ne1, p2, in3[i], p4);
+        Jsonb *r = jsonb_set_lax(p0, v1, (int) ne1, (n2 ? nullptr : p2), in3[i], p4);
         free(p0);
         FreeTextArr(v1, ne1);
         free(p2);
@@ -2202,13 +2202,13 @@ static void Gen_jsonb_set_lax_v1(DataChunk &args, ExpressionState &, Vector &res
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Jsonb *p0 = BlobToJsonb(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Jsonb *p2 = BlobToJsonb(in2[i]);
-        Jsonb *r = jsonb_set_lax(p0, v1, (int) ne1, p2, in3[i], MeosTextLiteral("use_json_null"));
+        Jsonb *p2 = n2 ? nullptr : BlobToJsonb(in2[i]);
+        Jsonb *r = jsonb_set_lax(p0, v1, (int) ne1, (n2 ? nullptr : p2), in3[i], MeosTextLiteral("use_json_null"));
         free(p0);
         FreeTextArr(v1, ne1);
         free(p2);
@@ -2232,12 +2232,12 @@ static void Gen_jsonb_set_lax_v2(DataChunk &args, ExpressionState &, Vector &res
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         Jsonb *p0 = BlobToJsonb(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Jsonb *p2 = BlobToJsonb(in2[i]);
-        Jsonb *r = jsonb_set_lax(p0, v1, (int) ne1, p2, true, MeosTextLiteral("use_json_null"));
+        Jsonb *p2 = n2 ? nullptr : BlobToJsonb(in2[i]);
+        Jsonb *r = jsonb_set_lax(p0, v1, (int) ne1, (n2 ? nullptr : p2), true, MeosTextLiteral("use_json_null"));
         free(p0);
         FreeTextArr(v1, ne1);
         free(p2);
@@ -5648,18 +5648,18 @@ void RegisterGenerated_meos_geo_box_constructor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("stboxT", {SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_srid_xmax_xmin_ymax_ymin_zmax_zmin));
     RegisterMeosFunction(loader, ScalarFunction("geodstboxZ", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_s_null));
     RegisterMeosFunction(loader, ScalarFunction("geodstboxZ", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_s_null_a6));
-    RegisterMeosFunction(loader, ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin));
-    RegisterMeosFunction(loader, ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v1));
-    RegisterMeosFunction(loader, ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v2));
-    RegisterMeosFunction(loader, ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v3));
-    RegisterMeosFunction(loader, ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true));
-    RegisterMeosFunction(loader, ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v1));
-    RegisterMeosFunction(loader, ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v2));
-    RegisterMeosFunction(loader, ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v3));
-    RegisterMeosFunction(loader, ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true));
-    RegisterMeosFunction(loader, ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v1));
-    RegisterMeosFunction(loader, ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v2));
-    RegisterMeosFunction(loader, ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v3));
+    { ScalarFunction sf = ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxXT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_hasx_hasz_zmax_zmin_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("stboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_false_hasx_true_hasz_true_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("geodstboxZT", {LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, SpanTypes::tstzspan()}, StboxType::stbox(), Gen_stbox_make_geodetic_true_hasx_true_hasz_true_v3); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
 }
 
 void RegisterGenerated_meos_h3_base_inspection(ExtensionLoader &loader) {
@@ -5674,9 +5674,9 @@ void RegisterGenerated_meos_json_base_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("jsonbDelete", {TJsonbTypes::jsonb(), LogicalType::VARCHAR}, TJsonbTypes::jsonb(), Gen_jsonb_delete));
     RegisterMeosFunction(loader, ScalarFunction("jsonbDeleteIndex", {TJsonbTypes::jsonb(), LogicalType::INTEGER}, TJsonbTypes::jsonb(), Gen_jsonb_delete_index));
     RegisterMeosFunction(loader, ScalarFunction("jsonbPretty", {TJsonbTypes::jsonb()}, LogicalType::VARCHAR, Gen_jsonb_pretty));
-    RegisterMeosFunction(loader, ScalarFunction("jsonbSetLax", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN, LogicalType::VARCHAR}, TJsonbTypes::jsonb(), Gen_jsonb_set_lax));
-    RegisterMeosFunction(loader, ScalarFunction("jsonbSetLax", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::jsonb(), Gen_jsonb_set_lax_v1));
-    RegisterMeosFunction(loader, ScalarFunction("jsonbSetLax", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, TJsonbTypes::jsonb(), Gen_jsonb_set_lax_v2));
+    { ScalarFunction sf = ScalarFunction("jsonbSetLax", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN, LogicalType::VARCHAR}, TJsonbTypes::jsonb(), Gen_jsonb_set_lax); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("jsonbSetLax", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::jsonb(), Gen_jsonb_set_lax_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("jsonbSetLax", {TJsonbTypes::jsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, TJsonbTypes::jsonb(), Gen_jsonb_set_lax_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     RegisterMeosFunction(loader, ScalarFunction("jsonbStripNulls", {TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::jsonb(), Gen_jsonb_strip_nulls));
     RegisterMeosFunction(loader, ScalarFunction("jsonbStripNulls", {TJsonbTypes::jsonb()}, TJsonbTypes::jsonb(), Gen_jsonb_strip_nulls_v1));
     RegisterMeosFunction(loader, ScalarFunction("jsonbConcat", {TJsonbTypes::jsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::jsonb(), Gen_jsonb_concat));

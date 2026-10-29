@@ -3747,16 +3747,16 @@ static void Gen_raster_slope_v6(DataChunk &args, ExpressionState &, Vector &resu
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
         std::string s4 = in4[i].GetString();
-        Raster *r = raster_slope(p0, in1[i], p2, s3.c_str(), s4.c_str(), in5[i], in6[i]);
+        Raster *r = raster_slope(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), s4.c_str(), in5[i], in6[i]);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3780,15 +3780,15 @@ static void Gen_raster_slope_v7(DataChunk &args, ExpressionState &, Vector &resu
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[5]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
         std::string s4 = in4[i].GetString();
-        Raster *r = raster_slope(p0, in1[i], p2, s3.c_str(), s4.c_str(), in5[i], false);
+        Raster *r = raster_slope(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), s4.c_str(), in5[i], false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3811,14 +3811,14 @@ static void Gen_raster_slope_v8(DataChunk &args, ExpressionState &, Vector &resu
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
         std::string s4 = in4[i].GetString();
-        Raster *r = raster_slope(p0, in1[i], p2, s3.c_str(), s4.c_str(), 1.0, false);
+        Raster *r = raster_slope(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), s4.c_str(), 1.0, false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3840,12 +3840,12 @@ static void Gen_raster_slope_v9(DataChunk &args, ExpressionState &, Vector &resu
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
-        Raster *r = raster_slope(p0, in1[i], p2, s3.c_str(), "DEGREES", 1.0, false);
+        Raster *r = raster_slope(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), "DEGREES", 1.0, false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3866,10 +3866,10 @@ static void Gen_raster_slope_v10(DataChunk &args, ExpressionState &, Vector &res
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
-        Raster *r = raster_slope(p0, in1[i], p2, "32BF", "DEGREES", 1.0, false);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
+        Raster *r = raster_slope(p0, in1[i], (n2 ? nullptr : p2), "32BF", "DEGREES", 1.0, false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3978,13 +3978,13 @@ static void Gen_raster_tpi_v4(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
-        Raster *r = raster_tpi(p0, in1[i], p2, s3.c_str(), in4[i]);
+        Raster *r = raster_tpi(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), in4[i]);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -4006,12 +4006,12 @@ static void Gen_raster_tpi_v5(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
-        Raster *r = raster_tpi(p0, in1[i], p2, s3.c_str(), false);
+        Raster *r = raster_tpi(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -4032,10 +4032,10 @@ static void Gen_raster_tpi_v6(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
-        Raster *r = raster_tpi(p0, in1[i], p2, "32BF", false);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
+        Raster *r = raster_tpi(p0, in1[i], (n2 ? nullptr : p2), "32BF", false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -4144,13 +4144,13 @@ static void Gen_raster_tri_v4(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
-        Raster *r = raster_tri(p0, in1[i], p2, s3.c_str(), in4[i]);
+        Raster *r = raster_tri(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), in4[i]);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -4172,12 +4172,12 @@ static void Gen_raster_tri_v5(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
         std::string s3 = in3[i].GetString();
-        Raster *r = raster_tri(p0, in1[i], p2, s3.c_str(), false);
+        Raster *r = raster_tri(p0, in1[i], (n2 ? nullptr : p2), s3.c_str(), false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -4198,10 +4198,10 @@ static void Gen_raster_tri_v6(DataChunk &args, ExpressionState &, Vector &result
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
         Raster *p0 = BlobToRaster(in0[i]);
-        Raster *p2 = BlobToRaster(in2[i]);
-        Raster *r = raster_tri(p0, in1[i], p2, "32BF", false);
+        Raster *p2 = n2 ? nullptr : BlobToRaster(in2[i]);
+        Raster *r = raster_tri(p0, in1[i], (n2 ? nullptr : p2), "32BF", false);
         free(p0);
         free(p2);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -5241,25 +5241,25 @@ void RegisterGenerated_meos_raster_base_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v3));
     RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_slope_v4));
     RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v5));
-    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope_v6));
-    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_slope_v7));
-    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v8));
-    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v9));
-    RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v10));
+    { ScalarFunction sf = ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope_v6); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_slope_v7); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v8); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_slope_v9); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_slope_v10); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi));
     RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v1));
     RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_tpi_v2));
     RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v3));
-    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi_v4));
-    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v5));
-    RegisterMeosFunction(loader, ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v6));
+    { ScalarFunction sf = ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tpi_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tpi_v5); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("tpi", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tpi_v6); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri));
     RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v1));
     RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_tri_v2));
     RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v3));
-    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri_v4));
-    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v5));
-    RegisterMeosFunction(loader, ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v6));
+    { ScalarFunction sf = ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_tri_v4); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster(), LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_tri_v5); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("tri", {RasterTypes::raster(), LogicalType::INTEGER, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_tri_v6); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_map_algebra); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster(), LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_map_algebra_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     { ScalarFunction sf = ScalarFunction("mapAlgebra", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, RasterTypes::raster()}, RasterTypes::raster(), Gen_raster_map_algebra_v2); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
