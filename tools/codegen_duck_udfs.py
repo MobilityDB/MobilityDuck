@@ -987,24 +987,30 @@ CATALOG = json.load(open(catalog_path()))
 # registered per declared signature rather than by the set loops
 HAND_SET_BASES = ("geom", "geog")
 
-def catalog_set_bases(cat):
-    """The base values whose set types the binding registers, in the order of those set types in
-    the catalog's MeosType enum: every base to which the catalog's type relations give a set
-    (`typeRelations.byBase[<base>].set`, which MEOS-API reads from MEOS_RELTYPE_CATALOG), named as
-    its set type is named less the `set` suffix (intset -> int, tstzset -> tstz), so a base MEOS
-    gives a set reaches the binding with no edit here."""
+def catalog_collection_bases(cat, role):
+    """The base values whose `role` collection types (set, span or spanset) the binding registers,
+    in the order of those collection types in the catalog's MeosType enum: every base to which the
+    catalog's type relations give one (`typeRelations.byBase[<base>].<role>`, which MEOS-API reads
+    from MEOS_RELTYPE_CATALOG), named as its collection type is named less the role suffix
+    (intset -> int, tstzspanset -> tstz), so a base MEOS gives a collection type reaches the
+    binding with no edit here. It answers per role what #typereg_members answered by filtering the
+    set bases on the enum."""
     enum = next(e for e in cat["enums"] if e["name"] == "MeosType")
     order = {v["name"]: v["value"] for v in enum["values"]}
-    sets = [r["set"] for r in cat["typeRelations"]["byBase"].values() if r.get("set")]
-    bases = [s[:-len("set")] for s in sorted(sets, key=lambda s: order["T_" + s.upper()])]
-    return [b for b in bases if b not in HAND_SET_BASES]
+    types = [r[role] for r in cat["typeRelations"]["byBase"].values() if r.get(role)]
+    bases = [t[:-len(role)] for t in sorted(types, key=lambda t: order["T_" + t.upper()])]
+    return [b for b in bases if role != "set" or b not in HAND_SET_BASES]
 
-# The base values whose collection types the binding registers, in canonical order. ONE list
-# serves both the type registration below (SetTypes/SpanTypes/SpansetTypes, filtered per family by
-# T_<BASE><SUFFIX> membership in the catalog MeosType enum) and the name-scoping maps here, so a
-# base can never be registered as a type while its family functions stay unscoped.
-BASE_ORDER = catalog_set_bases(CATALOG)
+# The base values whose set types the binding registers, in canonical order. ONE list serves both
+# the set type registration below and the name-scoping maps here, so a base can never be
+# registered as a type while its family functions stay unscoped; the span and span set families
+# read their own relations (SPAN_BASES, SPANSET_BASES).
+BASE_ORDER = catalog_collection_bases(CATALOG, "set")
 SET_TYPES = {b + "set": "SetTypes::%sset()" % b for b in BASE_ORDER}
+SPAN_BASES = catalog_collection_bases(CATALOG, "span")
+SPAN_TYPES = {b + "span": "SpanTypes::%sspan()" % b for b in SPAN_BASES}
+SPANSET_BASES = catalog_collection_bases(CATALOG, "spanset")
+SPANSET_TYPES = {b + "spanset": "SpansetTypes::%sspanset()" % b for b in SPANSET_BASES}
 
 # The element LogicalType per base value. A core base names a DuckDB built-in; a base the binding
 # registers itself names that type's accessor, and BASE_HEADER states the header declaring it so the
@@ -1052,7 +1058,7 @@ def ret_set_type(name, arg_acc):
                     and SET_SIG_ACC.get(s.get("ret"))):
                 return SET_SIG_ACC[s["ret"]]
     # `*_to_<settype>` conversion CHANGES type -> target; else preserve the arg's set type.
-    m = re.search(r'_to_(intset|bigintset|floatset|textset|dateset|tstzset)$', name)
+    m = re.search(r'_to_(%s)$' % '|'.join(SET_TYPES), name)
     return SET_TYPES[m.group(1)] if m else arg_acc
 
 # The geometry and geography sets, whose element GSERIALIZED has no base value marshaller of the
@@ -4801,9 +4807,7 @@ SQL_BASE_TO_DUCK = {
     "integer": "LogicalType::INTEGER", "bigint": "LogicalType::BIGINT", "float": "LogicalType::DOUBLE",
     "boolean": "LogicalType::BOOLEAN", "text": "LogicalType::VARCHAR", "date": "LogicalType::DATE",
     "timestamptz": "LogicalType::TIMESTAMP_TZ", "interval": "LogicalType::INTERVAL",
-    "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
-    "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
-    "tstzspan": "SpanTypes::tstzspan()", "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
+    **SPAN_TYPES, "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()", "nsegment": "NpointTypes::nsegment()",
 }
 
@@ -5161,12 +5165,7 @@ def emit_temporal_span(f, kind):
 # straight from the catalog, so no name is read to decide it. The container return
 # marshals via PTR_RET (SpanToBlob/TboxToBlob/...), already present.
 SQL_CONTAINER_ACC = {
-    "tstzspan": "SpanTypes::tstzspan()", "intspan": "SpanTypes::intspan()",
-    "bigintspan": "SpanTypes::bigintspan()", "floatspan": "SpanTypes::floatspan()",
-    "datespan": "SpanTypes::datespan()",
-    "tstzspanset": "SpansetTypes::tstzspanset()", "intspanset": "SpansetTypes::intspanset()",
-    "bigintspanset": "SpansetTypes::bigintspanset()", "floatspanset": "SpansetTypes::floatspanset()",
-    "datespanset": "SpansetTypes::datespanset()",
+    **SPAN_TYPES, **SPANSET_TYPES,
     "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()",
 }
@@ -5284,28 +5283,18 @@ ELEM_TO_SPAN = {
     "int64_t": "SpanTypes::bigintspan()", "double": "SpanTypes::floatspan()",
     "DateADT": "SpanTypes::datespan()", "TimestampTz": "SpanTypes::tstzspan()",
 }
-SPAN_TYPES = {
-    "intspan": "SpanTypes::intspan()", "bigintspan": "SpanTypes::bigintspan()",
-    "floatspan": "SpanTypes::floatspan()", "datespan": "SpanTypes::datespan()",
-    "tstzspan": "SpanTypes::tstzspan()",
-}
 def span_reg_scope(name):
     if name.startswith("span_"): return ("all", None)
     for pre, acc in SPAN_TYPES.items():
         if name.startswith(pre + "_") or name == pre: return ("types", [acc])
     return None
 def ret_span_type(name, arg_acc):
-    m = re.search(r'_to_(intspan|bigintspan|floatspan|datespan|tstzspan)$', name)
+    m = re.search(r'_to_(%s)$' % '|'.join(SPAN_TYPES), name)
     return SPAN_TYPES[m.group(1)] if m else arg_acc
 
 # SpanSet mirrors Span (varlena -> spanset_mem_size; SpansetTypes accessors verified
 # lowercase spanset.hpp + meos_catalog.c). Same shapes -> handled by the SAME collection
 # machinery (shape_coll/emit_coll) via a descriptor, so SpanSet is added without duplication.
-SPANSET_TYPES = {
-    "intspanset": "SpansetTypes::intspanset()", "bigintspanset": "SpansetTypes::bigintspanset()",
-    "floatspanset": "SpansetTypes::floatspanset()",
-    "datespanset": "SpansetTypes::datespanset()", "tstzspanset": "SpansetTypes::tstzspanset()",
-}
 ELEM_TO_SPANSET = {
     "int": "SpansetTypes::intspanset()", "int32_t": "SpansetTypes::intspanset()",
     "int64_t": "SpansetTypes::bigintspanset()", "double": "SpansetTypes::floatspanset()",
@@ -5317,7 +5306,7 @@ def spanset_reg_scope(name):
         if name.startswith(pre + "_") or name == pre: return ("types", [acc])
     return None
 def ret_spanset_type(name, arg_acc):
-    m = re.search(r'_to_(intspanset|bigintspanset|floatspanset|datespanset|tstzspanset)$', name)
+    m = re.search(r'_to_(%s)$' % '|'.join(SPANSET_TYPES), name)
     return SPANSET_TYPES[m.group(1)] if m else arg_acc
 
 # Collection-family descriptors (Span + SpanSet share ALL shape logic).
@@ -9655,8 +9644,10 @@ TYPEREG_FAMILIES = [
 ]
 
 def typereg_members(enum_names, suffix):
-    """Bases (in canonical order) for which T_<BASE><SUFFIX> exists in the enum."""
-    return [b for b in BASE_ORDER if ("T_" + (b + suffix).upper()) in enum_names]
+    """Bases (in canonical order) whose `suffix` collection type the catalog's type relations
+    state (#catalog_collection_bases) and the enum declares."""
+    bases = {"set": BASE_ORDER, "span": SPAN_BASES, "spanset": SPANSET_BASES}[suffix]
+    return [b for b in bases if ("T_" + (b + suffix).upper()) in enum_names]
 
 def emit_typereg_family(fam, enum_names):
     cls, mp, suf, macro = fam["cls"], fam["mapping"], fam["suffix"], fam["macro"]
@@ -9735,8 +9726,8 @@ def gen_type_registration(catalog, out_path):
     ] + [
         # The headers stating the element accessors the admitted bases name.
         '#include "%s"' % BASE_HEADER[b]
-        for b in BASE_ORDER
-        if b in BASE_HEADER and any(("T_" + (b + f["suffix"]).upper()) in enum_names
+        for b in dict.fromkeys(BASE_ORDER + SPAN_BASES + SPANSET_BASES)
+        if b in BASE_HEADER and any(b in typereg_members(enum_names, f["suffix"])
                                     for f in TYPEREG_FAMILIES)
     ] + [
         '#include "duckdb/main/extension/extension_loader.hpp"',
