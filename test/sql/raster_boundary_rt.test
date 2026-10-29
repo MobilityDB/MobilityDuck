@@ -1,16 +1,17 @@
 # name: test/sql/raster_boundary_rt.test
 # description: The casts between MEOS's raster and DuckDB's raster extension (duckdb-raster),
 #              whose type names RT_DATACUBE and RT_STATS exist once the extension
-#              is loaded. MOBILITYDUCK_RASTER_EXTENSION names the extension file, the
-#              community binary of duckdb-raster for the DuckDB version of the build.
+#              is loaded: the community binary of duckdb-raster published for the
+#              DuckDB version of the build.
 # group: [sql]
 
 require mobilityduck
 
-require-env MOBILITYDUCK_RASTER_EXTENSION
+statement ok
+INSTALL raster FROM community;
 
 statement ok
-LOAD '${MOBILITYDUCK_RASTER_EXTENSION}';
+LOAD raster;
 
 # The raster of two bands of each PostGIS pixel type, with the header of its
 # datacube, as in raster_boundary.test.
@@ -186,9 +187,14 @@ true
 true
 true
 
-# duckdb-raster's statistics of the datacube of a band are MEOS's of the band.
+# duckdb-raster's statistics of the datacube of a band are MEOS's of the band: the count,
+# the sum, the minimum and the maximum exactly, the mean and the standard deviation each
+# rounded by its own engine, so within a few units in the last place of each other.
 query I
-SELECT CAST(RT_CubeStats(CAST(r AS RT_DATACUBE), 0) AS summarystats) = summaryStats(r, 1) FROM rast WHERE pixtype = '16BUI';
+SELECT s.count = m.count AND s.sum = m.sum AND s.min = m.min AND s.max = m.max
+  AND abs(s.mean - m.mean) <= 1e-15 * abs(m.mean) AND abs(s.stddev - m.stddev) <= 1e-15 * m.stddev
+FROM (SELECT CAST(RT_CubeStats(CAST(r AS RT_DATACUBE), 0) AS summarystats) AS s, summaryStats(r, 1) AS m
+      FROM rast WHERE pixtype = '16BUI');
 ----
 true
 
