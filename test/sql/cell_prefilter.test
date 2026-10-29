@@ -1,0 +1,94 @@
+# name: test/sql/cell_prefilter.test
+# description: The cell-set prefilter of every cell family — geoTo<Cell>Set(geometry, res), the
+#   single-cell geoTo<Cell>(geometry, res) and eEqual(<cell>set, t<cell>) in either operand
+#   order — for quadbin and S2 as h3_prefilter.test states it for H3, and the
+#   (th3index, h3indexset) order. The assertions are those MobilityDB's 356_quadbin_ops,
+#   602_s2cell_ops, 355_tquadbin_spatialfuncs and 605_ts2cell_spatialfuncs state.
+
+require mobilityduck
+
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
+# ── quadbin ──
+
+# The cell of a point at a zoom has that zoom, and the cell set of a point holds that one cell.
+query II
+SELECT getResolution(geoToQuadbinCell(ST_Point(4.35, 50.85), 10)),
+       numValues(geoToQuadbinSet(ST_Point(4.35, 50.85), 10));
+----
+10	1
+
+query I
+SELECT startValue(geoToQuadbinSet(ST_Point(4.35, 50.85), 10)) =
+       geoToQuadbinCell(ST_Point(4.35, 50.85), 10);
+----
+true
+
+# A region's cell set at the trip's own location holds the trip's cell, in either operand order;
+# a far region holds none of its cells.
+query II
+SELECT eEqual(geoToQuadbinSet(ST_Point(1, 1), 5),
+              tquadbin('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)),
+       eEqual(tquadbin('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5),
+              geoToQuadbinSet(ST_Point(1, 1), 5));
+----
+true	true
+
+query II
+SELECT eEqual(geoToQuadbinSet(ST_Point(50, 50), 5),
+              tquadbin('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5)),
+       eEqual(tquadbin('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5),
+              geoToQuadbinSet(ST_Point(50, 50), 5));
+----
+false	false
+
+# ── S2: the geography argument is read as geodetic ──
+
+query III
+SELECT getResolution(geoToS2Cell(ST_Point(4.35, 50.85), 10)),
+       s2GetFace(geoToS2Cell(ST_Point(4.35, 50.85), 10)),
+       s2GetFace(geoToS2Cell(ST_Point(-122.4, 37.8), 10));
+----
+10	2	4
+
+query II
+SELECT numValues(geoToS2CellSet(ST_Point(4.35, 50.85), 10)),
+       startValue(geoToS2CellSet(ST_Point(4.35, 50.85), 10)) =
+       geoToS2Cell(ST_Point(4.35, 50.85), 10);
+----
+1	true
+
+statement error
+SELECT geoToS2Cell(ST_GeomFromText('LINESTRING(4.35 50.85, 4.36 50.86)'), 10);
+----
+Only point geometries accepted
+
+query II
+SELECT eEqual(geoToS2CellSet(ST_Point(1, 1), 10),
+              ts2cell('SRID=4326;[Point(1 1)@2000-01-01]'::tgeogpoint, 10)),
+       eEqual(ts2cell('SRID=4326;[Point(1 1)@2000-01-01]'::tgeogpoint, 10),
+              geoToS2CellSet(ST_Point(1, 1), 10));
+----
+true	true
+
+query II
+SELECT eEqual(geoToS2CellSet(ST_Point(50, 50), 10),
+              ts2cell('SRID=4326;[Point(1 1)@2000-01-01]'::tgeogpoint, 10)),
+       eEqual(ts2cell('SRID=4326;[Point(1 1)@2000-01-01]'::tgeogpoint, 10),
+              geoToS2CellSet(ST_Point(50, 50), 10));
+----
+false	false
+
+# ── H3, the (th3index, h3indexset) order ──
+
+query II
+SELECT eEqual(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5),
+              geoToH3IndexSet(ST_Point(1, 1), 5)),
+       eEqual(th3index('SRID=4326;[Point(1 1)@2000-01-01]'::tgeompoint, 5),
+              geoToH3IndexSet(ST_Point(50, 50), 5));
+----
+true	false

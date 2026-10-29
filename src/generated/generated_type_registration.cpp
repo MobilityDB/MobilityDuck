@@ -35,16 +35,16 @@
 #include "temporal/set.hpp"
 #include "temporal/span.hpp"
 #include "temporal/spanset.hpp"
-#include "json/tjsonb.hpp"
-#include "cbuffer/tcbuffer.hpp"
 #include "npoint/tnpoint.hpp"
+#include "pose/tpose.hpp"
+#include "cbuffer/tcbuffer.hpp"
+#include "json/tjsonb.hpp"
 #include "h3/th3index.hpp"
 #include "quadbin/tquadbin.hpp"
-#include "s2cell/ts2cell.hpp"
-#include "pose/tpose.hpp"
-#include "posechain/tposechain.hpp"
 #include "pointcloud/tpcpoint.hpp"
 #include "pointcloud/tpcpatch.hpp"
+#include "posechain/tposechain.hpp"
+#include "s2cell/ts2cell.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include <unordered_map>
 
@@ -62,31 +62,31 @@ namespace duckdb {
         type.SetAlias(#NAME);                                  \
         return type;                                           \
     }
+DEFINE_SPAN_SET_TYPE(datespanset)
+DEFINE_SPAN_SET_TYPE(floatspanset)
 DEFINE_SPAN_SET_TYPE(intspanset)
 DEFINE_SPAN_SET_TYPE(bigintspanset)
-DEFINE_SPAN_SET_TYPE(floatspanset)
-DEFINE_SPAN_SET_TYPE(datespanset)
 DEFINE_SPAN_SET_TYPE(tstzspanset)
 #undef DEFINE_SPAN_SET_TYPE
 
 void SpansetTypes::RegisterTypes(ExtensionLoader &loader) {
+    loader.RegisterType("datespanset", datespanset());
+    loader.RegisterType("floatspanset", floatspanset());
     loader.RegisterType("intspanset", intspanset());
     loader.RegisterType("bigintspanset", bigintspanset());
-    loader.RegisterType("floatspanset", floatspanset());
-    loader.RegisterType("datespanset", datespanset());
     loader.RegisterType("tstzspanset", tstzspanset());
 }
 
 const std::vector<LogicalType> &SpansetTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        intspanset(), bigintspanset(), floatspanset(), datespanset(), tstzspanset()
+        datespanset(), floatspanset(), intspanset(), bigintspanset(), tstzspanset()
     };
     return types;
 }
 
 MeosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intspanset", T_INTSPANSET}, {"bigintspanset", T_BIGINTSPANSET}, {"floatspanset", T_FLOATSPANSET}, {"datespanset", T_DATESPANSET}, {"tstzspanset", T_TSTZSPANSET}
+        {"datespanset", T_DATESPANSET}, {"floatspanset", T_FLOATSPANSET}, {"intspanset", T_INTSPANSET}, {"bigintspanset", T_BIGINTSPANSET}, {"tstzspanset", T_TSTZSPANSET}
     };
     auto it = alias_to_type.find(alias);
     return it != alias_to_type.end() ? it->second : T_UNKNOWN;
@@ -94,30 +94,30 @@ MeosType SpansetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 LogicalType SpansetTypeMapping::GetChildType(const LogicalType &type) {
     auto alias = type.ToString();
+    if (alias == "datespanset") return SpanTypes::datespan();
+    if (alias == "floatspanset") return SpanTypes::floatspan();
     if (alias == "intspanset") return SpanTypes::intspan();
     if (alias == "bigintspanset") return SpanTypes::bigintspan();
-    if (alias == "floatspanset") return SpanTypes::floatspan();
-    if (alias == "datespanset") return SpanTypes::datespan();
     if (alias == "tstzspanset") return SpanTypes::tstzspan();
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 
 LogicalType SpansetTypeMapping::GetSetType(const LogicalType &type) {
     auto alias = type.ToString();
+    if (alias == "datespanset") return SetTypes::dateset();
+    if (alias == "floatspanset") return SetTypes::floatset();
     if (alias == "intspanset") return SetTypes::intset();
     if (alias == "bigintspanset") return SetTypes::bigintset();
-    if (alias == "floatspanset") return SetTypes::floatset();
-    if (alias == "datespanset") return SetTypes::dateset();
     if (alias == "tstzspanset") return SetTypes::tstzset();
     throw NotImplementedException("GetSetType: unsupported alias: " + alias);
 }
 
 LogicalType SpansetTypeMapping::GetBaseType(const LogicalType &type) {
     auto alias = type.ToString();
+    if (alias == "datespanset") return LogicalType::DATE;
+    if (alias == "floatspanset") return LogicalType::DOUBLE;
     if (alias == "intspanset") return LogicalType::INTEGER;
     if (alias == "bigintspanset") return LogicalType::BIGINT;
-    if (alias == "floatspanset") return LogicalType::DOUBLE;
-    if (alias == "datespanset") return LogicalType::DATE;
     if (alias == "tstzspanset") return LogicalType::TIMESTAMP_TZ;
     throw NotImplementedException("GetBaseType: unsupported alias: " + alias);
 }
@@ -129,31 +129,31 @@ LogicalType SpansetTypeMapping::GetBaseType(const LogicalType &type) {
         type.SetAlias(#NAME);                                  \
         return type;                                           \
     }
+DEFINE_SPAN_TYPE(datespan)
+DEFINE_SPAN_TYPE(floatspan)
 DEFINE_SPAN_TYPE(intspan)
 DEFINE_SPAN_TYPE(bigintspan)
-DEFINE_SPAN_TYPE(floatspan)
-DEFINE_SPAN_TYPE(datespan)
 DEFINE_SPAN_TYPE(tstzspan)
 #undef DEFINE_SPAN_TYPE
 
 void SpanTypes::RegisterTypes(ExtensionLoader &loader) {
+    loader.RegisterType("datespan", datespan());
+    loader.RegisterType("floatspan", floatspan());
     loader.RegisterType("intspan", intspan());
     loader.RegisterType("bigintspan", bigintspan());
-    loader.RegisterType("floatspan", floatspan());
-    loader.RegisterType("datespan", datespan());
     loader.RegisterType("tstzspan", tstzspan());
 }
 
 const std::vector<LogicalType> &SpanTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        intspan(), bigintspan(), floatspan(), datespan(), tstzspan()
+        datespan(), floatspan(), intspan(), bigintspan(), tstzspan()
     };
     return types;
 }
 
 MeosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intspan", T_INTSPAN}, {"bigintspan", T_BIGINTSPAN}, {"floatspan", T_FLOATSPAN}, {"datespan", T_DATESPAN}, {"tstzspan", T_TSTZSPAN}
+        {"datespan", T_DATESPAN}, {"floatspan", T_FLOATSPAN}, {"intspan", T_INTSPAN}, {"bigintspan", T_BIGINTSPAN}, {"tstzspan", T_TSTZSPAN}
     };
     auto it = alias_to_type.find(alias);
     return it != alias_to_type.end() ? it->second : T_UNKNOWN;
@@ -161,10 +161,10 @@ MeosType SpanTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
     auto alias = type.ToString();
+    if (alias == "datespan") return LogicalType::DATE;
+    if (alias == "floatspan") return LogicalType::DOUBLE;
     if (alias == "intspan") return LogicalType::INTEGER;
     if (alias == "bigintspan") return LogicalType::BIGINT;
-    if (alias == "floatspan") return LogicalType::DOUBLE;
-    if (alias == "datespan") return LogicalType::DATE;
     if (alias == "tstzspan") return LogicalType::TIMESTAMP_TZ;
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
@@ -176,53 +176,53 @@ LogicalType SpanTypeMapping::GetChildType(const LogicalType &type) {
         type.SetAlias(#NAME);                                  \
         return type;                                           \
     }
+DEFINE_SET_TYPE(dateset)
+DEFINE_SET_TYPE(floatset)
 DEFINE_SET_TYPE(intset)
 DEFINE_SET_TYPE(bigintset)
-DEFINE_SET_TYPE(floatset)
 DEFINE_SET_TYPE(textset)
-DEFINE_SET_TYPE(dateset)
 DEFINE_SET_TYPE(tstzset)
-DEFINE_SET_TYPE(jsonbset)
-DEFINE_SET_TYPE(cbufferset)
 DEFINE_SET_TYPE(npointset)
+DEFINE_SET_TYPE(poseset)
+DEFINE_SET_TYPE(cbufferset)
+DEFINE_SET_TYPE(jsonbset)
 DEFINE_SET_TYPE(h3indexset)
 DEFINE_SET_TYPE(quadbinset)
-DEFINE_SET_TYPE(s2cellset)
-DEFINE_SET_TYPE(poseset)
-DEFINE_SET_TYPE(posechainset)
 DEFINE_SET_TYPE(pcpointset)
 DEFINE_SET_TYPE(pcpatchset)
+DEFINE_SET_TYPE(posechainset)
+DEFINE_SET_TYPE(s2cellset)
 #undef DEFINE_SET_TYPE
 
 void SetTypes::RegisterTypes(ExtensionLoader &loader) {
+    loader.RegisterType("dateset", dateset());
+    loader.RegisterType("floatset", floatset());
     loader.RegisterType("intset", intset());
     loader.RegisterType("bigintset", bigintset());
-    loader.RegisterType("floatset", floatset());
     loader.RegisterType("textset", textset());
-    loader.RegisterType("dateset", dateset());
     loader.RegisterType("tstzset", tstzset());
-    loader.RegisterType("jsonbset", jsonbset());
-    loader.RegisterType("cbufferset", cbufferset());
     loader.RegisterType("npointset", npointset());
+    loader.RegisterType("poseset", poseset());
+    loader.RegisterType("cbufferset", cbufferset());
+    loader.RegisterType("jsonbset", jsonbset());
     loader.RegisterType("h3indexset", h3indexset());
     loader.RegisterType("quadbinset", quadbinset());
-    loader.RegisterType("s2cellset", s2cellset());
-    loader.RegisterType("poseset", poseset());
-    loader.RegisterType("posechainset", posechainset());
     loader.RegisterType("pcpointset", pcpointset());
     loader.RegisterType("pcpatchset", pcpatchset());
+    loader.RegisterType("posechainset", posechainset());
+    loader.RegisterType("s2cellset", s2cellset());
 }
 
 const std::vector<LogicalType> &SetTypes::AllTypes() {
     static std::vector<LogicalType> types = {
-        intset(), bigintset(), floatset(), textset(), dateset(), tstzset(), jsonbset(), cbufferset(), npointset(), h3indexset(), quadbinset(), s2cellset(), poseset(), posechainset(), pcpointset(), pcpatchset()
+        dateset(), floatset(), intset(), bigintset(), textset(), tstzset(), npointset(), poseset(), cbufferset(), jsonbset(), h3indexset(), quadbinset(), pcpointset(), pcpatchset(), posechainset(), s2cellset()
     };
     return types;
 }
 
 MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
     static const std::unordered_map<std::string, MeosType> alias_to_type = {
-        {"intset", T_INTSET}, {"bigintset", T_BIGINTSET}, {"floatset", T_FLOATSET}, {"textset", T_TEXTSET}, {"dateset", T_DATESET}, {"tstzset", T_TSTZSET}, {"jsonbset", T_JSONBSET}, {"cbufferset", T_CBUFFERSET}, {"npointset", T_NPOINTSET}, {"h3indexset", T_H3INDEXSET}, {"quadbinset", T_QUADBINSET}, {"s2cellset", T_S2CELLSET}, {"poseset", T_POSESET}, {"posechainset", T_POSECHAINSET}, {"pcpointset", T_PCPOINTSET}, {"pcpatchset", T_PCPATCHSET}
+        {"dateset", T_DATESET}, {"floatset", T_FLOATSET}, {"intset", T_INTSET}, {"bigintset", T_BIGINTSET}, {"textset", T_TEXTSET}, {"tstzset", T_TSTZSET}, {"npointset", T_NPOINTSET}, {"poseset", T_POSESET}, {"cbufferset", T_CBUFFERSET}, {"jsonbset", T_JSONBSET}, {"h3indexset", T_H3INDEXSET}, {"quadbinset", T_QUADBINSET}, {"pcpointset", T_PCPOINTSET}, {"pcpatchset", T_PCPATCHSET}, {"posechainset", T_POSECHAINSET}, {"s2cellset", T_S2CELLSET}
     };
     auto it = alias_to_type.find(alias);
     return it != alias_to_type.end() ? it->second : T_UNKNOWN;
@@ -230,22 +230,22 @@ MeosType SetTypeMapping::GetMeosTypeFromAlias(const std::string &alias) {
 
 LogicalType SetTypeMapping::GetChildType(const LogicalType &type) {
     auto alias = type.ToString();
+    if (alias == "dateset") return LogicalType::DATE;
+    if (alias == "floatset") return LogicalType::DOUBLE;
     if (alias == "intset") return LogicalType::INTEGER;
     if (alias == "bigintset") return LogicalType::BIGINT;
-    if (alias == "floatset") return LogicalType::DOUBLE;
     if (alias == "textset") return LogicalType::VARCHAR;
-    if (alias == "dateset") return LogicalType::DATE;
     if (alias == "tstzset") return LogicalType::TIMESTAMP_TZ;
-    if (alias == "jsonbset") return TJsonbTypes::jsonb();
-    if (alias == "cbufferset") return CbufferTypes::cbuffer();
     if (alias == "npointset") return NpointTypes::npoint();
+    if (alias == "poseset") return PoseTypes::pose();
+    if (alias == "cbufferset") return CbufferTypes::cbuffer();
+    if (alias == "jsonbset") return TJsonbTypes::jsonb();
     if (alias == "h3indexset") return H3indexTypes::h3index();
     if (alias == "quadbinset") return QuadbinTypes::quadbin();
-    if (alias == "s2cellset") return S2cellTypes::s2cell();
-    if (alias == "poseset") return PoseTypes::pose();
-    if (alias == "posechainset") return PosechainTypes::posechain();
     if (alias == "pcpointset") return TPcpointTypes::pcpoint();
     if (alias == "pcpatchset") return TPcpatchTypes::pcpatch();
+    if (alias == "posechainset") return PosechainTypes::posechain();
+    if (alias == "s2cellset") return S2cellTypes::s2cell();
     throw NotImplementedException("GetChildType: unsupported alias: " + alias);
 }
 

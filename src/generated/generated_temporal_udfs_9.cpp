@@ -1810,6 +1810,19 @@ static void Gen_ever_eq_h3indexset_th3index(DataChunk &args, ExpressionState &, 
         });
 }
 
+static void Gen_ever_eq_th3index_h3indexset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_s, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_th3index_h3indexset(t, s);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 
 // ===== @ingroup meos_h3_set_accessor =====
 static void Gen_h3indexset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3624,6 +3637,8 @@ void RegisterGenerated_meos_h3_base_metrics(ExtensionLoader &loader) {
 void RegisterGenerated_meos_h3_comp(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {SetTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
     RegisterMeosFunction(loader, ScalarFunction("?=", {SetTypes::h3indexset(), H3indexTypes::th3index()}, LogicalType::BOOLEAN, Gen_ever_eq_h3indexset_th3index));
+    RegisterMeosFunction(loader, ScalarFunction("eEqual", {H3indexTypes::th3index(), SetTypes::h3indexset()}, LogicalType::BOOLEAN, Gen_ever_eq_th3index_h3indexset));
+    RegisterMeosFunction(loader, ScalarFunction("?=", {H3indexTypes::th3index(), SetTypes::h3indexset()}, LogicalType::BOOLEAN, Gen_ever_eq_th3index_h3indexset));
 }
 
 void RegisterGenerated_meos_h3_set_accessor(ExtensionLoader &loader) {

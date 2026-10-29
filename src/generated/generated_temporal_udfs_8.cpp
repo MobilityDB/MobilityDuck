@@ -4766,6 +4766,54 @@ static void Gen_ts2cell_cell_to_token(DataChunk &args, ExpressionState &, Vector
         });
 }
 
+static void Gen_geo_to_s2cell_cell(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, int32_t res) {
+            GSERIALIZED *gs = GeogFromGeometry(in_g);
+            uint64_t r = geo_to_s2cell_cell(gs, res);
+            free(gs);
+            return (int64_t) r;
+        });
+}
+
+static void Gen_geo_to_s2cell_set(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, int32_t res) {
+            GSERIALIZED *gs = GeogFromGeometry(in_g);
+            Set *r = geo_to_s2cell_set(gs, res);
+            free(gs);
+            return SetToBlob(result, r);
+        });
+}
+
+static void Gen_ever_eq_s2cellset_ts2cell(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_s, string_t in_t, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_s2cellset_ts2cell(s, t);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
+static void Gen_ever_eq_ts2cell_s2cellset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_s, ValidityMask &mask, idx_t idx) {
+            Set *s = BlobToSet(in_s);
+            Temporal *t = BlobToTemporal(in_t);
+            int r = ever_eq_ts2cell_s2cellset(t, s);
+            free(s); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return false; }
+            return r != 0;
+        });
+}
+
 } // anonymous
 
 void RegisterGenerated_meos_cbuffer_comp_ever(ExtensionLoader &loader) {
@@ -5044,6 +5092,12 @@ void RegisterGenerated_meos_s2cell(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_s2cell_timestamptz_to_stbox));
     RegisterMeosFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell(), SpanTypes::tstzspan()}, StboxType::stbox(), Gen_s2cell_tstzspan_to_stbox));
     RegisterMeosFunction(loader, ScalarFunction("ts2CellToToken", {S2cellTypes::ts2cell()}, TemporalTypes::ttext(), Gen_ts2cell_cell_to_token));
+    RegisterMeosFunction(loader, ScalarFunction("geoToS2Cell", {MobilityDuckGeometryType(), LogicalType::INTEGER}, S2cellTypes::s2cell(), Gen_geo_to_s2cell_cell));
+    RegisterMeosFunction(loader, ScalarFunction("geoToS2CellSet", {MobilityDuckGeometryType(), LogicalType::INTEGER}, SetTypes::s2cellset(), Gen_geo_to_s2cell_set));
+    RegisterMeosFunction(loader, ScalarFunction("eEqual", {SetTypes::s2cellset(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_ever_eq_s2cellset_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("?=", {SetTypes::s2cellset(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_ever_eq_s2cellset_ts2cell));
+    RegisterMeosFunction(loader, ScalarFunction("eEqual", {S2cellTypes::ts2cell(), SetTypes::s2cellset()}, LogicalType::BOOLEAN, Gen_ever_eq_ts2cell_s2cellset));
+    RegisterMeosFunction(loader, ScalarFunction("?=", {S2cellTypes::ts2cell(), SetTypes::s2cellset()}, LogicalType::BOOLEAN, Gen_ever_eq_ts2cell_s2cellset));
 }
 
 } // namespace duckdb
