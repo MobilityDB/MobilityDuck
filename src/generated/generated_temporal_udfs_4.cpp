@@ -1192,6 +1192,18 @@ static void Gen_tquadbin_cell_to_quadkey(DataChunk &args, ExpressionState &, Vec
         });
 }
 
+static void Gen_tquadbin_grid_distance(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = (Temporal *) tquadbin_grid_distance(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 
 // ===== @ingroup meos_geo_accessor =====
 static void Gen_bearing_point_point(DataChunk &args, ExpressionState &, Vector &result) {
@@ -6010,6 +6022,9 @@ void RegisterGenerated_meos_cellindex(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("cellArea", {QuadbinTypes::tquadbin()}, TemporalTypes::tfloat(), Gen_tcellindex_cell_area));
     RegisterMeosFunction(loader, ScalarFunction("cellArea", {S2cellTypes::ts2cell()}, TemporalTypes::tfloat(), Gen_tcellindex_cell_area));
     RegisterMeosFunction(loader, ScalarFunction("tquadbinCellToQuadkey", {QuadbinTypes::tquadbin()}, TemporalTypes::ttext(), Gen_tquadbin_cell_to_quadkey));
+    RegisterMeosFunction(loader, ScalarFunction("tquadbinGridDistance", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, TemporalTypes::tbigint(), Gen_tquadbin_grid_distance));
+    RegisterMeosFunction(loader, ScalarFunction("tDistance", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, TemporalTypes::tbigint(), Gen_tquadbin_grid_distance));
+    RegisterMeosFunction(loader, ScalarFunction("<->", {QuadbinTypes::tquadbin(), QuadbinTypes::tquadbin()}, TemporalTypes::tbigint(), Gen_tquadbin_grid_distance));
 }
 
 void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
