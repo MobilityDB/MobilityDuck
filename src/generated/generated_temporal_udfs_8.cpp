@@ -4766,6 +4766,18 @@ static void Gen_ts2cell_cell_to_token(DataChunk &args, ExpressionState &, Vector
         });
 }
 
+static void Gen_ts2cell_grid_distance(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = (Temporal *) ts2cell_grid_distance(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_geo_to_s2cell_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
@@ -5092,6 +5104,9 @@ void RegisterGenerated_meos_s2cell(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell(), LogicalType::TIMESTAMP_TZ}, StboxType::stbox(), Gen_s2cell_timestamptz_to_stbox));
     RegisterMeosFunction(loader, ScalarFunction("stbox", {S2cellTypes::s2cell(), SpanTypes::tstzspan()}, StboxType::stbox(), Gen_s2cell_tstzspan_to_stbox));
     RegisterMeosFunction(loader, ScalarFunction("ts2CellToToken", {S2cellTypes::ts2cell()}, TemporalTypes::ttext(), Gen_ts2cell_cell_to_token));
+    RegisterMeosFunction(loader, ScalarFunction("ts2GridDistance", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_grid_distance));
+    RegisterMeosFunction(loader, ScalarFunction("tDistance", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_grid_distance));
+    RegisterMeosFunction(loader, ScalarFunction("<->", {S2cellTypes::ts2cell(), S2cellTypes::ts2cell()}, TemporalTypes::tbigint(), Gen_ts2cell_grid_distance));
     RegisterMeosFunction(loader, ScalarFunction("geoToS2Cell", {MobilityDuckGeometryType(), LogicalType::INTEGER}, S2cellTypes::s2cell(), Gen_geo_to_s2cell_cell));
     RegisterMeosFunction(loader, ScalarFunction("geoToS2CellSet", {MobilityDuckGeometryType(), LogicalType::INTEGER}, SetTypes::s2cellset(), Gen_geo_to_s2cell_set));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {SetTypes::s2cellset(), S2cellTypes::ts2cell()}, LogicalType::BOOLEAN, Gen_ever_eq_s2cellset_ts2cell));
