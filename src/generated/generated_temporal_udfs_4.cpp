@@ -2391,6 +2391,36 @@ static void Gen_jsonbset_extract_path(DataChunk &args, ExpressionState &, Vector
     }
 }
 
+static void Gen_jsonbset_extract_path_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lst = args.data[1]; lst.Flatten(args.size());
+    auto &child = ListVector::GetEntry(lst);
+    child.Flatten(ListVector::GetListSize(lst));
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Set *t = BlobToSet(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            int n = 0;
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            Set *r = jsonbset_extract_path(t, elems, n, null_handle_type_from_string("use_json_null"));
+            free(t); FreeTextArr(elems, n);
+            return SetToBlobN(result, r, mask, idx);
+        }();
+    }
+}
+
 static void Gen_jsonbset_extract_path_text(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &lst = args.data[1]; lst.Flatten(args.size());
@@ -2416,6 +2446,36 @@ static void Gen_jsonbset_extract_path_text(DataChunk &args, ExpressionState &, V
             text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
             nullHandleType c2 = null_handle_type_from_string(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]].GetString().c_str());
             Set *r = jsonbset_extract_path_text(t, elems, n, c2);
+            free(t); FreeTextArr(elems, n);
+            return SetToBlobN(result, r, mask, idx);
+        }();
+    }
+}
+
+static void Gen_jsonbset_extract_path_text_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lst = args.data[1]; lst.Flatten(args.size());
+    auto &child = ListVector::GetEntry(lst);
+    child.Flatten(ListVector::GetListSize(lst));
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Set *t = BlobToSet(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            int n = 0;
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            Set *r = jsonbset_extract_path_text(t, elems, n, null_handle_type_from_string("use_json_null"));
             free(t); FreeTextArr(elems, n);
             return SetToBlobN(result, r, mask, idx);
         }();
@@ -2448,6 +2508,37 @@ static void Gen_jsonbset_insert(DataChunk &args, ExpressionState &, Vector &resu
             Jsonb *c2 = BlobToJsonb(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]]);
             bool c3 = UnifiedVectorFormat::GetData<bool>(u[3])[ri[3]];
             Set *r = jsonbset_insert(t, elems, n, c2, c3);
+            free(t); FreeTextArr(elems, n); free(c2);
+            return SetToBlobN(result, r, mask, idx);
+        }();
+    }
+}
+
+static void Gen_jsonbset_insert_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &lst = args.data[1]; lst.Flatten(args.size());
+    auto &child = ListVector::GetEntry(lst);
+    child.Flatten(ListVector::GetListSize(lst));
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[3];
+    for (idx_t c = 0; c < 3; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[3];
+        bool valid = true;
+        for (idx_t c = 0; c < 3; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Set *t = BlobToSet(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            int n = 0;
+            text **elems = ListToTextArr(child, UnifiedVectorFormat::GetData<list_entry_t>(u[1])[ri[1]], &n);
+            Jsonb *c2 = BlobToJsonb(UnifiedVectorFormat::GetData<string_t>(u[2])[ri[2]]);
+            Set *r = jsonbset_insert(t, elems, n, c2, false);
             free(t); FreeTextArr(elems, n); free(c2);
             return SetToBlobN(result, r, mask, idx);
         }();
@@ -6151,8 +6242,11 @@ void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetDeleteArray", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_delete_array));
     RegisterMeosFunction(loader, ScalarFunction("-", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_delete_array));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetDeletePath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_delete_path));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_v1));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_jsonbset_extract_path));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_text_v1));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbsetInsert", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, SetTypes::jsonbset(), Gen_jsonbset_insert_v1));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetInsert", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, SetTypes::jsonbset(), Gen_jsonbset_insert));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetArrayLength", {SetTypes::jsonbset()}, SetTypes::intset(), Gen_jsonbset_array_length));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetDeleteIndex", {SetTypes::jsonbset(), LogicalType::INTEGER}, SetTypes::jsonbset(), Gen_jsonbset_delete_index));
