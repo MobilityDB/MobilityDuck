@@ -7908,8 +7908,8 @@ void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tjsonObjectField", {TemporalTypes::ttext(), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjson_object_field_v1));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbExtractPath", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_extract_path));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbExtractPath", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, TJsonbTypes::tjsonb(), Gen_tjsonb_extract_path_v1));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbExtractPathText", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_extract_path_text));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbExtractPathText", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, TJsonbTypes::tjsonb(), Gen_tjsonb_extract_path_text_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbExtractPathText", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjsonb_extract_path_text));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbExtractPathText", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR)}, TemporalTypes::ttext(), Gen_tjsonb_extract_path_text_v1));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbInsert", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, TJsonbTypes::tjsonb(), Gen_tjsonb_insert));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbInsert", {TJsonbTypes::tjsonb(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_tjsonb_insert_v1));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbObjectField", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR, LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_object_field));

@@ -6244,8 +6244,8 @@ void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetDeletePath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_delete_path));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_v1));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPath", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_jsonbset_extract_path));
-    RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_text_v1));
-    RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::jsonbset(), Gen_jsonbset_extract_path_text));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR)}, SetTypes::textset(), Gen_jsonbset_extract_path_text_v1));
+    RegisterMeosFunction(loader, ScalarFunction("jsonbsetExtractPathText", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, SetTypes::textset(), Gen_jsonbset_extract_path_text));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetInsert", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb()}, SetTypes::jsonbset(), Gen_jsonbset_insert_v1));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetInsert", {SetTypes::jsonbset(), LogicalType::LIST(LogicalType::VARCHAR), TJsonbTypes::jsonb(), LogicalType::BOOLEAN}, SetTypes::jsonbset(), Gen_jsonbset_insert));
     RegisterMeosFunction(loader, ScalarFunction("jsonbsetArrayLength", {SetTypes::jsonbset()}, SetTypes::intset(), Gen_jsonbset_array_length));
