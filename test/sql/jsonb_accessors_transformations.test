@@ -263,3 +263,48 @@ SELECT tjsonbSet(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['x', NULL], jsonb '2'
   = tjsonb '{{"gears": [1, 3]}@2001-01-01}';
 ----
 true
+
+# ── the forms a trailing SQL default allows ──────────────────────────────────
+# Each function MobilityDB declares with a trailing default (jsonbSet's create_missing true,
+# jsonbInsert's after false, the null_handle 'use_json_null' of the path extractions) answers
+# without that argument what it answers with the default passed.
+
+query T
+SELECT jsonbSet(jsonb '{"a": 1}', ['b'], jsonb '2')::VARCHAR;
+----
+{"a": 1, "b": 2}
+
+query T
+SELECT jsonbInsert(jsonb '{"d": [1, 2]}', ['d', '0'], jsonb '3')::VARCHAR;
+----
+{"d": [3, 1, 2]}
+
+query T
+SELECT tjsonbInsert(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '0'], jsonb '2')
+  = tjsonbInsert(tjsonb '{{"gears": [1, 3]}@2001-01-01}', ['gears', '0'], jsonb '2', false);
+----
+true
+
+query T
+SELECT tjsonbExtractPath(tjsonb '{{"speed": 10}@2001-01-01, {"units": "km/h"}@2001-01-02}', ['speed'])
+  = tjsonbExtractPath(tjsonb '{{"speed": 10}@2001-01-01, {"units": "km/h"}@2001-01-02}', ['speed'], 'use_json_null');
+----
+true
+
+query T
+SELECT tjsonbExtractPathText(tjsonb '{{"speed": 10}@2001-01-01, {"speed": 20}@2001-01-02}', ['speed'])
+  = tjsonbExtractPathText(tjsonb '{{"speed": 10}@2001-01-01, {"speed": 20}@2001-01-02}', ['speed'], 'use_json_null');
+----
+true
+
+query T
+SELECT tjsonExtractPath(ttext '{"{\"speed\": 10}"@2001-01-01, "{\"speed\": 20}"@2001-01-02}', ['speed'])
+  = tjsonExtractPath(ttext '{"{\"speed\": 10}"@2001-01-01, "{\"speed\": 20}"@2001-01-02}', ['speed'], 'use_json_null');
+----
+true
+
+# A path holding a NULL element extracts no value, as jsonbExtractPath answers NULL
+query T
+SELECT tjsonbExtractPath(tjsonb '{{"speed": 10}@2001-01-01, {"speed": 20}@2001-01-02}', ['speed', NULL]) IS NULL;
+----
+true

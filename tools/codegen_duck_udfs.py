@@ -2471,6 +2471,14 @@ def shape_text_array(f):
     sigs = f.get("sqlSignatures") or []
     if not any("text[]" in (sg.get("args") or []) for sg in sigs):
         return None                      # the SQL surface is the SoT for the pairing
+    # A trailing argument with an SQL default (jsonbSet's create_missing, jsonbInsert's after,
+    # tjsonbExtractPath's null_handle) gives a shorter form this shape cannot register; over a
+    # temporal or a base value the function goes to #shape_sig_call, whose #sig_call_forms
+    # registers every form the defaults allow, as it does for jsonbSetLax. #shape_sig_call
+    # reads no set operand, so a set keeps its full form here.
+    if ob != "Set" and \
+            any(d is not None for sg in sigs for d in (sg.get("argDefaults") or [])):
+        return None
     # A kernel whose signatures name MORE THAN ONE SQL function is the shared generic behind a
     # family (`tjsonb_exists_array` carries both tjsonbExistsAny and tjsonbExistsAll, selected by
     # the `any` flag it binds). Each of those names has its own dedicated kernel, so registering
