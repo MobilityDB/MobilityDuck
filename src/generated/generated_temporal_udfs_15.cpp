@@ -1118,6 +1118,846 @@ inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Tempor
 
 
 // ===== @ingroup meos_box_bbox_topo =====
+static void Gen_adjacent_numspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = adjacent_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_numspan_tbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = adjacent_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_numspan_tbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = adjacent_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_tbox_numspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = adjacent_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_tbox_numspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = adjacent_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_tbox_numspan_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = adjacent_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_tbox_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = adjacent_tbox_tstzspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_adjacent_tstzspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = adjacent_tstzspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_numspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contained_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_numspan_tbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contained_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_numspan_tbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contained_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_tbox_numspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contained_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_tbox_numspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contained_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_tbox_numspan_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contained_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_tbox_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contained_tbox_tstzspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contained_tstzspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contained_tstzspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_numspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contains_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_numspan_tbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contains_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_numspan_tbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contains_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_tbox_numspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contains_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_tbox_numspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contains_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_tbox_numspan_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contains_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_tbox_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = contains_tbox_tstzspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_contains_tstzspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = contains_tstzspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_numspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = overlaps_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_numspan_tbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = overlaps_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_numspan_tbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = overlaps_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_tbox_numspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = overlaps_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_tbox_numspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = overlaps_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_tbox_numspan_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = overlaps_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_tbox_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = overlaps_tbox_tstzspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_overlaps_tstzspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = overlaps_tstzspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_numspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = same_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_numspan_tbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = same_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_numspan_tbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = same_numspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_tbox_numspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = same_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_tbox_numspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = same_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_tbox_numspan_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = same_tbox_numspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_tbox_tstzspan(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        bool r = same_tbox_tstzspan(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_same_tstzspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        bool r = same_tstzspan_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        out[i] = (bool) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_adjacent_tbox_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -5481,6 +6321,86 @@ static void Gen_float_degrees_d(DataChunk &args, ExpressionState &, Vector &resu
 } // anonymous
 
 void RegisterGenerated_meos_box_bbox_topo(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("-|-", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contained_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContained", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_contains_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxContains", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contains_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_overlaps_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxOverlaps", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("&&", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_overlaps_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {SpanTypes::intspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_numspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_numspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_numspan_tbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_same_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::BOOLEAN, Gen_same_tbox_numspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_same_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::BOOLEAN, Gen_same_tbox_numspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_same_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::BOOLEAN, Gen_same_tbox_numspan_v2));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {TboxType::tbox(), SpanTypes::tstzspan()}, LogicalType::BOOLEAN, Gen_same_tbox_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("tboxSame", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_tstzspan_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("~=", {SpanTypes::tstzspan(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_same_tstzspan_tbox));
     RegisterMeosFunction(loader, ScalarFunction("tboxAdjacent", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_tbox));
     RegisterMeosFunction(loader, ScalarFunction("-|-", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_adjacent_tbox_tbox));
     RegisterMeosFunction(loader, ScalarFunction("tboxContained", {TboxType::tbox(), TboxType::tbox()}, LogicalType::BOOLEAN, Gen_contained_tbox_tbox));
