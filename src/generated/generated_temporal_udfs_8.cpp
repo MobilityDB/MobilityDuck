@@ -2718,6 +2718,34 @@ static void Gen_tposechain_value(DataChunk &args, ExpressionState &, Vector &res
         });
 }
 
+static void Gen_tposechain_value_at_timestamptz(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    UnifiedVectorFormat u[2];
+    for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
+    result.SetVectorType(VectorType::FLAT_VECTOR);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &mask = FlatVector::Validity(result);
+    for (idx_t idx = 0; idx < rows; idx++) {
+        idx_t ri[2];
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++) {
+            ri[c] = u[c].sel->get_index(idx);
+            valid = valid && u[c].validity.RowIsValid(ri[c]);
+        }
+        if (!valid) { mask.SetInvalid(idx); continue; }
+        out[idx] = [&]() -> string_t {
+            Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
+            timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
+            PoseChain *o = NULL;
+            bool ok = tposechain_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
+            free(t);
+            if (! ok) { mask.SetInvalid(idx); return string_t(); }
+            return PosechainToBlob(result, o);
+        }();
+    }
+}
+
 static void Gen_tposechain_value_n(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -4991,6 +5019,7 @@ void RegisterGenerated_meos_posechain_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("numPoses", {PosechainTypes::tposechain()}, LogicalType::INTEGER, Gen_tposechain_num_poses));
     RegisterMeosFunction(loader, ScalarFunction("startValue", {PosechainTypes::tposechain()}, PosechainTypes::posechain(), Gen_tposechain_start_value));
     RegisterMeosFunction(loader, ScalarFunction("getValue", {PosechainTypes::tposechain()}, PosechainTypes::posechain(), Gen_tposechain_value));
+    RegisterMeosFunction(loader, ScalarFunction("valueAtTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::posechain(), Gen_tposechain_value_at_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("valueN", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::posechain(), Gen_tposechain_value_n));
 }
 
