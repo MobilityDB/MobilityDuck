@@ -2595,9 +2595,9 @@ static void Gen_nad_bigintspan_tbox_v1(DataChunk &args, ExpressionState &, Vecto
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p0 = BlobToSpan(in0[i]);
-        TBox *p1 = BlobToTbox(in1[i]);
-        int64_t r = nad_bigintspan_tbox(p0, p1);
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        int64_t r = nad_bigintspan_tbox(p1, p0);
         free(p0);
         free(p1);
         out[i] = (double) r;
@@ -2637,9 +2637,9 @@ static void Gen_nad_floatspan_tbox_v1(DataChunk &args, ExpressionState &, Vector
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p0 = BlobToSpan(in0[i]);
-        TBox *p1 = BlobToTbox(in1[i]);
-        double r = nad_floatspan_tbox(p0, p1);
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        double r = nad_floatspan_tbox(p1, p0);
         free(p0);
         free(p1);
         out[i] = (double) r;
@@ -2679,9 +2679,9 @@ static void Gen_nad_intspan_tbox_v1(DataChunk &args, ExpressionState &, Vector &
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Span *p0 = BlobToSpan(in0[i]);
-        TBox *p1 = BlobToTbox(in1[i]);
-        int32_t r = nad_intspan_tbox(p0, p1);
+        TBox *p0 = BlobToTbox(in0[i]);
+        Span *p1 = BlobToSpan(in1[i]);
+        int32_t r = nad_intspan_tbox(p1, p0);
         free(p0);
         free(p1);
         out[i] = (double) r;
@@ -2705,6 +2705,29 @@ static void Gen_nad_tfloat_floatspan(DataChunk &args, ExpressionState &, Vector 
         double r = nad_tfloat_floatspan(p0, p1);
         free(p0);
         free(p1);
+        if (r == std::numeric_limits<decltype(r)>::max()) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nad_tfloat_floatspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        double r = nad_tfloat_floatspan(p1, p0);
+        free(p0);
+        free(p1);
+        if (r == std::numeric_limits<decltype(r)>::max()) { outv.SetInvalid(i); continue; }
         out[i] = (double) r;
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -2726,6 +2749,29 @@ static void Gen_nad_tbigint_bigintspan(DataChunk &args, ExpressionState &, Vecto
         int64_t r = nad_tbigint_bigintspan(p0, p1);
         free(p0);
         free(p1);
+        if (r == std::numeric_limits<decltype(r)>::max()) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nad_tbigint_bigintspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int64_t r = nad_tbigint_bigintspan(p1, p0);
+        free(p0);
+        free(p1);
+        if (r == std::numeric_limits<decltype(r)>::max()) { outv.SetInvalid(i); continue; }
         out[i] = (double) r;
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -2747,6 +2793,29 @@ static void Gen_nad_tint_intspan(DataChunk &args, ExpressionState &, Vector &res
         int32_t r = nad_tint_intspan(p0, p1);
         free(p0);
         free(p1);
+        if (r == std::numeric_limits<decltype(r)>::max()) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nad_tint_intspan_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Span *p0 = BlobToSpan(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int32_t r = nad_tint_intspan(p1, p0);
+        free(p0);
+        free(p1);
+        if (r == std::numeric_limits<decltype(r)>::max()) { outv.SetInvalid(i); continue; }
         out[i] = (double) r;
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
@@ -3211,10 +3280,16 @@ void RegisterGenerated_meos_temporal_dist(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("|=|", {TboxType::tbox(), SpanTypes::intspan()}, LogicalType::DOUBLE, Gen_nad_intspan_tbox_v1));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::DOUBLE, Gen_nad_tfloat_floatspan));
     RegisterMeosFunction(loader, ScalarFunction("|=|", {TemporalTypes::tfloat(), SpanTypes::floatspan()}, LogicalType::DOUBLE, Gen_nad_tfloat_floatspan));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_nad_tfloat_floatspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {SpanTypes::floatspan(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_nad_tfloat_floatspan_v1));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tbigint(), SpanTypes::bigintspan()}, LogicalType::DOUBLE, Gen_nad_tbigint_bigintspan));
     RegisterMeosFunction(loader, ScalarFunction("|=|", {TemporalTypes::tbigint(), SpanTypes::bigintspan()}, LogicalType::DOUBLE, Gen_nad_tbigint_bigintspan));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {SpanTypes::bigintspan(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_nad_tbigint_bigintspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {SpanTypes::bigintspan(), TemporalTypes::tbigint()}, LogicalType::DOUBLE, Gen_nad_tbigint_bigintspan_v1));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::DOUBLE, Gen_nad_tint_intspan));
     RegisterMeosFunction(loader, ScalarFunction("|=|", {TemporalTypes::tint(), SpanTypes::intspan()}, LogicalType::DOUBLE, Gen_nad_tint_intspan));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_nad_tint_intspan_v1));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {SpanTypes::intspan(), TemporalTypes::tint()}, LogicalType::DOUBLE, Gen_nad_tint_intspan_v1));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TemporalTypes::tfloat(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox));
     RegisterMeosFunction(loader, ScalarFunction("|=|", {TemporalTypes::tfloat(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), TemporalTypes::tfloat()}, LogicalType::DOUBLE, Gen_nad_tfloat_tbox_rev));
