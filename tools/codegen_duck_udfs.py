@@ -2508,9 +2508,36 @@ def shape_text_array(f):
     # while `asText(jsonbsetExtractPath(...))` answers "No function matches asText(BLOB)".
     return (("set", "MD_SET") if ob == "Set" else ("temporal", "MD_TEMPORAL")) + (tail, sig)
 
-def emit_body_text_array(f, kind, tail, sig):
+def text_array_default_forms(f, tail):
+    """[(tail, sig)] for each shorter form a #shape_text_array function's trailing SQL defaults
+    allow, the omitted arguments passing the literals their defaults name (#sig_call_literal), as
+    #sig_call_forms states them for a function #shape_sig_call registers; [] otherwise."""
+    ins, _out = classify(f)
+    params = ins[3:]
+    bound = ((f.get("shape") or {}).get("boundArgs") or {})
+    exposed = [i for i, p in enumerate(params) if p.get("name") not in bound]
+    sigs = [s for s in f.get("sqlSignatures") or [] if "text[]" in (s.get("args") or [])]
+    if len(sigs) != 1:
+        return []
+    defs = sigs[0].get("argDefaults") or []
+    if len(defs) != len(sigs[0]["args"]) or len(defs) != 2 + len(exposed):
+        return []
+    forms, cur = [], list(tail)
+    for j in range(len(exposed) - 1, -1, -1):
+        d = defs[2 + j]
+        if d is None:
+            break
+        lit = sig_call_literal(params[exposed[j]], d)
+        if lit is None:
+            break
+        cur = list(cur)
+        cur[exposed[j]] = ("lit", lit)
+        forms.append((cur, ["LogicalType::LIST(LogicalType::VARCHAR)"] + _tail_sig(cur)))
+    return forms
+
+def emit_body_text_array(f, kind, tail, sig, sfx=""):
     name = f["name"]
-    L = [f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{",
+    L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
          "    auto &lst = args.data[1]; lst.Flatten(args.size());",
          "    auto &child = ListVector::GetEntry(lst);",
@@ -8261,6 +8288,19 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             _rest = "".join(", %s" % x for x in sig[1:])
             argsig = "{type, %s%s}" % (sig[0], _rest)
             spec_sig = "{%%s, %s%s}" % (sig[0], _rest)
+            # A set operand reaches no #shape_sig_call, so the forms its trailing SQL defaults
+            # allow (jsonbsetExtractPath without its null handling, jsonbsetInsert without its
+            # `after`) are registered here, each its own body Gen_<fn>_v<k>
+            if kind == "set":
+                for k, (ftail, fsig) in enumerate(text_array_default_forms(f, tail), 1):
+                    bodies.append(emit_body_text_array(f, kind, ftail, fsig, sfx="_v%d" % k))
+                    _frest = "".join(", %s" % x for x in fsig)
+                    for a in accs:
+                        for nm in reg_names(f, sqlfn, aliases, None):
+                            specific_regs.append(
+                                f'    RegisterMeosFunction(loader, ScalarFunction('
+                                f'"{reg_name(nm, f)}", {{{a}{_frest}}}, '
+                                f'{ret_set_type(fn, a)}, Gen_{fn}_v{k}));')
         elif tt:
             kind, dret = tt; n_bin += 1
             bodies.append(emit_binary_tt(f, kind))
