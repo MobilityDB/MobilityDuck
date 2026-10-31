@@ -1720,29 +1720,6 @@ static void Gen_stbox_shift_scale_time_shift(DataChunk &args, ExpressionState &s
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_stboxarr_round(DataChunk &args, ExpressionState &state, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
-    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
-    auto out = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-    for (idx_t i = 0; i < rows; i++) {
-        bool valid = true;
-        for (idx_t c = 0; c < 3; c++)
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
-        if (!valid) { outv.SetInvalid(i); continue; }
-        STBox *x0 = BlobToStbox(in0[i]);
-        STBox *r = stboxarr_round(x0, in1[i], in2[i]);
-        free(x0);
-        if (!r) { outv.SetInvalid(i); continue; }
-        out[i] = StboxToBlob(result, r);
-    }
-    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
 static void Gen_stbox_quad_split(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -1772,6 +1749,82 @@ static void Gen_stbox_quad_split(DataChunk &args, ExpressionState &, Vector &res
         if (arr) free(arr);
         result_validity.SetValid(i);
     }
+}
+
+static void Gen_stboxarr_round(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<STBox> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j)) {
+                STBox e;
+                memcpy(&e, ch0d[le0.offset + j].GetData(), sizeof(STBox));
+                v0.push_back(e);
+            }
+        const int cnt = (int) v0.size();
+        STBox * r = cnt > 0 ? stboxarr_round((const STBox *) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++)
+            FlatVector::GetData<string_t>(ent)[off + j] = StringVector::AddStringOrBlob(ent, (const char *) &r[j], sizeof(STBox));
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_stboxarr_round_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<STBox> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j)) {
+                STBox e;
+                memcpy(&e, ch0d[le0.offset + j].GetData(), sizeof(STBox));
+                v0.push_back(e);
+            }
+        const int cnt = (int) v0.size();
+        STBox * r = cnt > 0 ? stboxarr_round((const STBox *) v0.data(), (int) v0.size(), 0) : NULL;
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++)
+            FlatVector::GetData<string_t>(ent)[off + j] = StringVector::AddStringOrBlob(ent, (const char *) &r[j], sizeof(STBox));
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 static void Gen_stbox_expand_space(DataChunk &args, ExpressionState &, Vector &result) {
@@ -6710,6 +6763,8 @@ void RegisterGenerated_meos_geo_box_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("shiftTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_shift_scale_time_duration));
     RegisterMeosFunction(loader, ScalarFunction("scaleTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_shift_scale_time_shift));
     RegisterMeosFunction(loader, ScalarFunction("quadSplit", {StboxType::stbox()}, LogicalType::LIST(StboxType::stbox()), Gen_stbox_quad_split));
+    RegisterMeosFunction(loader, ScalarFunction("round", {LogicalType::LIST(StboxType::stbox()), LogicalType::INTEGER}, LogicalType::LIST(StboxType::stbox()), Gen_stboxarr_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {LogicalType::LIST(StboxType::stbox())}, LogicalType::LIST(StboxType::stbox()), Gen_stboxarr_round_v1));
     RegisterMeosFunction(loader, ScalarFunction("expandSpace", {StboxType::stbox(), LogicalType::DOUBLE}, StboxType::stbox(), Gen_stbox_expand_space));
     RegisterMeosFunction(loader, ScalarFunction("round", {StboxType::stbox(), LogicalType::INTEGER}, StboxType::stbox(), Gen_stbox_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {StboxType::stbox()}, StboxType::stbox(), Gen_stbox_round_d));

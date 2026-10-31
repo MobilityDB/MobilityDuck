@@ -4453,7 +4453,11 @@ def shape_nary_scalars(f):
     # or span set: shiftScale(intspan, integer, integer), shiftScale(tstzset, interval, interval),
     # and a container of another kind, span(intspanset) -> intspan, spanN(intspanset, integer),
     # dates(datespanset) -> dateset
-    if out is None and b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3:
+    # (an array of boxes with its count, round(stbox[], integer), is not one container: the
+    # catalog's `inputArrays` names it, and #shape_sig_call reads it as a LIST)
+    arrs = {a.get("param") for a in (f.get("shape") or {}).get("inputArrays") or []}
+    if out is None and b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3 \
+            and ins[0]["name"] not in arrs:
         # a span past the first answering a box is a period (tbox(intspan, tstzspan)), read as
         # #span_operand reads one
         tail = [shape_arg(p) or (span_operand(f, p, k) if rb in ("TBox", "STBox") else None)
@@ -5213,6 +5217,9 @@ SQL_CONTAINER_ACC = {
     "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()",
 }
+# The boxes a C array holds by value (const STBox *boxarr), each the fixed-size bytes its
+# blob is, as StboxToBlob and TboxToBlob write one
+BOX_BYVAL = {"STBox", "TBox"}
 # The set a temporal value answers its values as (getValues=temporal_valueset over every temporal
 # type, valueSet over the temporal numbers) resolves as #declared_element_pairs resolves a declared
 # set: through SET_SIG_ACC, and the spatial sets through the types their own unit registers
@@ -6145,7 +6152,10 @@ TEMPORAL_CTOR = {
     "temporal_from_mfjson":     "from_mfjson", # <t>FromMFJSON(text)
 }
 def shape_temporal_ctor(f):
-    return TEMPORAL_CTOR.get(f["name"])
+    """The kind of #TEMPORAL_CTOR a public function is; an internal one (temporal_from_mfjson,
+    behind the typed public readers tintFromMFJSON .. ts2cellFromMFJSON) is not bound, as
+    #supported rejects it."""
+    return TEMPORAL_CTOR.get(f["name"]) if f.get("api") == "public" else None
 
 def ctor_arg_slot(a, acc):
     """A catalog SQL arg type -> the DuckDB LogicalType slot for a constructor overload."""
@@ -7067,6 +7077,24 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
                         post=["for (auto *e : v%d) free(e);" % k],
                         cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
                                lenp["name"]: "(%s) v%d.size()" % (ln, k)})
+        # a list of boxes handed over as the C array of their values (stboxarr_round), each
+        # element the bytes of one box as StboxToBlob writes them, the NULL elements left out as
+        # the list of base values above leaves them out
+        bacc = SQL_CONTAINER_ACC.get(t[:-2]) if t.endswith("[]") else None
+        if "*" not in elem and eb in BOX_BYVAL and bacc:
+            pre = ["const list_entry_t le%d = %s;" % (k, v),
+                   "vector<%s> v%d;" % (eb, k),
+                   "v%d.reserve(le%d.length + 1);" % (k, k),
+                   "for (idx_t j = 0; j < le%d.length; j++)" % k,
+                   "    if (ch%dv.RowIsValid(le%d.offset + j)) {" % (k, k),
+                   "        %s e;" % eb,
+                   "        memcpy(&e, ch%dd[le%d.offset + j].GetData(), sizeof(%s));" % (k, k, eb),
+                   "        v%d.push_back(e);" % k,
+                   "    }"]
+            return dict(kind="list", dt="LogicalType::LIST(%s)" % bacc, cpp="list_entry_t", pre=pre,
+                        post=[],
+                        cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
+                               lenp["name"]: "(%s) v%d.size()" % (ln, k)})
         # a list of numbers or booleans, the SQL type of its elements the one BOUND_TAIL_SQL
         # names for the C element; a NULL element raises PostgreSQL's message for it, as
         # deconstruct_array raises it where datumarr_extract asks no NULL flags, and as
@@ -7429,7 +7457,27 @@ def sig_call_mapped(f, s, outs, cexpr):
     ar = (f.get("shape") or {}).get("arrayReturn") or {}
     lf = (ar.get("lengthFrom") or {}).get("name")
     sqlr, rn = s.get("ret") or "", norm(f["returnType"]["canonical"])
-    if outs or not lf or lf not in cexpr or not sqlr.endswith("[]") or not rn.endswith("**"):
+    if outs or not lf or lf not in cexpr or not sqlr.endswith("[]"):
+        return None
+    # an array of boxes held by value (stboxarr_round answering stbox[]), each element written as
+    # the bytes of one box, as StboxToBlob writes one, the array freed whole
+    rel = norm((ar.get("element") or {}).get("canonical") or "")
+    bacc = SQL_CONTAINER_ACC.get(sqlr[:-2])
+    if rel in BOX_BYVAL and rn == rel + " *" and bacc:
+        rcall = ["const int cnt = %s;" % cexpr[lf],
+                 "%s r = cnt > 0 ? CALL : NULL;" % rn]
+        rwrite = ["if (!r) { outv.SetInvalid(i); continue; }",
+                  "const idx_t off = ListVector::GetListSize(result);",
+                  "ListVector::Reserve(result, off + cnt);",
+                  "auto &ent = ListVector::GetEntry(result);",
+                  "for (int j = 0; j < cnt; j++)",
+                  "    FlatVector::GetData<string_t>(ent)[off + j] = StringVector::AddStringOrBlob("
+                  "ent, (const char *) &r[j], sizeof(%s));" % rel,
+                  "ListVector::SetListSize(result, off + cnt);",
+                  "out[i] = list_entry_t{off, idx_t(cnt)};",
+                  "free(r);"]
+        return ("LogicalType::LIST(%s)" % bacc, "list_entry_t", rcall, rwrite, {})
+    if not rn.endswith("**"):
         return None
     el = set_elem(sqlr[:-2], (ar.get("element") or {}).get("canonical") or "")
     if el is None:
@@ -8315,7 +8363,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             spec_sig = "{%s}"
         elif b:
             kind, dret, arg2 = b; n_bin += 1
-            bodies.append(emit_body_binary(f, kind, arg2))
+            # a retired kernel declared over each of its types in the commuted order alone
+            # (#sig_only_commuted) registers no call in its own order, so only its commuted
+            # body (Gen_<fn>_rev) is emitted
+            if not (scope != "all" and retired(f) and accs
+                    and all(sig_only_commuted(f, a) for a in accs)):
+                bodies.append(emit_body_binary(f, kind, arg2))
             argsig = "{type, %s}" % arg2[0]
             spec_sig = "{%%s, %s}" % arg2[0]
         elif t:
