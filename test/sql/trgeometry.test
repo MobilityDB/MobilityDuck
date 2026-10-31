@@ -13,15 +13,14 @@ LOAD spatial;
 
 # ---------------------------------------------------------------------------
 # Type + text I/O (hand-registered boundary).  The cast prints the reference
-# geometry as HEXEWKB and the pose as the canonical #Pose_out() form; asText
-# prints both in WKT.
+# geometry and the pose in WKT, as asText does.
 # ---------------------------------------------------------------------------
 
 # trgeometry instant round-trip
 query I
 SELECT trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01';
 ----
-01030000000100000004000000000000000000F03F000000000000F03F000000000000004000000000000000400000000000000840000000000000F03F000000000000F03F000000000000F03F;POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-01 00:00:00+01
+POLYGON((1 1,2 2,3 1,1 1));Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
 
 # ---------------------------------------------------------------------------
 # Catalog-generated operation surface.  The expected values mirror MobilityDB's
@@ -182,5 +181,22 @@ SELECT asText(points(trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1), 0.
 
 query I
 SELECT ST_Equals(valueN(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', 1), traversedArea(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
+----
+true
+
+# ── the readers of the text and MF-JSON forms ───────────────────────────────
+# Each reader answers the value its writer writes.
+query I
+SELECT trgeometryFromText(asText(t)) = t FROM (SELECT trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02}' AS t);
+----
+true
+
+query I
+SELECT trgeometryFromEWKT(asEWKT(t)) = t FROM (SELECT trgeometry 'SRID=3857;Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02]' AS t);
+----
+true
+
+query I
+SELECT trgeometryFromMFJSON(asMFJSON(t)) = t FROM (SELECT trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02]' AS t);
 ----
 true

@@ -46,6 +46,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "mobilityduck/meos_registration.hpp"
 #include "time_util.hpp"
+#include "temporal/temporal_blob.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -116,9 +117,9 @@ bool TrgeometryFunctions::Trgeometry_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Temporal *t = BlobToTemp(blob);
-            /* Not temporal_out: the generic form walks the pose skeleton
-             * alone and loses the appended reference geometry. */
-            char *str = trgeometry_out(t);
+            /* trgeometry_as_text, not temporal_out: the generic form walks
+             * the pose skeleton alone and loses the reference geometry. */
+            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
             free(t);
             std::string copy(str);
             free(str);

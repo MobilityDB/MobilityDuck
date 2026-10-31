@@ -34,6 +34,7 @@
 #include <string>
 #include <temporal/span.hpp>
 #include "mobilityduck/meos_registration.hpp"
+#include "temporal/temporal_blob.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -102,7 +103,7 @@ bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t
                 throw InvalidInputException("Invalid tgeometry data: null pointer");
             }
             
-            char *str = temporal_out(temp, 15);
+            char *str = TemporalAsText(temp, 15);
             if (!str) {
                 free(data_copy);
                 throw InvalidInputException("Failed to convert tgeometry to string");

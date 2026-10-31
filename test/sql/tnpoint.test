@@ -178,3 +178,43 @@ SELECT sameRid(npoint 'NPoint(1, 0.5)', tnpoint '{NPoint(1, 0.3)@2001-01-01, NPo
        sameRid(tnpoint '{NPoint(1, 0.3)@2001-01-01, NPoint(1, 0.6)@2001-01-02}', npoint 'NPoint(1, 0.5)');
 ----
 true	false	true	true
+
+# ── the readers of the text, MF-JSON and WKB forms ──────────────────────────
+# Each reader answers the value its writer writes.
+query I
+SELECT tnpointFromText(asText(t)) = t FROM (SELECT tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02}' AS t);
+----
+true
+
+query I
+SELECT tnpointFromEWKT(asEWKT(t)) = t FROM (SELECT tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]' AS t);
+----
+true
+
+query I
+SELECT tnpointFromMFJSON(asMFJSON(t)) = t FROM (SELECT tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]' AS t);
+----
+true
+
+query II
+SELECT npointFromText(asText(n)) = n, npointFromEWKT(asEWKT(n)) = n FROM (SELECT npoint 'Npoint(1,0.5)' AS n);
+----
+true	true
+
+query II
+SELECT npointFromBinary(asBinary(n)) = n, npointFromHexWKB(asHexWKB(n)) = n FROM (SELECT npoint 'Npoint(1,0.5)' AS n);
+----
+true	true
+
+query II
+SELECT npointFromEWKB(asEWKB(n)) = n, npointFromHexEWKB(asHexEWKB(n)) = n FROM (SELECT npoint 'Npoint(1,0.5)' AS n);
+----
+true	true
+
+query III
+SELECT nsegmentFromText(asText(s))::VARCHAR = s::VARCHAR,
+       nsegmentFromBinary(asBinary(s))::VARCHAR = s::VARCHAR,
+       nsegmentFromHexWKB(asHexWKB(s))::VARCHAR = s::VARCHAR
+FROM (SELECT nsegment 'NSegment(1,0.2,0.6)' AS s);
+----
+true	true	true

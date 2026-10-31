@@ -54,16 +54,4 @@ struct TgeogpointType {
     static void RegisterScalarFunctions(ExtensionLoader &loader);
 };
 
-// Temporal geographies — the geographic-coordinate-system counterpart to
-// `tgeometry`. Mirrors the `tgeometry` registration pattern (see
-// `src/geo/tgeometry.{hpp,cpp}` and `src/geo/tgeometry_ops.cpp`); the
-// MEOS C functions reached here are subtype-agnostic and shared between
-// the two types.
-struct TGeogpointType {
-    static LogicalType tgeogpoint();
-    static void RegisterTypes(ExtensionLoader &loader);
-    static void RegisterScalarFunctions(ExtensionLoader &loader);
-    static void RegisterCastFunctions(ExtensionLoader &loader);
-};
-
 } // namespace duckdb

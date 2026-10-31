@@ -11,10 +11,8 @@
 #              tgeometry registrations in src/geo/tgeography.cpp and
 #              src/geo/tgeography_ops.cpp with the type swapped.
 #
-#              Geometry values are emitted in EWKB-hex display rather
-#              than WKT, so expected outputs encode coordinates verbatim.
-#              tgeography defaults to SRID 4326 (WGS84), which is the
-#              `0101000020E6100000…` prefix in the encoded payloads.
+#              Geometry values are displayed as the WKT asText writes,
+#              without the SRID 4326 (WGS84) tgeography defaults to.
 # group: [sql]
 
 require mobilityduck
@@ -60,13 +58,13 @@ query I
 SELECT atTime(t::tgeography, TIMESTAMPTZ '2000-01-01 00:00:00+01')::VARCHAR FROM (VALUES
   ('[Point(0 0)@2000-01-01, Point(2 2)@2000-01-03]')) t(t);
 ----
-0101000020E610000000000000000000000000000000000000@2000-01-01 00:00:00+01
+POINT(0 0)@2000-01-01 00:00:00+01
 
 query I
 SELECT shiftTime(t::tgeography, INTERVAL '1 day')::VARCHAR FROM (VALUES
   ('Point(0 0)@2000-01-01')) t(t);
 ----
-0101000020E610000000000000000000000000000000000000@2000-01-02 00:00:00+01
+POINT(0 0)@2000-01-02 00:00:00+01
 
 # =============================================================================
 # Comparison

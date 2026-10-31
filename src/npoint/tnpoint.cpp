@@ -52,6 +52,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "mobilityduck/meos_registration.hpp"
 #include "time_util.hpp"
+#include "temporal/temporal_blob.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -175,7 +176,7 @@ bool NpointFunctions::Npoint_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Npoint *np = BlobToNpoint(blob);
-            char *str = npoint_out(np, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = npoint_as_text(np, OUT_DEFAULT_DECIMAL_DIGITS);
             free(np);
             std::string copy(str);
             free(str);
@@ -208,7 +209,7 @@ bool NpointFunctions::Nsegment_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Nsegment *ns = BlobToNsegment(blob);
-            char *str = nsegment_out(ns, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = nsegment_as_text(ns, OUT_DEFAULT_DECIMAL_DIGITS);
             free(ns);
             std::string copy(str);
             free(str);
@@ -241,7 +242,7 @@ bool NpointFunctions::Tnpoint_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
             free(t);
             std::string copy(str);
             free(str);

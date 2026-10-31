@@ -76,7 +76,8 @@ void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {
         SpatialSetType::geogset(),                                    
         SpatialSetFunctions::Text_to_geoset   
     ); 
-    // A geometry set reads as text as every set does, through set_out
+    // A geometry set writes its text as every spatial set does: its WKT, through
+    // spatialset_as_text
     RegisterMeosCastFunction(loader,
         SpatialSetType::geomset(),
         LogicalType::VARCHAR,

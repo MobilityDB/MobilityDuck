@@ -158,7 +158,7 @@ TSPTreeIndex::TSPTreeIndex(const string &name, IndexConstraintType constraint_ty
     } else if (type == TgeompointType::tgeompoint() ||
                type == TGeometryTypes::tgeometry() ||
                type == TGeographyTypes::tgeography() ||
-               type == TGeogpointType::tgeogpoint()) {
+               type == TgeogpointType::tgeogpoint()) {
         // Temporal spatial types: the bounding box is an stbox.
         bbox_type_ = T_STBOX;
         bbox_size_ = sizeof(STBox);
@@ -449,7 +449,7 @@ void TSPTreeIndex::Construct(DataChunk &expression_result, Vector &row_identifie
         column_type_ == TgeompointType::tgeompoint() ||
         column_type_ == TGeometryTypes::tgeometry() ||
         column_type_ == TGeographyTypes::tgeography() ||
-        column_type_ == TGeogpointType::tgeogpoint();
+        column_type_ == TgeogpointType::tgeogpoint();
 
     // The bounding box of the row currently being indexed. It is both handed to
     // the MEOS tree and recorded for persistence, so that reloading the index

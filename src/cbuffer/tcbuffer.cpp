@@ -45,6 +45,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "mobilityduck/meos_registration.hpp"
 #include "time_util.hpp"
+#include "temporal/temporal_blob.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -138,7 +139,7 @@ bool CbufferFunctions::Cbuffer_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Cbuffer *cb = BlobToCbuffer(blob);
-            char *str = cbuffer_out(cb, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = cbuffer_as_text(cb, OUT_DEFAULT_DECIMAL_DIGITS);
             free(cb);
             std::string copy(str);
             free(str);
@@ -171,7 +172,7 @@ bool CbufferFunctions::Tcbuffer_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
             free(t);
             std::string copy(str);
             free(str);

@@ -9,12 +9,12 @@ LOAD spatial;
 query I
 SELECT tgeompoint 'Point(1 1)@2012-01-01 08:00:00';
 ----
-0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+01
+POINT(1 1)@2012-01-01 08:00:00+01
 
 query I
 SELECT tgeompoint '  Point(2 2)@2012-01-01 08:00:00  ';
 ----
-010100000000000000000000400000000000000040@2012-01-01 08:00:00+01
+POINT(2 2)@2012-01-01 08:00:00+01
 
 query I
 SELECT asText(tgeompoint 'Point(1 1)@2012-01-01 08:00:00');
@@ -40,7 +40,7 @@ POINT(1 1)@2012-01-01 08:00:00+01
 query I
 SELECT tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00');
 ----
-0101000000000000000000F03F000000000000F03F@2012-01-01 08:00:00+01
+POINT(1 1)@2012-01-01 08:00:00+01
 
 query I
 SELECT asEWKT(tgeompoint(ST_Point(1,1), timestamptz '2012-01-01 08:00:00'));
@@ -164,7 +164,7 @@ POINT(1 1)@2000-01-01 00:00:00+01
 query I
 SELECT atValue(tgeompoint 'Point(1 1)@2000-01-01', ST_Point(1,1));
 ----
-0101000000000000000000F03F000000000000F03F@2000-01-01 00:00:00+01
+POINT(1 1)@2000-01-01 00:00:00+01
 
 query I
 SELECT getValue(tgeompoint 'Point(1 1)@2000-01-01');
@@ -825,3 +825,26 @@ SELECT ST_AsText(value) v, time FROM temporalUnnest(tgeompoint '{Point(1 1)@2001
 ----
 POINT (1 1)	{[2001-01-01 00:00:00+01, 2001-01-01 00:00:00+01], [2001-01-03 00:00:00+01, 2001-01-03 00:00:00+01]}
 POINT (2 2)	{[2001-01-02 00:00:00+01, 2001-01-02 00:00:00+01]}
+
+# ── the VARCHAR cast reads what the VARCHAR cast writes ─────────────────────
+query IIIIII
+SELECT (t::VARCHAR)::tgeompoint = t, (g::VARCHAR)::tgeogpoint = g,
+       (c::VARCHAR)::tcbuffer = c, (p::VARCHAR)::tpose = p,
+       (r::VARCHAR)::trgeometry = r, (s::VARCHAR)::geomset = s
+FROM (SELECT tgeompoint '[Point(1 1)@2000-01-01, Point(2 3)@2000-01-02]' AS t,
+             tgeogpoint '[Point(1 1)@2000-01-01, Point(2 3)@2000-01-02]' AS g,
+             tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02]' AS c,
+             tpose '[Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(2 2), 0.5)@2000-01-02]' AS p,
+             trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02]' AS r,
+             geomset '{"Point(1 1)", "Point(2 2)"}' AS s);
+----
+true	true	true	true	true	true
+
+query IIII
+SELECT (c::VARCHAR)::cbuffer = c, (p::VARCHAR)::pose = p, (k::VARCHAR)::posechain = k,
+       (n::VARCHAR)::tnpoint = n
+FROM (SELECT cbuffer 'Cbuffer(Point(1 1),0.5)' AS c, pose 'Pose(Point(1 1),0.5)' AS p,
+             posechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))' AS k,
+             tnpoint '[Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)@2000-01-02]' AS n);
+----
+true	true	true	true
