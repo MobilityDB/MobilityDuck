@@ -6772,6 +6772,43 @@ def emit_baseval_scalar(f, bb, rb):
 # written back as int64_t, the id keeping its bits both ways.
 CELL_SQL = {_acc_sqlname(v): v for v in CELL_BASEVAL.values()}         # h3index / quadbin / s2cell
 
+def srid_types(cat):
+    """The types that carry an SRID, read from the catalog as #catalog_collection_bases reads the
+    collection types: a type over which MobilityDB declares SRID(<type>), a temporal type whose
+    bounding box (temporalTypes[t].bbox) is one of those, and a spatial set
+    (typeRelations.predicates.spatialset_type), whose bounding box is an stbox. A cell set and a
+    temporal cell carry the SRID of their box; a cell value carries none, its grid fixing it."""
+    decl = {s["args"][0] for f in cat["functions"] for s in f.get("sqlSignatures") or []
+            if (s.get("sqlName") or f.get("sqlfn")) == "SRID" and s.get("args")}
+    pred = cat["typeRelations"]["predicates"]
+    boxed = {t for t, v in cat["temporalTypes"].items() if v.get("bbox") in decl}
+    sets = set(pred.get("spatialset_type", [])) if "stbox" in decl else set()
+    return decl | boxed | sets
+
+# The spatial types the rule decides, as the catalog classes them (spatial_basetype,
+# spatialset_type, tspatial_type), less PostGIS's geometry and geography, whose SRID is their own;
+# those of them without an SRID (#srid_types) have none of the E forms of the I/O functions,
+# which write and read the SRID: asEWKT, asEWKB, asHexEWKB and <type>FromEWKT, FromEWKB,
+# FromHexEWKB.
+_PRED = CATALOG["typeRelations"]["predicates"]
+NO_SRID_TYPES = ((set(_PRED.get("spatial_basetype", [])) | set(_PRED.get("spatialset_type", []))
+                  | set(_PRED.get("tspatial_type", []))) - set(_PRED.get("geo_basetype", []))
+                 - srid_types(CATALOG))
+_EFORM_WRITER = re.compile(r'^as(?:EWKT|EWKB|HexEWKB)$')
+_EFORM_READER = re.compile(r'^(\w+)From(?:EWKT|EWKB|HexEWKB)$')
+def no_srid_eform(line):
+    """True when the registration `line` is an E form of a type #NO_SRID_TYPES names: a writer
+    over it (asEWKT(h3index)), its type the one #_acc_sqlname reads from the first argument, or a
+    reader answering it (h3indexFromEWKB). The registration is read as the shape_sig_call pass of
+    #main reads one, by the same `ScalarFunction("<name>", {<arguments>}` match."""
+    m = re.search(r'ScalarFunction\("([^"]+)", \{([^}]*)\}', line)
+    if not m:
+        return False
+    if _EFORM_WRITER.match(m.group(1)):
+        return _acc_sqlname(m.group(2).split(",")[0].strip()) in NO_SRID_TYPES
+    r = _EFORM_READER.match(m.group(1))
+    return bool(r) and r.group(1) in NO_SRID_TYPES
+
 def static_cell_arg(p, sqlt, i, wide=False):
     """(DuckDB type, executor C++ type, MEOS-call expression, pre-call lines, post-call lines) for
     argument `i`, whose C parameter is `p` and whose declared SQL type is `sqlt`; None if unmappable.
@@ -9590,6 +9627,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     else:
                         specific_regs.append(
                             f'    RegisterMeosFunction(loader, {sf});')
+
+    # No E form is registered over a type without an SRID (#no_srid_eform)
+    for acc in (generic_regs, specific_regs, set_generic_regs, set_specific_regs,
+                span_generic_regs, span_specific_regs, temporal_box_regs):
+        acc.items = [(g, line) for g, line in acc.items if not no_srid_eform(line)]
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)
