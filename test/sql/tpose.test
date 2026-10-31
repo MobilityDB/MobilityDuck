@@ -126,3 +126,35 @@ SELECT asText(atStbox(tpose '[Pose(Point(1 1),0.5)@2000-01-01, Pose(Point(3 3),1
                       stbox 'STBOX XT(((0,0),(2,2)),[2000-01-01,2000-01-03])', false));
 ----
 {[Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Pose(POINT(2 2),0.75)@2000-01-02 00:00:00+01)}
+
+# ── the readers of the text, MF-JSON and WKB forms ──────────────────────────
+# Each reader answers the value its writer writes.
+query I
+SELECT tposeFromText(asText(t)) = t FROM (SELECT tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}' AS t);
+----
+true
+
+query I
+SELECT tposeFromEWKT(asEWKT(t)) = t FROM (SELECT tpose 'SRID=3857;[Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(2 2), 0.5)@2000-01-02]' AS t);
+----
+true
+
+query I
+SELECT tposeFromMFJSON(asMFJSON(t)) = t FROM (SELECT tpose '[Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(2 2), 0.5)@2000-01-02]' AS t);
+----
+true
+
+query II
+SELECT poseFromText(asText(p)) = p, poseFromEWKT(asEWKT(p)) = p FROM (SELECT pose 'Pose(Point(1 1),0.5)' AS p);
+----
+true	true
+
+query II
+SELECT poseFromBinary(asBinary(p)) = p, poseFromHexWKB(asHexWKB(p)) = p FROM (SELECT pose 'Pose(Point(1 1),0.5)' AS p);
+----
+true	true
+
+query II
+SELECT poseFromEWKB(asEWKB(p)) = p, poseFromHexEWKB(asHexEWKB(p)) = p FROM (SELECT pose 'SRID=3857;Pose(Point(1 1),0.5)' AS p);
+----
+true	true

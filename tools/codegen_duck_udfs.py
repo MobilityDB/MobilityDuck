@@ -6008,7 +6008,16 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_npoint_base_transf",
                   "meos_pose_base_transf", "meos_pose_base_srid",
                   "meos_posechain_base_transf", "meos_posechain_base_srid",
-                  "meos_json_base_accessor", "meos_json_base_transf"}
+                  "meos_json_base_accessor", "meos_json_base_transf",
+                  # the text, WKB and MF-JSON I/O of the temporal circular buffers, network
+                  # points, poses, pose chains, rigid geometries and cells, and of the circular
+                  # buffer, network point, pose and pose chain values: <type>FromText, FromEWKT,
+                  # FromMFJSON, FromBinary, FromEWKB, FromHexWKB, FromHexEWKB and their writers
+                  "meos_cbuffer_inout", "meos_npoint_inout", "meos_pose_inout",
+                  "meos_posechain_inout", "meos_rgeo_inout", "meos_h3_inout",
+                  "meos_quadbin_inout", "meos_s2cell_inout",
+                  "meos_cbuffer_base_inout", "meos_npoint_base_inout", "meos_pose_base_inout",
+                  "meos_posechain_base_inout"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -6473,13 +6482,28 @@ def type_input(f):
     if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
     t = fn[:-len("_in")]
-    if rb in IO_BLOBTO:
-        acc = io_acc(rb).get(t)
-    else:
-        acc = (PTR_RET.get(rb) or (None,))[0]
-        if not acc or not re.search(r'::%s\(\)$' % re.escape(t), acc):
-            acc = None
+    acc = reader_acc(rb, t)
     return (t, acc) if acc else None
+
+def base_value_acc(rb, t):
+    """The DuckDB accessor of the base value `rb` (Cbuffer) when it is the type `t` (cbuffer), the
+    one its #PTR_RET entry names; None otherwise."""
+    acc = (PTR_RET.get(rb) or (None,))[0]
+    return acc if acc and re.search(r'::%s\(\)$' % re.escape(t), acc) else None
+
+def reader_acc(cont, t):
+    """The DuckDB accessor a reader answering `cont` as the SQL type `t` registers its result as:
+    the one #io_acc gives a container or a temporal value, the one #base_value_acc gives a base
+    value (cbufferFromText, cbufferFromBinary answering a cbuffer)."""
+    return io_acc(cont).get(t) if cont in IO_BLOBTO else base_value_acc(cont, t)
+
+def cfh_serialize(cont):
+    """The lines serializing the result `r` of a reader answering `cont`: the container or
+    temporal arm of #_CFH_SERIALIZE, or a base value (cbuffer_in) serialized as #PTR_RET states
+    it, NULL for no value."""
+    return _CFH_SERIALIZE.get(cont) or (
+        "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+        "            return %s;\n" % (PTR_RET[cont][1] % "r"))
 
 def container_from_text(f):
     """The container a retired group's public parser answers from one C string, the shape the
@@ -6503,10 +6527,7 @@ def container_from_text(f):
 
 def emit_container_from_hexwkb(f, cont):
     fn = f["name"]
-    # a base value (cbuffer_in) serialized as #PTR_RET states it, NULL for no value
-    ser = _CFH_SERIALIZE.get(cont) or (
-        "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
-        "            return %s;\n" % (PTR_RET[cont][1] % "r"))
+    ser = cfh_serialize(cont)
     return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             "    EnsureMeosThreadInitialized();\n"
             "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
@@ -6567,16 +6588,17 @@ def emit_container_wkb(f, kind, cont):
             "}}\n").format(fn=fn, two=two, one=one)
 
 def container_from_wkb(f):
-    """The container a retired group's reader answers from WKB bytes, (const uint8_t *, size_t)
-    (set_from_wkb, intsetFromBinary), as #container_from_text answers one from a C string;
-    None otherwise."""
+    """The container, temporal value or base value a retired group's reader answers from WKB
+    bytes, (const uint8_t *, size_t) (set_from_wkb, intsetFromBinary, cbuffer_from_wkb), as
+    #container_from_text answers one from a C string; None otherwise."""
     if not retired(f) or f.get("api") != "public":
         return None
     ps = f.get("params") or []
     if len(ps) != 2 or norm(ps[0]["canonical"]) != "uint8_t *" or norm(ps[1]["canonical"]) != "size_t":
         return None
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
-    if rb not in IO_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+    if (rb not in IO_BLOBTO and rb not in PTR_RET) or not rn.endswith("*") \
+            or "const" in f["returnType"]["canonical"]:
         return None
     return rb
 
@@ -6591,7 +6613,7 @@ def emit_container_from_wkb(f, cont):
             "            {cont} *r = {fn}((const uint8_t *) in.GetData(), (size_t) in.GetSize());\n"
             "{ser}"
             "        }});\n"
-            "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
+            "}}\n").format(fn=fn, cont=cont, ser=cfh_serialize(cont))
 
 def prefilter_signature(f):
     """(DuckDB argument types, DuckDB result type, whether the geometry operand is a geography) of
@@ -7810,7 +7832,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_container_from_hexwkb(f, cont))
             # the names the signatures declare (intsetFromText), where the group is retired
             for s in (f.get("sqlSignatures", []) if retired(f) else []):
-                acc = io_acc(cont).get(s["ret"]) if cont in IO_BLOBTO else None
+                acc = reader_acc(cont, s["ret"])
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
                 nm = s.get("sqlName") or f["sqlfn"]
@@ -7849,11 +7871,13 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 # writer: intspan_in .. tstzspanset_in), every set, the sets of the other families
                 # and of geometries among them (asBinary(cbufferset), geomsetFromBinary), and
                 # every temporal value, whose readers and writers the temporal, spatial, JSON and
-                # point cloud I/O groups retire together, over each type declared
+                # point cloud I/O groups retire together, over each type declared; a base value
+                # (cbufferFromBinary, rasterFromBinary) is the one type its accessor names
                 cio = cw[1] if cw else cr
                 tname = (s.get("args") or [None])[0] if cw else s.get("ret")
                 own = FN_BY_NAME.get(f"{tname}_in")
-                if cio not in ("Temporal", "Set") and (not own or own.get("group") != f.get("group")):
+                if cio in IO_BLOBTO and cio not in ("Temporal", "Set") \
+                        and (not own or own.get("group") != f.get("group")):
                     continue
                 if cw:
                     acc = io_acc(cio).get((s.get("args") or [None])[0])
@@ -7864,7 +7888,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     if len(s.get("args") or []) == 2 and not (defs and defs[-1] is not None):
                         forms = forms[1:]
                 else:
-                    acc = io_acc(cio).get(s.get("ret"))
+                    acc = reader_acc(cio, s.get("ret"))
                     rty, forms = acc, [["LogicalType::BLOB"]]
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file

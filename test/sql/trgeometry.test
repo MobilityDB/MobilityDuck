@@ -183,3 +183,20 @@ query I
 SELECT ST_Equals(valueN(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01', 1), traversedArea(trgeometry 'Polygon((1 1,2 2,3 1,1 1));Pose(Point(1 1), 0.5)@2000-01-01'));
 ----
 true
+
+# ── the readers of the text and MF-JSON forms ───────────────────────────────
+# Each reader answers the value its writer writes.
+query I
+SELECT trgeometryFromText(asText(t)) = t FROM (SELECT trgeometry 'Polygon((1 1,2 2,3 1,1 1));{Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02}' AS t);
+----
+true
+
+query I
+SELECT trgeometryFromEWKT(asEWKT(t)) = t FROM (SELECT trgeometry 'SRID=3857;Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02]' AS t);
+----
+true
+
+query I
+SELECT trgeometryFromMFJSON(asMFJSON(t)) = t FROM (SELECT trgeometry 'Polygon((1 1,2 2,3 1,1 1));[Pose(Point(1 1),0.3)@2000-01-01, Pose(Point(2 2),0.5)@2000-01-02]' AS t);
+----
+true

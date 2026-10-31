@@ -1049,6 +1049,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
+    return ::cbuffer_out(p0, 15);
+}
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
 }
@@ -1070,8 +1073,17 @@ inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, c
 inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
     return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
 }
+inline char * npoint_out_maxdd(const Npoint * p0) {
+    return ::npoint_out(p0, 15);
+}
+inline char * nsegment_out_maxdd(const Nsegment * p0) {
+    return ::nsegment_out(p0, 15);
+}
 inline char * npointset_out_maxdd(const Set * p0) {
     return ::npointset_out(p0, 15);
+}
+inline char * tnpoint_out_maxdd(const Temporal * p0) {
+    return ::tnpoint_out(p0, 15);
 }
 inline char * pcpointset_out_maxdd(const Set * p0) {
     return ::pcpointset_out(p0, 15);
@@ -1079,11 +1091,17 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline char * pose_out_maxdd(const Pose * p0) {
+    return ::pose_out(p0, 15);
+}
 inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
     return ::pose_transform_pipeline(p0, p1, 0, true);
 }
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline char * posechain_out_maxdd(const PoseChain * p0) {
+    return ::posechain_out(p0, 15);
 }
 inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
     return ::posechain_transform_pipeline(p0, p1, 0, true);
@@ -2614,6 +2632,16 @@ static void Gen_jsonbset_pretty(DataChunk &args, ExpressionState &, Vector &resu
 
 
 // ===== @ingroup meos_npoint_base_inout =====
+static void Gen_npoint_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Npoint *r = npoint_from_wkb((const uint8_t *) in.GetData(), (size_t) in.GetSize());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return NpointToBlob(result, r);
+        });
+}
+
 static void Gen_npoint_in(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -2621,6 +2649,16 @@ static void Gen_npoint_in(DataChunk &args, ExpressionState &, Vector &result) {
             Npoint *r = npoint_in(in.GetString().c_str());
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return NpointToBlob(result, r);
+        });
+}
+
+static void Gen_nsegment_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Nsegment *r = nsegment_from_wkb((const uint8_t *) in.GetData(), (size_t) in.GetSize());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return NsegmentToBlob(result, r);
         });
 }
 
@@ -2632,6 +2670,486 @@ static void Gen_nsegment_in(DataChunk &args, ExpressionState &, Vector &result) 
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return NsegmentToBlob(result, r);
         });
+}
+
+static void Gen_npoint_as_ewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = npoint_as_ewkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_ewkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = npoint_as_ewkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_hexewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        char *r = npoint_as_hexewkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_hexewkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        char *r = npoint_as_hexewkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        char *r = npoint_as_hexwkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        char *r = npoint_as_hexwkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = npoint_as_wkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_as_wkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Npoint *p0 = BlobToNpoint(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = npoint_as_wkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s0 = in0[i].GetString();
+        Npoint *r = npoint_from_hexwkb(s0.c_str());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NpointToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_npoint_from_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s0 = in0[i].GetString();
+        Npoint *r = npoint_from_hexwkb(s0.c_str());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NpointToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_hexewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        char *r = nsegment_as_hexewkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_hexewkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        char *r = nsegment_as_hexewkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        char *r = nsegment_as_hexwkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        char *r = nsegment_as_hexwkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = nsegment_as_wkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_wkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = nsegment_as_wkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s0 = in0[i].GetString();
+        Nsegment *r = nsegment_from_hexwkb(s0.c_str());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NsegmentToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_from_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s0 = in0[i].GetString();
+        Nsegment *r = nsegment_from_hexwkb(s0.c_str());
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = NsegmentToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_ewkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = nsegment_as_ewkb(p0, wkb_variant_from_endian(in1[i].GetString().c_str()), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_ewkb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = nsegment_as_ewkb(p0, wkb_variant_from_endian(""), &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_ewkt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        char *r = nsegment_as_ewkt(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_ewkt_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        char *r = nsegment_as_ewkt(p0, 15);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        char *r = nsegment_as_text(p0, in1[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_nsegment_as_text_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Nsegment *p0 = BlobToNsegment(in0[i]);
+        char *r = nsegment_as_text(p0, 15);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 static void Gen_npoint_as_ewkt(DataChunk &args, ExpressionState &, Vector &result) {
@@ -6259,8 +6777,40 @@ void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_npoint_base_inout(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("npointFromBinary", {LogicalType::BLOB}, NpointTypes::npoint(), Gen_npoint_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("npointFromEWKB", {LogicalType::BLOB}, NpointTypes::npoint(), Gen_npoint_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("npointFromText", {LogicalType::VARCHAR}, NpointTypes::npoint(), Gen_npoint_in));
+    RegisterMeosFunction(loader, ScalarFunction("npointFromEWKT", {LogicalType::VARCHAR}, NpointTypes::npoint(), Gen_npoint_in));
     RegisterMeosFunction(loader, ScalarFunction("npoint", {LogicalType::VARCHAR}, NpointTypes::npoint(), Gen_npoint_in));
+    RegisterMeosFunction(loader, ScalarFunction("nsegmentFromBinary", {LogicalType::BLOB}, NpointTypes::nsegment(), Gen_nsegment_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("nsegmentFromEWKB", {LogicalType::BLOB}, NpointTypes::nsegment(), Gen_nsegment_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("nsegmentFromText", {LogicalType::VARCHAR}, NpointTypes::nsegment(), Gen_nsegment_in));
+    RegisterMeosFunction(loader, ScalarFunction("nsegmentFromEWKT", {LogicalType::VARCHAR}, NpointTypes::nsegment(), Gen_nsegment_in));
     RegisterMeosFunction(loader, ScalarFunction("nsegment", {LogicalType::VARCHAR}, NpointTypes::nsegment(), Gen_nsegment_in));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKB", {NpointTypes::npoint(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_npoint_as_ewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKB", {NpointTypes::npoint()}, LogicalType::BLOB, Gen_npoint_as_ewkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asHexEWKB", {NpointTypes::npoint(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_npoint_as_hexewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexEWKB", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_hexewkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {NpointTypes::npoint(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_npoint_as_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_hexwkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asBinary", {NpointTypes::npoint(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_npoint_as_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("asBinary", {NpointTypes::npoint()}, LogicalType::BLOB, Gen_npoint_as_wkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("npointFromHexWKB", {LogicalType::VARCHAR}, NpointTypes::npoint(), Gen_npoint_from_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("npointFromHexEWKB", {LogicalType::VARCHAR}, NpointTypes::npoint(), Gen_npoint_from_hexwkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asHexEWKB", {NpointTypes::nsegment(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_nsegment_as_hexewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexEWKB", {NpointTypes::nsegment()}, LogicalType::VARCHAR, Gen_nsegment_as_hexewkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {NpointTypes::nsegment(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_nsegment_as_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {NpointTypes::nsegment()}, LogicalType::VARCHAR, Gen_nsegment_as_hexwkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asBinary", {NpointTypes::nsegment(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_nsegment_as_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("asBinary", {NpointTypes::nsegment()}, LogicalType::BLOB, Gen_nsegment_as_wkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("nsegmentFromHexWKB", {LogicalType::VARCHAR}, NpointTypes::nsegment(), Gen_nsegment_from_hexwkb));
+    RegisterMeosFunction(loader, ScalarFunction("nsegmentFromHexEWKB", {LogicalType::VARCHAR}, NpointTypes::nsegment(), Gen_nsegment_from_hexwkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKB", {NpointTypes::nsegment(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_nsegment_as_ewkb));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKB", {NpointTypes::nsegment()}, LogicalType::BLOB, Gen_nsegment_as_ewkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {NpointTypes::nsegment(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_nsegment_as_ewkt));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {NpointTypes::nsegment()}, LogicalType::VARCHAR, Gen_nsegment_as_ewkt_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {NpointTypes::nsegment(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_nsegment_as_text));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {NpointTypes::nsegment()}, LogicalType::VARCHAR, Gen_nsegment_as_text_v1));
     RegisterMeosFunction(loader, ScalarFunction("asEWKT", {NpointTypes::npoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_npoint_as_ewkt));
     RegisterMeosFunction(loader, ScalarFunction("asEWKT", {NpointTypes::npoint()}, LogicalType::VARCHAR, Gen_npoint_as_ewkt_d));
     RegisterMeosFunction(loader, ScalarFunction("asText", {NpointTypes::npoint(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_npoint_as_text));

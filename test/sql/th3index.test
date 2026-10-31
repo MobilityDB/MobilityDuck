@@ -181,3 +181,11 @@ SELECT asText(th3index(h3index '880326b885fffff', tstzspanset '{[2001-01-01, 200
      = asText(th3index '{[880326b885fffff@2001-01-01, 880326b885fffff@2001-01-02]}');
 ----
 true
+
+# ── the readers of the text and MF-JSON forms ───────────────────────────────
+# Each reader answers the value its writer writes.
+query II
+SELECT th3indexFromText(asText(t)) = t, th3indexFromMFJSON(asMFJSON(t)) = t
+FROM (SELECT th3index '{8a2a1072b59ffff@2001-01-01, 8a2a1072b597fff@2001-01-02}' AS t);
+----
+true	true

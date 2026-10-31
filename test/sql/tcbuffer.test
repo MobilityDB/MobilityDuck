@@ -205,3 +205,35 @@ SELECT asText(atStbox(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Poi
                   stbox 'STBOX XT(((0,0),(2,2)),[2000-01-01,2000-01-03])') IS NULL;
 ----
 {[Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Cbuffer(POINT(3 3),1.5)@2000-01-03 00:00:00+01]}	true
+
+# ── the readers of the text, MF-JSON and WKB forms ──────────────────────────
+# Each reader answers the value its writer writes.
+query I
+SELECT tcbufferFromText(asText(t)) = t FROM (SELECT tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}' AS t);
+----
+true
+
+query I
+SELECT tcbufferFromEWKT(asEWKT(t)) = t FROM (SELECT tcbuffer 'SRID=3857;[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02]' AS t);
+----
+true
+
+query I
+SELECT tcbufferFromMFJSON(asMFJSON(t)) = t FROM (SELECT tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02]' AS t);
+----
+true
+
+query II
+SELECT cbufferFromText(asText(c)) = c, cbufferFromEWKT(asEWKT(c)) = c FROM (SELECT cbuffer 'Cbuffer(Point(1 1),0.5)' AS c);
+----
+true	true
+
+query II
+SELECT cbufferFromBinary(asBinary(c)) = c, cbufferFromHexWKB(asHexWKB(c)) = c FROM (SELECT cbuffer 'Cbuffer(Point(1 1),0.5)' AS c);
+----
+true	true
+
+query II
+SELECT cbufferFromEWKB(asEWKB(c)) = c, cbufferFromHexEWKB(asHexEWKB(c)) = c FROM (SELECT cbuffer 'SRID=3857;Cbuffer(Point(1 1),0.5)' AS c);
+----
+true	true

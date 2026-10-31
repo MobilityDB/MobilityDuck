@@ -1049,6 +1049,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
+    return ::cbuffer_out(p0, 15);
+}
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
 }
@@ -1070,8 +1073,17 @@ inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, c
 inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
     return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
 }
+inline char * npoint_out_maxdd(const Npoint * p0) {
+    return ::npoint_out(p0, 15);
+}
+inline char * nsegment_out_maxdd(const Nsegment * p0) {
+    return ::nsegment_out(p0, 15);
+}
 inline char * npointset_out_maxdd(const Set * p0) {
     return ::npointset_out(p0, 15);
+}
+inline char * tnpoint_out_maxdd(const Temporal * p0) {
+    return ::tnpoint_out(p0, 15);
 }
 inline char * pcpointset_out_maxdd(const Set * p0) {
     return ::pcpointset_out(p0, 15);
@@ -1079,11 +1091,17 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline char * pose_out_maxdd(const Pose * p0) {
+    return ::pose_out(p0, 15);
+}
 inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
     return ::pose_transform_pipeline(p0, p1, 0, true);
 }
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline char * posechain_out_maxdd(const PoseChain * p0) {
+    return ::posechain_out(p0, 15);
 }
 inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
     return ::posechain_transform_pipeline(p0, p1, 0, true);
@@ -3667,6 +3685,15 @@ static void Gen_tquadbin_out(DataChunk &args, ExpressionState &, Vector &result)
         });
 }
 
+static void Gen_tquadbin_from_mfjson(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = tquadbin_from_mfjson(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 
 // ===== @ingroup meos_rgeo_inout =====
 static void Gen_trgeometry_in(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3674,6 +3701,15 @@ static void Gen_trgeometry_in(DataChunk &args, ExpressionState &, Vector &result
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *r = trgeometry_in(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_trgeometry_from_mfjson(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = trgeometry_from_mfjson(in.GetString().c_str());
             return TemporalToBlobN(result, r, mask, idx);
         });
 }
@@ -6617,12 +6653,18 @@ void RegisterGenerated_meos_quadbin(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_quadbin_inout(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("tquadbinFromText", {LogicalType::VARCHAR}, QuadbinTypes::tquadbin(), Gen_tquadbin_in));
+    RegisterMeosFunction(loader, ScalarFunction("tquadbinFromEWKT", {LogicalType::VARCHAR}, QuadbinTypes::tquadbin(), Gen_tquadbin_in));
     RegisterMeosFunction(loader, ScalarFunction("tquadbin", {LogicalType::VARCHAR}, QuadbinTypes::tquadbin(), Gen_tquadbin_in));
     RegisterMeosFunction(loader, ScalarFunction("asText", {QuadbinTypes::tquadbin()}, LogicalType::VARCHAR, Gen_tquadbin_out));
+    RegisterMeosFunction(loader, ScalarFunction("tquadbinFromMFJSON", {LogicalType::VARCHAR}, QuadbinTypes::tquadbin(), Gen_tquadbin_from_mfjson));
 }
 
 void RegisterGenerated_meos_rgeo_inout(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("trgeometryFromText", {LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_in));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometryFromEWKT", {LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_in));
     RegisterMeosFunction(loader, ScalarFunction("trgeometry", {LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_in));
+    RegisterMeosFunction(loader, ScalarFunction("trgeometryFromMFJSON", {LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_trgeometry_from_mfjson));
     RegisterMeosFunction(loader, ScalarFunction("asText", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_trgeometry_as_text));
     RegisterMeosFunction(loader, ScalarFunction("asText", {TrgeometryTypes::trgeometry()}, LogicalType::VARCHAR, Gen_trgeometry_as_text_d));
     RegisterMeosFunction(loader, ScalarFunction("asEWKT", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_trgeometry_as_ewkt));
