@@ -6,20 +6,20 @@ require mobilityduck
 
 # ---------------------------------------------------------------------------
 # Type + text I/O (hand-registered boundary).  The cast prints each link's point
-# as HEXEWKB, the canonical #Posechain_out() form; asText prints WKT.
+# as WKT, as asText does.
 # ---------------------------------------------------------------------------
 
 # Static posechain value round-trip, two links
 query I
 SELECT posechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))';
 ----
-POSECHAIN(POSE (010100000000000000000000000000000000000000, 0), POSE (010100000000000000000024400000000000000000, 0))
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))
 
 # tposechain instant round-trip
 query I
 SELECT tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01';
 ----
-POSECHAIN(POSE (010100000000000000000000000000000000000000, 0), POSE (010100000000000000000024400000000000000000, 0))@2000-01-01 00:00:00+01
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2000-01-01 00:00:00+01
 
 # ---------------------------------------------------------------------------
 # Catalog-generated operation surface.  The expected values mirror MobilityDB's
@@ -75,3 +75,35 @@ query I
 SELECT eEqual(tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01', tposechain 'PoseChain(Pose(Point(1 1), 0))@2000-01-01');
 ----
 true
+
+# ── the readers of the text, MF-JSON and WKB forms ──────────────────────────
+# Each reader answers the value its writer writes.
+query I
+SELECT tposechainFromText(asText(t)) = t FROM (SELECT tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01' AS t);
+----
+true
+
+query I
+SELECT tposechainFromEWKT(asEWKT(t)) = t FROM (SELECT tposechain 'SRID=3857;PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01' AS t);
+----
+true
+
+query I
+SELECT tposechainFromMFJSON(asMFJSON(t)) = t FROM (SELECT tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01' AS t);
+----
+true
+
+query II
+SELECT posechainFromText(asText(c)) = c, posechainFromEWKT(asEWKT(c)) = c FROM (SELECT posechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))' AS c);
+----
+true	true
+
+query II
+SELECT posechainFromBinary(asBinary(c)) = c, posechainFromHexWKB(asHexWKB(c)) = c FROM (SELECT posechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))' AS c);
+----
+true	true
+
+query II
+SELECT posechainFromEWKB(asEWKB(c)) = c, posechainFromHexEWKB(asHexEWKB(c)) = c FROM (SELECT posechain 'SRID=3857;PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))' AS c);
+----
+true	true

@@ -44,6 +44,7 @@
 #include <functional>
 
 #include "time_util.hpp"
+#include "temporal/temporal_blob.hpp"
 
 namespace duckdb {
 
@@ -117,7 +118,7 @@ bool TemporalFunctions::Temporal_out(Vector &source, Vector &result, idx_t count
                 throw InvalidInputException("Invalid Temporal input: " + input_blob.GetString());
             }
 
-            char *ret = temporal_out(temp, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *ret = TemporalAsText(temp, OUT_DEFAULT_DECIMAL_DIGITS);
             if (!ret) {
                 free(data_copy);
                 throw InternalException("Failure in Temporal_out: unable to cast temporal to string");

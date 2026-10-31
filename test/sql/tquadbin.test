@@ -209,3 +209,11 @@ SELECT asText(tquadbin(quadbin '48a6227affffffff', tstzspanset '{[2001-01-01, 20
      = asText(tquadbin '{[48a6227affffffff@2001-01-01, 48a6227affffffff@2001-01-02]}');
 ----
 true
+
+# ── the readers of the text and MF-JSON forms ───────────────────────────────
+# Each reader answers the value its writer writes.
+query II
+SELECT tquadbinFromText(asText(t)) = t, tquadbinFromMFJSON(asMFJSON(t)) = t
+FROM (SELECT tquadbin '[48a6227affffffff@2001-01-01, 48a6227affffffff@2001-01-02]' AS t);
+----
+true	true

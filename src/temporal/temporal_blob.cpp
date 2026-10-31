@@ -52,4 +52,38 @@ Temporal *BlobToTemporal(string_t blob) {
     return reinterpret_cast<Temporal *>(copy);
 }
 
+char *TemporalAsText(const Temporal *t, int maxdd) {
+    switch (t->temptype) {
+    case T_TGEOMPOINT:
+    case T_TGEOGPOINT:
+    case T_TGEOMETRY:
+    case T_TGEOGRAPHY:
+    case T_TCBUFFER:
+    case T_TNPOINT:
+    case T_TPOSE:
+    case T_TPOSECHAIN:
+        return tspatial_as_text(t, maxdd);
+    case T_TRGEOMETRY:
+        return trgeometry_as_text(t, maxdd);
+    default:
+        return temporal_out(t, maxdd);
+    }
+}
+
+char *SetAsText(const Set *s, int maxdd) {
+    switch (s->settype) {
+    case T_GEOMSET:
+    case T_GEOGSET:
+    case T_CBUFFERSET:
+    case T_NPOINTSET:
+    case T_POSESET:
+    case T_POSECHAINSET:
+    case T_PCPOINTSET:
+    case T_PCPATCHSET:
+        return spatialset_as_text(s, maxdd);
+    default:
+        return set_out(s, maxdd);
+    }
+}
+
 } // namespace duckdb

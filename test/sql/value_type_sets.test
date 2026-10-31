@@ -48,8 +48,8 @@ SELECT typeof(unnest), unnest::VARCHAR
 FROM setUnnest(set([CAST('Cbuffer(Point(1 1),0.5)' AS cbuffer),
                     CAST('Cbuffer(Point(3 3),2)' AS cbuffer)]));
 ----
-cbuffer	Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)
-cbuffer	Cbuffer(010100000000000000000008400000000000000840,2)
+cbuffer	Cbuffer(POINT(1 1),0.5)
+cbuffer	Cbuffer(POINT(3 3),2)
 
 query II
 SELECT typeof(unnest), unnest::VARCHAR

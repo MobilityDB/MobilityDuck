@@ -423,8 +423,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	TGeographyTypes::RegisterCastFunctions(loader);
 	TGeographyOps::RegisterScalarFunctions(loader);
 
-	TGeogpointType::RegisterScalarFunctions(loader);
-	TGeogpointType::RegisterCastFunctions(loader);
 	TGeogpointOps::RegisterScalarFunctions(loader);
 
 	// What a point cloud value's pcid names, stated as rows of two tables a

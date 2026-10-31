@@ -4453,7 +4453,11 @@ def shape_nary_scalars(f):
     # or span set: shiftScale(intspan, integer, integer), shiftScale(tstzset, interval, interval),
     # and a container of another kind, span(intspanset) -> intspan, spanN(intspanset, integer),
     # dates(datespanset) -> dateset
-    if out is None and b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3:
+    # (an array of boxes with its count, round(stbox[], integer), is not one container: the
+    # catalog's `inputArrays` names it, and #shape_sig_call reads it as a LIST)
+    arrs = {a.get("param") for a in (f.get("shape") or {}).get("inputArrays") or []}
+    if out is None and b0 in CONT_BLOBTO and n0.endswith("*") and len(ins) <= 3 \
+            and ins[0]["name"] not in arrs:
         # a span past the first answering a box is a period (tbox(intspan, tstzspan)), read as
         # #span_operand reads one
         tail = [shape_arg(p) or (span_operand(f, p, k) if rb in ("TBox", "STBox") else None)
@@ -5213,6 +5217,9 @@ SQL_CONTAINER_ACC = {
     "tbox": "TboxType::tbox()", "stbox": "StboxType::stbox()",
     "tpcbox": "TpcboxType::tpcbox()",
 }
+# The boxes a C array holds by value (const STBox *boxarr), each the fixed-size bytes its
+# blob is, as StboxToBlob and TboxToBlob write one
+BOX_BYVAL = {"STBox", "TBox"}
 # The set a temporal value answers its values as (getValues=temporal_valueset over every temporal
 # type, valueSet over the temporal numbers) resolves as #declared_element_pairs resolves a declared
 # set: through SET_SIG_ACC, and the spatial sets through the types their own unit registers
@@ -6008,7 +6015,16 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_npoint_base_transf",
                   "meos_pose_base_transf", "meos_pose_base_srid",
                   "meos_posechain_base_transf", "meos_posechain_base_srid",
-                  "meos_json_base_accessor", "meos_json_base_transf"}
+                  "meos_json_base_accessor", "meos_json_base_transf",
+                  # the text, WKB and MF-JSON I/O of the temporal circular buffers, network
+                  # points, poses, pose chains, rigid geometries and cells, and of the circular
+                  # buffer, network point, pose and pose chain values: <type>FromText, FromEWKT,
+                  # FromMFJSON, FromBinary, FromEWKB, FromHexWKB, FromHexEWKB and their writers
+                  "meos_cbuffer_inout", "meos_npoint_inout", "meos_pose_inout",
+                  "meos_posechain_inout", "meos_rgeo_inout", "meos_h3_inout",
+                  "meos_quadbin_inout", "meos_s2cell_inout",
+                  "meos_cbuffer_base_inout", "meos_npoint_base_inout", "meos_pose_base_inout",
+                  "meos_posechain_base_inout"}
 # @sqlfn names in a RETIRED group that the generator legitimately does NOT emit and that the
 # hand keeps on purpose (a documented generator-shape gap, NOT a silent drop). Anything else
 # uncovered in a retired group is a build-FATAL retire-safety error (see the validation below).
@@ -6136,7 +6152,10 @@ TEMPORAL_CTOR = {
     "temporal_from_mfjson":     "from_mfjson", # <t>FromMFJSON(text)
 }
 def shape_temporal_ctor(f):
-    return TEMPORAL_CTOR.get(f["name"])
+    """The kind of #TEMPORAL_CTOR a public function is; an internal one (temporal_from_mfjson,
+    behind the typed public readers tintFromMFJSON .. ts2cellFromMFJSON) is not bound, as
+    #supported rejects it."""
+    return TEMPORAL_CTOR.get(f["name"]) if f.get("api") == "public" else None
 
 def ctor_arg_slot(a, acc):
     """A catalog SQL arg type -> the DuckDB LogicalType slot for a constructor overload."""
@@ -6473,13 +6492,28 @@ def type_input(f):
     if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
     t = fn[:-len("_in")]
-    if rb in IO_BLOBTO:
-        acc = io_acc(rb).get(t)
-    else:
-        acc = (PTR_RET.get(rb) or (None,))[0]
-        if not acc or not re.search(r'::%s\(\)$' % re.escape(t), acc):
-            acc = None
+    acc = reader_acc(rb, t)
     return (t, acc) if acc else None
+
+def base_value_acc(rb, t):
+    """The DuckDB accessor of the base value `rb` (Cbuffer) when it is the type `t` (cbuffer), the
+    one its #PTR_RET entry names; None otherwise."""
+    acc = (PTR_RET.get(rb) or (None,))[0]
+    return acc if acc and re.search(r'::%s\(\)$' % re.escape(t), acc) else None
+
+def reader_acc(cont, t):
+    """The DuckDB accessor a reader answering `cont` as the SQL type `t` registers its result as:
+    the one #io_acc gives a container or a temporal value, the one #base_value_acc gives a base
+    value (cbufferFromText, cbufferFromBinary answering a cbuffer)."""
+    return io_acc(cont).get(t) if cont in IO_BLOBTO else base_value_acc(cont, t)
+
+def cfh_serialize(cont):
+    """The lines serializing the result `r` of a reader answering `cont`: the container or
+    temporal arm of #_CFH_SERIALIZE, or a base value (cbuffer_in) serialized as #PTR_RET states
+    it, NULL for no value."""
+    return _CFH_SERIALIZE.get(cont) or (
+        "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+        "            return %s;\n" % (PTR_RET[cont][1] % "r"))
 
 def container_from_text(f):
     """The container a retired group's public parser answers from one C string, the shape the
@@ -6503,10 +6537,7 @@ def container_from_text(f):
 
 def emit_container_from_hexwkb(f, cont):
     fn = f["name"]
-    # a base value (cbuffer_in) serialized as #PTR_RET states it, NULL for no value
-    ser = _CFH_SERIALIZE.get(cont) or (
-        "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
-        "            return %s;\n" % (PTR_RET[cont][1] % "r"))
+    ser = cfh_serialize(cont)
     return ("static void Gen_{fn}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
             "    EnsureMeosThreadInitialized();\n"
             "    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),\n"
@@ -6567,16 +6598,17 @@ def emit_container_wkb(f, kind, cont):
             "}}\n").format(fn=fn, two=two, one=one)
 
 def container_from_wkb(f):
-    """The container a retired group's reader answers from WKB bytes, (const uint8_t *, size_t)
-    (set_from_wkb, intsetFromBinary), as #container_from_text answers one from a C string;
-    None otherwise."""
+    """The container, temporal value or base value a retired group's reader answers from WKB
+    bytes, (const uint8_t *, size_t) (set_from_wkb, intsetFromBinary, cbuffer_from_wkb), as
+    #container_from_text answers one from a C string; None otherwise."""
     if not retired(f) or f.get("api") != "public":
         return None
     ps = f.get("params") or []
     if len(ps) != 2 or norm(ps[0]["canonical"]) != "uint8_t *" or norm(ps[1]["canonical"]) != "size_t":
         return None
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
-    if rb not in IO_BLOBTO or not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
+    if (rb not in IO_BLOBTO and rb not in PTR_RET) or not rn.endswith("*") \
+            or "const" in f["returnType"]["canonical"]:
         return None
     return rb
 
@@ -6591,7 +6623,7 @@ def emit_container_from_wkb(f, cont):
             "            {cont} *r = {fn}((const uint8_t *) in.GetData(), (size_t) in.GetSize());\n"
             "{ser}"
             "        }});\n"
-            "}}\n").format(fn=fn, cont=cont, ser=_CFH_SERIALIZE[cont])
+            "}}\n").format(fn=fn, cont=cont, ser=cfh_serialize(cont))
 
 def prefilter_signature(f):
     """(DuckDB argument types, DuckDB result type, whether the geometry operand is a geography) of
@@ -6749,6 +6781,43 @@ def emit_baseval_scalar(f, bb, rb):
 # a cell type is a BIGINT alias, so its vector is int64_t, read into the MEOS call as uint64_t and
 # written back as int64_t, the id keeping its bits both ways.
 CELL_SQL = {_acc_sqlname(v): v for v in CELL_BASEVAL.values()}         # h3index / quadbin / s2cell
+
+def srid_types(cat):
+    """The types that carry an SRID, read from the catalog as #catalog_collection_bases reads the
+    collection types: a type over which MobilityDB declares SRID(<type>), a temporal type whose
+    bounding box (temporalTypes[t].bbox) is one of those, and a spatial set
+    (typeRelations.predicates.spatialset_type), whose bounding box is an stbox. A cell set and a
+    temporal cell carry the SRID of their box; a cell value carries none, its grid fixing it."""
+    decl = {s["args"][0] for f in cat["functions"] for s in f.get("sqlSignatures") or []
+            if (s.get("sqlName") or f.get("sqlfn")) == "SRID" and s.get("args")}
+    pred = cat["typeRelations"]["predicates"]
+    boxed = {t for t, v in cat["temporalTypes"].items() if v.get("bbox") in decl}
+    sets = set(pred.get("spatialset_type", [])) if "stbox" in decl else set()
+    return decl | boxed | sets
+
+# The spatial types the rule decides, as the catalog classes them (spatial_basetype,
+# spatialset_type, tspatial_type), less PostGIS's geometry and geography, whose SRID is their own;
+# those of them without an SRID (#srid_types) have none of the E forms of the I/O functions,
+# which write and read the SRID: asEWKT, asEWKB, asHexEWKB and <type>FromEWKT, FromEWKB,
+# FromHexEWKB.
+_PRED = CATALOG["typeRelations"]["predicates"]
+NO_SRID_TYPES = ((set(_PRED.get("spatial_basetype", [])) | set(_PRED.get("spatialset_type", []))
+                  | set(_PRED.get("tspatial_type", []))) - set(_PRED.get("geo_basetype", []))
+                 - srid_types(CATALOG))
+_EFORM_WRITER = re.compile(r'^as(?:EWKT|EWKB|HexEWKB)$')
+_EFORM_READER = re.compile(r'^(\w+)From(?:EWKT|EWKB|HexEWKB)$')
+def no_srid_eform(line):
+    """True when the registration `line` is an E form of a type #NO_SRID_TYPES names: a writer
+    over it (asEWKT(h3index)), its type the one #_acc_sqlname reads from the first argument, or a
+    reader answering it (h3indexFromEWKB). The registration is read as the shape_sig_call pass of
+    #main reads one, by the same `ScalarFunction("<name>", {<arguments>}` match."""
+    m = re.search(r'ScalarFunction\("([^"]+)", \{([^}]*)\}', line)
+    if not m:
+        return False
+    if _EFORM_WRITER.match(m.group(1)):
+        return _acc_sqlname(m.group(2).split(",")[0].strip()) in NO_SRID_TYPES
+    r = _EFORM_READER.match(m.group(1))
+    return bool(r) and r.group(1) in NO_SRID_TYPES
 
 def static_cell_arg(p, sqlt, i, wide=False):
     """(DuckDB type, executor C++ type, MEOS-call expression, pre-call lines, post-call lines) for
@@ -7006,6 +7075,24 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
                    "        v%d.push_back(%s);" % (k, PTR_IN[eb][1] % ("ch%dd[le%d.offset + j]" % (k, k)))]
             return dict(kind="list", dt="LogicalType::LIST(%s)" % acc, cpp="list_entry_t", pre=pre,
                         post=["for (auto *e : v%d) free(e);" % k],
+                        cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
+                               lenp["name"]: "(%s) v%d.size()" % (ln, k)})
+        # a list of boxes handed over as the C array of their values (stboxarr_round), each
+        # element the bytes of one box as StboxToBlob writes them, the NULL elements left out as
+        # the list of base values above leaves them out
+        bacc = SQL_CONTAINER_ACC.get(t[:-2]) if t.endswith("[]") else None
+        if "*" not in elem and eb in BOX_BYVAL and bacc:
+            pre = ["const list_entry_t le%d = %s;" % (k, v),
+                   "vector<%s> v%d;" % (eb, k),
+                   "v%d.reserve(le%d.length + 1);" % (k, k),
+                   "for (idx_t j = 0; j < le%d.length; j++)" % k,
+                   "    if (ch%dv.RowIsValid(le%d.offset + j)) {" % (k, k),
+                   "        %s e;" % eb,
+                   "        memcpy(&e, ch%dd[le%d.offset + j].GetData(), sizeof(%s));" % (k, k, eb),
+                   "        v%d.push_back(e);" % k,
+                   "    }"]
+            return dict(kind="list", dt="LogicalType::LIST(%s)" % bacc, cpp="list_entry_t", pre=pre,
+                        post=[],
                         cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
                                lenp["name"]: "(%s) v%d.size()" % (ln, k)})
         # a list of numbers or booleans, the SQL type of its elements the one BOUND_TAIL_SQL
@@ -7370,7 +7457,27 @@ def sig_call_mapped(f, s, outs, cexpr):
     ar = (f.get("shape") or {}).get("arrayReturn") or {}
     lf = (ar.get("lengthFrom") or {}).get("name")
     sqlr, rn = s.get("ret") or "", norm(f["returnType"]["canonical"])
-    if outs or not lf or lf not in cexpr or not sqlr.endswith("[]") or not rn.endswith("**"):
+    if outs or not lf or lf not in cexpr or not sqlr.endswith("[]"):
+        return None
+    # an array of boxes held by value (stboxarr_round answering stbox[]), each element written as
+    # the bytes of one box, as StboxToBlob writes one, the array freed whole
+    rel = norm((ar.get("element") or {}).get("canonical") or "")
+    bacc = SQL_CONTAINER_ACC.get(sqlr[:-2])
+    if rel in BOX_BYVAL and rn == rel + " *" and bacc:
+        rcall = ["const int cnt = %s;" % cexpr[lf],
+                 "%s r = cnt > 0 ? CALL : NULL;" % rn]
+        rwrite = ["if (!r) { outv.SetInvalid(i); continue; }",
+                  "const idx_t off = ListVector::GetListSize(result);",
+                  "ListVector::Reserve(result, off + cnt);",
+                  "auto &ent = ListVector::GetEntry(result);",
+                  "for (int j = 0; j < cnt; j++)",
+                  "    FlatVector::GetData<string_t>(ent)[off + j] = StringVector::AddStringOrBlob("
+                  "ent, (const char *) &r[j], sizeof(%s));" % rel,
+                  "ListVector::SetListSize(result, off + cnt);",
+                  "out[i] = list_entry_t{off, idx_t(cnt)};",
+                  "free(r);"]
+        return ("LogicalType::LIST(%s)" % bacc, "list_entry_t", rcall, rwrite, {})
+    if not rn.endswith("**"):
         return None
     el = set_elem(sqlr[:-2], (ar.get("element") or {}).get("canonical") or "")
     if el is None:
@@ -7810,7 +7917,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             bodies.append(emit_container_from_hexwkb(f, cont))
             # the names the signatures declare (intsetFromText), where the group is retired
             for s in (f.get("sqlSignatures", []) if retired(f) else []):
-                acc = io_acc(cont).get(s["ret"]) if cont in IO_BLOBTO else None
+                acc = reader_acc(cont, s["ret"])
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
                 nm = s.get("sqlName") or f["sqlfn"]
@@ -7849,11 +7956,13 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 # writer: intspan_in .. tstzspanset_in), every set, the sets of the other families
                 # and of geometries among them (asBinary(cbufferset), geomsetFromBinary), and
                 # every temporal value, whose readers and writers the temporal, spatial, JSON and
-                # point cloud I/O groups retire together, over each type declared
+                # point cloud I/O groups retire together, over each type declared; a base value
+                # (cbufferFromBinary, rasterFromBinary) is the one type its accessor names
                 cio = cw[1] if cw else cr
                 tname = (s.get("args") or [None])[0] if cw else s.get("ret")
                 own = FN_BY_NAME.get(f"{tname}_in")
-                if cio not in ("Temporal", "Set") and (not own or own.get("group") != f.get("group")):
+                if cio in IO_BLOBTO and cio not in ("Temporal", "Set") \
+                        and (not own or own.get("group") != f.get("group")):
                     continue
                 if cw:
                     acc = io_acc(cio).get((s.get("args") or [None])[0])
@@ -7864,7 +7973,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     if len(s.get("args") or []) == 2 and not (defs and defs[-1] is not None):
                         forms = forms[1:]
                 else:
-                    acc = io_acc(cio).get(s.get("ret"))
+                    acc = reader_acc(cio, s.get("ret"))
                     rty, forms = acc, [["LogicalType::BLOB"]]
                 if not acc:
                     continue    # spatial element (geo/cbuffer/npoint/...) -> its own family file
@@ -8254,7 +8363,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             spec_sig = "{%s}"
         elif b:
             kind, dret, arg2 = b; n_bin += 1
-            bodies.append(emit_body_binary(f, kind, arg2))
+            # a retired kernel declared over each of its types in the commuted order alone
+            # (#sig_only_commuted) registers no call in its own order, so only its commuted
+            # body (Gen_<fn>_rev) is emitted
+            if not (scope != "all" and retired(f) and accs
+                    and all(sig_only_commuted(f, a) for a in accs)):
+                bodies.append(emit_body_binary(f, kind, arg2))
             argsig = "{type, %s}" % arg2[0]
             spec_sig = "{%%s, %s}" % arg2[0]
         elif t:
@@ -9566,6 +9680,11 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                     else:
                         specific_regs.append(
                             f'    RegisterMeosFunction(loader, {sf});')
+
+    # No E form is registered over a type without an SRID (#no_srid_eform)
+    for acc in (generic_regs, specific_regs, set_generic_regs, set_specific_regs,
+                span_generic_regs, span_specific_regs, temporal_box_regs):
+        acc.items = [(g, line) for g, line in acc.items if not no_srid_eform(line)]
 
     # ---- bodies, sectioned by @ingroup group (one section per group) ----
     body_by_grp = defaultdict(list)

@@ -120,3 +120,11 @@ SELECT asText(ts2cell(s2cell '47c3c3', tstzspanset '{[2001-01-01, 2001-01-02]}')
      = asText(ts2cell '{[47c3c3@2001-01-01, 47c3c3@2001-01-02]}');
 ----
 true
+
+# ── the readers of the text and MF-JSON forms ───────────────────────────────
+# Each reader answers the value its writer writes.
+query II
+SELECT ts2cellFromText(asText(t)) = t, ts2cellFromMFJSON(asMFJSON(t)) = t
+FROM (SELECT '{47c3c3@2000-01-01, 47c3c5@2000-01-02}'::ts2cell AS t);
+----
+true	true

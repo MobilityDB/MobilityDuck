@@ -282,7 +282,7 @@ private:
 			is_temporal = false;
 			return true;
 		}
-		if (type == TgeompointType::tgeompoint() || type == TGeogpointType::tgeogpoint() ||
+		if (type == TgeompointType::tgeompoint() || type == TgeogpointType::tgeogpoint() ||
 		    type == TGeometryTypes::tgeometry() || type == TGeographyTypes::tgeography()) {
 			is_temporal = true;
 			return true;

@@ -1049,6 +1049,9 @@ inline STBox * stbox_get_space_tile_zsize(const GSERIALIZED * p0, double p1, dou
 inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosInterval * p1, int * p2) {
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
+inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
+    return ::cbuffer_out(p0, 15);
+}
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
 }
@@ -1070,8 +1073,17 @@ inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, c
 inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
     return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
 }
+inline char * npoint_out_maxdd(const Npoint * p0) {
+    return ::npoint_out(p0, 15);
+}
+inline char * nsegment_out_maxdd(const Nsegment * p0) {
+    return ::nsegment_out(p0, 15);
+}
 inline char * npointset_out_maxdd(const Set * p0) {
     return ::npointset_out(p0, 15);
+}
+inline char * tnpoint_out_maxdd(const Temporal * p0) {
+    return ::tnpoint_out(p0, 15);
 }
 inline char * pcpointset_out_maxdd(const Set * p0) {
     return ::pcpointset_out(p0, 15);
@@ -1079,11 +1091,17 @@ inline char * pcpointset_out_maxdd(const Set * p0) {
 inline char * pcpatchset_out_maxdd(const Set * p0) {
     return ::pcpatchset_out(p0, 15);
 }
+inline char * pose_out_maxdd(const Pose * p0) {
+    return ::pose_out(p0, 15);
+}
 inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
     return ::pose_transform_pipeline(p0, p1, 0, true);
 }
 inline char * poseset_out_maxdd(const Set * p0) {
     return ::poseset_out(p0, 15);
+}
+inline char * posechain_out_maxdd(const PoseChain * p0) {
+    return ::posechain_out(p0, 15);
 }
 inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
     return ::posechain_transform_pipeline(p0, p1, 0, true);
@@ -2428,6 +2446,15 @@ static void Gen_ever_ne_pose_tpose(DataChunk &args, ExpressionState &, Vector &r
 
 
 // ===== @ingroup meos_pose_inout =====
+static void Gen_tpose_from_mfjson(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *r = tpose_from_mfjson(in.GetString().c_str());
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tpose_in(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -2840,18 +2867,22 @@ static void Gen_raquet_in(DataChunk &args, ExpressionState &, Vector &result) {
 
 static void Gen_raquet_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto out = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-    for (idx_t i = 0; i < rows; i++) {
-        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Raquet *r = raquet_from_wkb((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
-        if (!r) { outv.SetInvalid(i); continue; }
-        out[i] = RaquetToBlob(result, r);
-    }
-    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Raquet *r = raquet_from_wkb((const uint8_t *) in.GetData(), (size_t) in.GetSize());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RaquetToBlob(result, r);
+        });
+}
+
+static void Gen_raster_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Raster *r = raster_from_wkb((const uint8_t *) in.GetData(), (size_t) in.GetSize());
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return RasterToBlob(result, r);
+        });
 }
 
 static void Gen_raquet_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
@@ -2951,22 +2982,6 @@ static void Gen_raquet_as_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StringVector::AddString(result, r);
         free(r);
-    }
-    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
-static void Gen_raster_from_wkb(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto out = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-    for (idx_t i = 0; i < rows; i++) {
-        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Raster *r = raster_from_wkb((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
-        if (!r) { outv.SetInvalid(i); continue; }
-        out[i] = RasterToBlob(result, r);
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
@@ -4996,6 +5011,9 @@ void RegisterGenerated_meos_pose_comp_ever(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_pose_inout(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("tposeFromMFJSON", {LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tpose_from_mfjson));
+    RegisterMeosFunction(loader, ScalarFunction("tposeFromText", {LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tpose_in));
+    RegisterMeosFunction(loader, ScalarFunction("tposeFromEWKT", {LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tpose_in));
     RegisterMeosFunction(loader, ScalarFunction("tpose", {LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_tpose_in));
 }
 
@@ -5040,12 +5058,12 @@ void RegisterGenerated_meos_quadbin_set_inout(ExtensionLoader &loader) {
 void RegisterGenerated_meos_raster_base_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("raquet", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_in));
     RegisterMeosFunction(loader, ScalarFunction("raquetFromBinary", {LogicalType::BLOB}, RaquetTypes::raquet(), Gen_raquet_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("rasterFromBinary", {LogicalType::BLOB}, RasterTypes::raster(), Gen_raster_from_wkb));
     RegisterMeosFunction(loader, ScalarFunction("raquetFromHexWKB", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_from_hexwkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RaquetTypes::raquet(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_raquet_as_wkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RaquetTypes::raquet()}, LogicalType::BLOB, Gen_raquet_as_wkb_v1));
     RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {RaquetTypes::raquet(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_raquet_as_hexwkb));
     RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {RaquetTypes::raquet()}, LogicalType::VARCHAR, Gen_raquet_as_hexwkb_v1));
-    RegisterMeosFunction(loader, ScalarFunction("rasterFromBinary", {LogicalType::BLOB}, RasterTypes::raster(), Gen_raster_from_wkb));
     RegisterMeosFunction(loader, ScalarFunction("rasterFromHexWKB", {LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_from_hexwkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RasterTypes::raster(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_raster_as_wkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_as_wkb_v1));

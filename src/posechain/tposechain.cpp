@@ -46,6 +46,7 @@
 #include "duckdb/function/scalar_function.hpp"
 #include "mobilityduck/meos_registration.hpp"
 #include "time_util.hpp"
+#include "temporal/temporal_blob.hpp"
 
 extern "C" {
     #include <meos.h>
@@ -139,7 +140,7 @@ bool PosechainFunctions::Posechain_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             PoseChain *pc = BlobToPosechain(blob);
-            char *str = posechain_out(pc, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = posechain_as_text(pc, OUT_DEFAULT_DECIMAL_DIGITS);
             free(pc);
             std::string copy(str);
             free(str);
@@ -172,7 +173,7 @@ bool PosechainFunctions::Tposechain_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
             free(t);
             std::string copy(str);
             free(str);
