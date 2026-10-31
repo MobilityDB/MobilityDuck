@@ -6,20 +6,20 @@ require mobilityduck
 
 # ---------------------------------------------------------------------------
 # Type + text I/O (hand-registered boundary).  The cast prints each link's point
-# as HEXEWKB, the canonical #Posechain_out() form; asText prints WKT.
+# as WKT, as asText does.
 # ---------------------------------------------------------------------------
 
 # Static posechain value round-trip, two links
 query I
 SELECT posechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))';
 ----
-POSECHAIN(POSE (010100000000000000000000000000000000000000, 0), POSE (010100000000000000000024400000000000000000, 0))
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))
 
 # tposechain instant round-trip
 query I
 SELECT tposechain 'PoseChain(Pose(Point(0 0), 0), Pose(Point(10 0), 0))@2000-01-01';
 ----
-POSECHAIN(POSE (010100000000000000000000000000000000000000, 0), POSE (010100000000000000000024400000000000000000, 0))@2000-01-01 00:00:00+01
+PoseChain(Pose(POINT(0 0),0),Pose(POINT(10 0),0))@2000-01-01 00:00:00+01
 
 # ---------------------------------------------------------------------------
 # Catalog-generated operation surface.  The expected values mirror MobilityDB's

@@ -44,4 +44,14 @@ string_t TemporalToBlob(Vector &result, Temporal *t);
 // Copy the blob bytes into a freshly malloc'd Temporal* owned by the caller.
 Temporal *BlobToTemporal(string_t blob);
 
+// The text asText writes for t, owned by the caller: the WKT of a spatial
+// value (tspatial_as_text, trgeometry_as_text) and temporal_out for the other
+// types, as MobilityDB's asText of each temporal type is.
+char *TemporalAsText(const Temporal *t, int maxdd);
+
+// The text asText writes for s, owned by the caller: the WKT of a set of
+// spatial values (spatialset_as_text) and set_out for the other sets, the
+// cell sets among them, as MobilityDB's asText of each set type is.
+char *SetAsText(const Set *s, int maxdd);
+
 } // namespace duckdb

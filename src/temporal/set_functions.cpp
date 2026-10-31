@@ -30,6 +30,7 @@
 #include "temporal/set.hpp"
 #include "temporal/set_functions.hpp"
 #include "time_util.hpp"
+#include "temporal/temporal_blob.hpp"
 #include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/common/vector_operations/binary_executor.hpp"
 #include "duckdb/common/vector_operations/ternary_executor.hpp"
@@ -61,7 +62,7 @@ bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, Cast
         Set *s = (Set*)malloc(size);                
 
         memcpy(s, data, size);             
-        char *cstr = set_out(s, 15);  
+        char *cstr = SetAsText(s, 15);  
         result_data[i] = StringVector::AddString(result, cstr);
 
         free(cstr);

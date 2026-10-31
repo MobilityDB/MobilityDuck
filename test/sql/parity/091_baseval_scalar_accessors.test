@@ -123,7 +123,7 @@ true
 query I
 SELECT applyPose(pose 'Pose(Point(1 0),0)', pose 'Pose(Point(10 20),0)')::VARCHAR;
 ----
-POSE (010100000000000000000026400000000000003440, 0)
+Pose(POINT(11 20),0)
 
 # A base value renders as text through asText / asEWKT. The MEOS entry always takes the maximum
 # decimal digits; the canonical SQL gives that argument a default, so both arities are declared.

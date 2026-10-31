@@ -5,27 +5,27 @@
 require mobilityduck
 
 # ---------------------------------------------------------------------------
-# Type + text I/O (hand-registered boundary; the point renders as HEXEWKB, the
-# canonical #Pose_out() form — asText produces the WKT POINT(..) form).
+# Type + text I/O (hand-registered boundary; the cast writes what asText writes,
+# the point as WKT).
 # ---------------------------------------------------------------------------
 
 # Static pose value round-trip
 query I
 SELECT pose 'Pose(Point(1 1),0.5)';
 ----
-POSE (0101000000000000000000F03F000000000000F03F, 0.5)
+Pose(POINT(1 1),0.5)
 
 # tpose instant round-trip
 query I
 SELECT tpose 'Pose(Point(1 1),0.5)@2000-01-01';
 ----
-POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-01 00:00:00+01
+Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
 
 # tpose discrete sequence round-trip
 query I
 SELECT tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}';
 ----
-{POSE (0101000000000000000000F03F000000000000F03F, 0.3)@2000-01-01 00:00:00+01, POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-02 00:00:00+01}
+{Pose(POINT(1 1),0.3)@2000-01-01 00:00:00+01, Pose(POINT(1 1),0.5)@2000-01-02 00:00:00+01}
 
 # ---------------------------------------------------------------------------
 # Catalog-generated operation surface (accessors, conversions, restrictions,
@@ -40,7 +40,7 @@ SELECT numInstants(tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.
 ----
 3
 
-# Text form of a temporal pose — the WKT point, not the HEXEWKB one the cast prints
+# Text form of a temporal pose — the WKT point, as the cast prints it
 query I
 SELECT asText(tpose 'Pose(Point(1 1), 0.5)@2000-01-01');
 ----

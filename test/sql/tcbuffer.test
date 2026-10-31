@@ -11,27 +11,27 @@ statement ok
 LOAD spatial;
 
 # ---------------------------------------------------------------------------
-# Type + text I/O (hand-registered boundary; the point renders as HEXEWKB, the
-# canonical #Cbuffer_out() form — asText produces the WKT POINT(..) form).
+# Type + text I/O (hand-registered boundary; the cast writes what asText writes,
+# the point as WKT).
 # ---------------------------------------------------------------------------
 
 # Static cbuffer value round-trip
 query I
 SELECT cbuffer 'Cbuffer(Point(1 1),0.5)';
 ----
-Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)
+Cbuffer(POINT(1 1),0.5)
 
 # tcbuffer instant round-trip
 query I
 SELECT tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01';
 ----
-Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)@2000-01-01 00:00:00+01
+Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01
 
 # tcbuffer sequence round-trip
 query I
 SELECT tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}';
 ----
-{Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)@2000-01-01 00:00:00+01, Cbuffer(010100000000000000000000400000000000000040,1)@2000-01-02 00:00:00+01}
+{Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Cbuffer(POINT(2 2),1)@2000-01-02 00:00:00+01}
 
 # ---------------------------------------------------------------------------
 # Catalog-generated operation surface (accessors, conversions, distance,
@@ -48,7 +48,7 @@ SELECT numInstants(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(
 query I
 SELECT startInstant(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
 ----
-Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)@2000-01-01 00:00:00+01
+Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01
 
 # Conversion: the radius as a tfloat
 query I
@@ -86,7 +86,7 @@ false
 # (duration/atTime) behaviour previously confined to the geo types.
 # ---------------------------------------------------------------------------
 
-# asText -> WKT point form (vs the hexewkb of the plain output cast)
+# asText -> WKT point form, as the output cast
 query I
 SELECT asText(tcbuffer 'Cbuffer(Point(1 1),0.5)@2000-01-01');
 ----
@@ -117,16 +117,16 @@ SELECT asText(atTime(tcbuffer '[Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Poin
 [Cbuffer(POINT(1 1),0.5)@2000-01-01 00:00:00+01, Cbuffer(POINT(2 2),1)@2000-01-02 00:00:00+01]
 
 # base-value accessors (Temporal<T>: startValue/endValue return the base value = a cbuffer,
-# rendered by the cbuffer output cast in the canonical HEXEWKB point form)
+# rendered by the cbuffer output cast in the WKT point form of asText)
 query I
 SELECT startValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
 ----
-Cbuffer(0101000000000000000000F03F000000000000F03F,0.5)
+Cbuffer(POINT(1 1),0.5)
 
 query I
 SELECT endValue(tcbuffer '{Cbuffer(Point(1 1),0.5)@2000-01-01, Cbuffer(Point(2 2),1.0)@2000-01-02}');
 ----
-Cbuffer(010100000000000000000000400000000000000040,1)
+Cbuffer(POINT(2 2),1)
 
 # spatial accessor: convex hull of the swept region. convexHull is computed on the exact
 # traversed area, arcs included, so a buffer of nonzero radius yields a CURVEPOLYGON (see the
