@@ -713,24 +713,6 @@ inline SpanSet * intspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * 
 inline SpanSet * intspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int p1, int p2) {
     return ::intspanset_shift_scale(p0, p1, p2, true, true);
 }
-inline Set * tstzset_shift_scale_duration(const Set * p0, const MeosInterval * p1) {
-    return ::tstzset_shift_scale(p0, p1, NULL);
-}
-inline Set * tstzset_shift_scale_shift(const Set * p0, const MeosInterval * p1) {
-    return ::tstzset_shift_scale(p0, NULL, p1);
-}
-inline Span * tstzspan_shift_scale_duration(const Span * p0, const MeosInterval * p1) {
-    return ::tstzspan_shift_scale(p0, p1, NULL);
-}
-inline Span * tstzspan_shift_scale_shift(const Span * p0, const MeosInterval * p1) {
-    return ::tstzspan_shift_scale(p0, NULL, p1);
-}
-inline SpanSet * tstzspanset_shift_scale_duration(const SpanSet * p0, const MeosInterval * p1) {
-    return ::tstzspanset_shift_scale(p0, p1, NULL);
-}
-inline SpanSet * tstzspanset_shift_scale_shift(const SpanSet * p0, const MeosInterval * p1) {
-    return ::tstzspanset_shift_scale(p0, NULL, p1);
-}
 inline Span * bigintspan_bins_border_inc_vorigin(const Span * p0, int64_t p1, int * p2) {
     return ::bigintspan_bins(p0, p1, 0, true, p2);
 }
@@ -778,12 +760,6 @@ inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p
 }
 inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
     return ::tintbox_shift_scale(p0, p1, p2, true, true);
-}
-inline TBox * tbox_shift_scale_time_duration(const TBox * p0, const MeosInterval * p1) {
-    return ::tbox_shift_scale_time(p0, p1, NULL);
-}
-inline TBox * tbox_shift_scale_time_shift(const TBox * p0, const MeosInterval * p1) {
-    return ::tbox_shift_scale_time(p0, NULL, p1);
 }
 inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
     return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
@@ -995,12 +971,6 @@ inline STBox * stbox_make_geodetic_true_hasx_true_hasz_true_s_null(int32_t p0, d
 inline STBox * stbox_make_geodetic_true_hasx_true_hasz_true(int32_t p0, double p1, double p2, double p3, double p4, double p5, double p6, const Span * p7) {
     return ::stbox_make(true, true, true, p0, p1, p2, p3, p4, p5, p6, p7);
 }
-inline STBox * stbox_shift_scale_time_duration(const STBox * p0, const MeosInterval * p1) {
-    return ::stbox_shift_scale_time(p0, p1, NULL);
-}
-inline STBox * stbox_shift_scale_time_shift(const STBox * p0, const MeosInterval * p1) {
-    return ::stbox_shift_scale_time(p0, NULL, p1);
-}
 inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
     return ::union_stbox_stbox(p0, p1, true);
 }
@@ -1120,6 +1090,9 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 }
 inline Raster * raster_map_algebra_distancex_distancey(const Raster * p0, int p1, const char * p2, const char * p3, const char * p4, const Raster * p5) {
     return ::raster_map_algebra(p0, p1, p2, p3, p4, p5, 0, 0);
+}
+inline bool trgeometry_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
+    return ::trgeometry_value_at_timestamptz(p0, p1, true, p2);
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, const MeosInterval * p1, TimestampTz p2, int * p3) {
     return ::trgeometry_time_boxes(p0, p1, p2, true, true, p3);
@@ -1653,6 +1626,28 @@ static void Gen_stbox_expand_time(DataChunk &args, ExpressionState &state, Vecto
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_stbox_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<interval_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        STBox *x0 = BlobToStbox(in0[i]);
+        STBox *r = stbox_scale_time(x0, MeosIntervalArg(in1[i]));
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StboxToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_stbox_shift_scale_time(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -1676,7 +1671,7 @@ static void Gen_stbox_shift_scale_time(DataChunk &args, ExpressionState &state, 
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_stbox_shift_scale_time_duration(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_stbox_shift_time(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
@@ -1690,29 +1685,7 @@ static void Gen_stbox_shift_scale_time_duration(DataChunk &args, ExpressionState
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         STBox *x0 = BlobToStbox(in0[i]);
-        STBox *r = stbox_shift_scale_time_duration(x0, MeosIntervalArg(in1[i]));
-        free(x0);
-        if (!r) { outv.SetInvalid(i); continue; }
-        out[i] = StboxToBlob(result, r);
-    }
-    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
-static void Gen_stbox_shift_scale_time_shift(DataChunk &args, ExpressionState &state, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto in1 = FlatVector::GetData<interval_t>(args.data[1]);
-    auto out = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-    for (idx_t i = 0; i < rows; i++) {
-        bool valid = true;
-        for (idx_t c = 0; c < 2; c++)
-            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
-        if (!valid) { outv.SetInvalid(i); continue; }
-        STBox *x0 = BlobToStbox(in0[i]);
-        STBox *r = stbox_shift_scale_time_shift(x0, MeosIntervalArg(in1[i]));
+        STBox *r = stbox_shift_time(x0, MeosIntervalArg(in1[i]));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StboxToBlob(result, r);
@@ -6759,9 +6732,9 @@ void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_geo_box_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("expandTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_expand_time));
+    RegisterMeosFunction(loader, ScalarFunction("scaleTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_scale_time));
     RegisterMeosFunction(loader, ScalarFunction("shiftScaleTime", {StboxType::stbox(), LogicalType::INTERVAL, LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_shift_scale_time));
-    RegisterMeosFunction(loader, ScalarFunction("shiftTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_shift_scale_time_duration));
-    RegisterMeosFunction(loader, ScalarFunction("scaleTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_shift_scale_time_shift));
+    RegisterMeosFunction(loader, ScalarFunction("shiftTime", {StboxType::stbox(), LogicalType::INTERVAL}, StboxType::stbox(), Gen_stbox_shift_time));
     RegisterMeosFunction(loader, ScalarFunction("quadSplit", {StboxType::stbox()}, LogicalType::LIST(StboxType::stbox()), Gen_stbox_quad_split));
     RegisterMeosFunction(loader, ScalarFunction("round", {LogicalType::LIST(StboxType::stbox()), LogicalType::INTEGER}, LogicalType::LIST(StboxType::stbox()), Gen_stboxarr_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {LogicalType::LIST(StboxType::stbox())}, LogicalType::LIST(StboxType::stbox()), Gen_stboxarr_round_v1));
