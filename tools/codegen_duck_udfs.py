@@ -63,26 +63,20 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "license",
     LICENSE_BANNER = _fh.read()
 MDB_LICENSE = LICENSE_BANNER + "\n"
 
-# Transparent MEOS typedefs the catalog leaves unresolved: a family names its own alias for
-# a type the rest of the surface spells natively, and every downstream map is keyed on the
-# native spelling. Resolving the alias HERE, once, is what keeps the family regular -- the
-# alternative is repeating the aliased spelling in each of OUTPRIM / OUTPARAM_LOCAL /
-# ARRAY_ELEM / CELL_UINT, i.e. one hand special-case per map.
-# S2CellId: meos_s2cell.h `typedef uint64 S2CellId` over pg_basetypes.h `typedef uint64_t
-# uint64` -- uint64_t itself, on every platform, so the resolved spelling is not merely
-# same-width but the SAME TYPE, and the pointer positions (S2CellId * out-params and array
-# returns) are compatible rather than reinterpreted. s2cell spells the cell id natively
-# ("unsigned long") in its scalar positions and S2CellId only in the array/out-parameter
-# ones, so without this the family answers startValue but not getValues/valueN.
-C_TYPEDEF_ALIASES = {"S2CellId": "uint64_t"}
-_ALIAS_RE = re.compile(r'\b(%s)\b' % "|".join(map(re.escape, C_TYPEDEF_ALIASES)))
+# The type maps below are keyed on a slot's `canonical`, the spelling the catalog states for
+# every slot: a width as its C standard type (int32_t, int64_t, float, double), a structure by
+# its name, and the names PostgreSQL declares (TimestampTz, DateADT, text, Jsonb, ...) kept as
+# they are, each defined in the catalog's `typedefs` list. A type of its own over a width, the
+# cell ids H3Index, Quadbin and S2CellId, is the slot's `typedef` over the canonical uint64_t
+# (CELL_TYPEDEF). The C prototype a forwarder re-declares is the slot's `cType`, the spelling
+# of the header, as it is a declaration and not a mapping.
+TYPEDEFS = {t["name"]: t["canonical"] for t in CATALOG.get("typedefs") or []}
 
 def norm(c):
     # Strip the `const` and `struct` keywords (the 14l catalog renders canonical
     # types as e.g. `const struct Temporal *`); word-boundary so type names that
-    # merely contain the substring are untouched.
-    t = re.sub(r'\s+', ' ', re.sub(r'\b(const|struct)\b', '', c or '')).strip()
-    return _ALIAS_RE.sub(lambda m: C_TYPEDEF_ALIASES[m.group(1)], t)
+    # merely contain the substring are untouched. #base reads the same spelling.
+    return re.sub(r'\s+', ' ', re.sub(r'\b(const|struct)\b', '', c or '')).strip()
 
 def base(canon):
     t = norm(canon)
@@ -163,11 +157,9 @@ BASEVAL_PTR_IN = set(PTR_IN) - _CONTAINER_PTR_IN
 # Scalar (by-value) args/returns -> (DuckDB LogicalType, C++ scalar type)
 SCALAR = {
     "int":          ("LogicalType::INTEGER",  "int32_t"),
-    "int32":        ("LogicalType::INTEGER",  "int32_t"),
     "int32_t":      ("LogicalType::INTEGER",  "int32_t"),
     # uint32 (the PG hash width) registers as the unsigned UINTEGER — see the
     # SCALAR_RET_CPP note below. The uint64 cell ids keep the CELL_UINT path.
-    "uint32":       ("LogicalType::UINTEGER", "uint32_t"),
     "uint32_t":     ("LogicalType::UINTEGER", "uint32_t"),
     # NB: uint64_t is deliberately NOT a generic SCALAR arg/return. A bare uint64 in
     # ARG position is a Tcell<T> cell-id base value (h3index/quadbin) already typed by
@@ -176,10 +168,10 @@ SCALAR = {
     # uint64 surface is *_hash_extended's (Temporal, seed) -> uint64, handled by
     # shape_binary via SCALAR_ARG / SCALAR_RET_CPP (UBIGINT); supported() lets the
     # SCALAR_ARG seed through even though arg_type has no generic uint64 mapping.
-    "int64":        ("LogicalType::BIGINT",   "int64_t"),
     "int64_t":      ("LogicalType::BIGINT",   "int64_t"),
+    # float4 is the C float, DuckDB's FLOAT
+    "float":        ("LogicalType::FLOAT",    "float"),
     "double":       ("LogicalType::DOUBLE",   "double"),
-    "float8":       ("LogicalType::DOUBLE",   "double"),
     "bool":         ("LogicalType::BOOLEAN",  "bool"),
     "TimestampTz":  ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t"),
     "DateADT":      ("LogicalType::DATE",     "date_t"),
@@ -481,6 +473,7 @@ SCALAR_RET_CPP = {"int": ("int32_t", "LogicalType::INTEGER"),
                   # too — see SCALAR_ARG). uint64 cell ids keep the CELL_UINT path.
                   "uint32_t": ("uint32_t", "LogicalType::UINTEGER"),
                   "uint64_t": ("uint64_t", "LogicalType::UBIGINT"),
+                  "float": ("float", "LogicalType::FLOAT"),
                   "double": ("double", "LogicalType::DOUBLE"),
                   "bool": ("bool", "LogicalType::BOOLEAN")}
 # By-value scalar returns the TEMPORAL detectors accept: the identity-marshalled ones
@@ -1794,14 +1787,21 @@ def emit_set(f, kind):
             f"        [&](string_t a, string_t b) {{\n"
             f"            Set *s1 = BlobToSet(a);\n            Set *s2 = BlobToSet(b);\n{inner}\n        }});\n}}\n")
 
-# Tcell<T> cell-id base value. A per-type cell accessor (th3index_start_value /
-# tquadbin_start_value; reg_scope keys the single cell temporal type) returns the cell id as
-# the collapsed uint64 -- spelled "unsigned long" (libh3's H3Index) OR "uint64_t" (MobilityDB's
-# Quadbin, or after the MEOS-API canonical normalization). Both map to the family's
-# BIGINT-backed cell DuckDB type. A cell temporal type appears here only once its hand accessor
-# layer is gone (mirrors the line-772 geometry-accessor guard) -- tquadbin joins when its hand
-# src/quadbin/tquadbin.cpp accessors retire, so both Tcell subtypes are then generated identically.
-CELL_UINT = {"unsigned long", "uint64_t"}
+# Tcell<T> cell-id base value. A cell id is a type of its own over a width: the catalog states
+# its slot as canonical `uint64_t` with `typedef` naming the cell (H3Index, Quadbin, S2CellId),
+# and CELL_TYPEDEF names the DuckDB type of each, the BIGINT-backed cell type its family
+# registers. CELL_UINT is the width those slots carry, read from the catalog, so a cell id is
+# recognised by the width the catalog states for it and never by a spelling assumed here. A
+# per-type cell accessor (th3index_start_value; reg_scope keys the single cell temporal type)
+# answers the cell type CELL_BASEVAL names for its temporal type, and #check_cell_slots stops
+# the generator when that type is not the one the slot's `typedef` names.
+CELL_TYPEDEF = {
+    "H3Index": "H3indexTypes::h3index()",
+    "Quadbin": "QuadbinTypes::quadbin()",
+    "S2CellId": "S2cellTypes::s2cell()",
+}
+CELL_UINT = {norm(p["canonical"]).replace("*", "").strip() for f in CATALOG["functions"]
+             for p in f["params"] + [f["returnType"]] if p.get("typedef") in CELL_TYPEDEF}
 CELL_BASEVAL = {
     "H3indexTypes::th3index()": "H3indexTypes::h3index()",
     "QuadbinTypes::tquadbin()": "QuadbinTypes::quadbin()",
@@ -1950,6 +1950,7 @@ SCALAR_ARG = {
     "int32_t":     ("LogicalType::INTEGER", "int32_t", "a2"),
     "int64_t":     ("LogicalType::BIGINT",  "int64_t", "a2"),
     "uint64_t":    ("LogicalType::UBIGINT", "uint64_t", "a2"),  # *_hash_extended seed (native unsigned)
+    "float":       ("LogicalType::FLOAT",   "float",   "a2"),
     "double":      ("LogicalType::DOUBLE",  "double",  "a2"),
     "bool":        ("LogicalType::BOOLEAN", "bool",    "a2"),
     "TimestampTz": ("LogicalType::TIMESTAMP_TZ", "timestamp_tz_t", "DuckDBToMeosTimestamp(a2).value"),
@@ -2952,12 +2953,33 @@ def emit_geo_temporal(f, kind, geo_first, has_dbl, suffix=""):
 # mirrors the hand RunSimilarityPath; the type mirrors temporal.cpp's path_type. STRUCTS is
 # populated from the catalog in main().
 STRUCTS = {}
-PATH_LT  = {"int": "LogicalType::INTEGER", "int64": "LogicalType::BIGINT",
+# Keyed on the field's `canonical`, as the slot maps are; a field type neither carries stops the
+# generator (#path_field) rather than being read as an integer.
+PATH_LT  = {"int": "LogicalType::INTEGER", "int32_t": "LogicalType::INTEGER",
+            "int64_t": "LogicalType::BIGINT",
             "double": "LogicalType::DOUBLE", "bool": "LogicalType::BOOLEAN"}
-PATH_CPP = {"int": "int32_t", "int64": "int64_t", "double": "double", "bool": "bool"}
+PATH_CPP = {"int": "int32_t", "int32_t": "int32_t", "int64_t": "int64_t", "double": "double",
+            "bool": "bool"}
 
-def path_logical_type(flds):
-    members = ", ".join('{"%s", %s}' % (fl["name"], PATH_LT.get(fl["cType"], "LogicalType::INTEGER"))
+def field_canonical(rb, fl):
+    """The `canonical` of field `fl` of structure `rb`, which the type maps of a structure's
+    fields key on, as #norm reads a slot's; a catalog that states none for it stops the
+    generator, which has no other spelling to map."""
+    if "canonical" not in fl:
+        raise SystemExit("structure %s: field %s states no canonical type (the catalog predates "
+                         "the field canonical of MEOS-API #240)" % (rb, fl["name"]))
+    return norm(fl["canonical"])
+
+def path_field(rb, fl):
+    """(DuckDB type, C++ type) of field `fl` of the path structure `rb`, from PATH_LT/PATH_CPP."""
+    c = field_canonical(rb, fl)
+    if c not in PATH_LT:
+        raise SystemExit("structure %s: field %s of type %s has no DuckDB column type"
+                         % (rb, fl["name"], c))
+    return PATH_LT[c], PATH_CPP[c]
+
+def path_logical_type(rb, flds):
+    members = ", ".join('{"%s", %s}' % (fl["name"], path_field(rb, fl)[0])
                         for fl in flds)
     return "LogicalType::LIST(LogicalType::STRUCT({%s}))" % members
 
@@ -2983,7 +3005,7 @@ def shape_path(f):
     if not all(base(p["canonical"]) == "Temporal" and norm(p["canonical"]).endswith("*") for p in ins):
         return None
     if reg_scope(f["name"]) is None: return None
-    return ("path", path_logical_type(flds))
+    return ("path", path_logical_type(rb, flds))
 
 def emit_path_table(f):
     """DuckDB TABLE function for a catalog array-return-struct fn (the canonical SETOF surface,
@@ -2991,14 +3013,14 @@ def emit_path_table(f):
     return schema + per-row marshalling are field-driven from the catalog struct (warp/Match)."""
     name = f["name"]; sqlfn = f["sqlfn"]
     rb = base(f["returnType"]["canonical"]); flds = STRUCTS[rb]["fields"]
-    state_cols = "".join(f"    std::vector<{PATH_CPP.get(fl['cType'],'int32_t')}> col{i};\n"
+    state_cols = "".join(f"    std::vector<{path_field(rb, fl)[1]}> col{i};\n"
                          for i, fl in enumerate(flds))
-    ret_types  = ", ".join(PATH_LT.get(fl["cType"], "LogicalType::INTEGER") for fl in flds)
+    ret_types  = ", ".join(path_field(rb, fl)[0] for fl in flds)
     names_list = ", ".join('"%s"' % fl["name"] for fl in flds)
     reserve = "".join(f"            state->col{i}.reserve(count);\n" for i in range(len(flds)))
     fill    = "".join(f"                state->col{i}.push_back(path[k].{fl['name']});\n"
                       for i, fl in enumerate(flds))
-    out_decls = "".join(f"    auto out{i} = FlatVector::GetData<{PATH_CPP.get(fl['cType'],'int32_t')}>(output.data[{i}]);\n"
+    out_decls = "".join(f"    auto out{i} = FlatVector::GetData<{path_field(rb, fl)[1]}>(output.data[{i}]);\n"
                         for i, fl in enumerate(flds))
     out_fill  = "".join(f"        out{i}[k] = state.col{i}[state.idx + k];\n" for i in range(len(flds)))
     return (
@@ -7227,7 +7249,7 @@ def struct_row(sql):
             rb, rn = base(g["returnType"]["canonical"]), norm(g["returnType"]["canonical"])
             flds = (STRUCTS.get(rb) or {}).get("fields")
             if (g.get("api") != "public" or rn.count("*") != 1 or not flds
-                    or any(fl["cType"] not in STRUCT_FIELD for fl in flds)):
+                    or any(field_canonical(rb, fl) not in STRUCT_FIELD for fl in flds)):
                 continue
             for t in g.get("sqlSignatures") or []:
                 if t.get("ret") and t["ret"] not in known and not t.get("retSet"):
@@ -7241,8 +7263,9 @@ def struct_row(sql):
     # what it is given, and bound to the static constexpr LogicalType::BIGINT it asks for a
     # definition of the constant beside the one libduckdb links, which the linker refuses
     dt = "LogicalType::STRUCT({%s})" % ", ".join(
-        '{"%s", LogicalType(%s)}' % (fl["name"], STRUCT_FIELD[fl["cType"]][0]) for fl in flds)
-    return rb, dt, [(fl["name"], STRUCT_FIELD[fl["cType"]][1]) for fl in flds]
+        '{"%s", LogicalType(%s)}' % (fl["name"], STRUCT_FIELD[field_canonical(rb, fl)][0])
+        for fl in flds)
+    return rb, dt, [(fl["name"], STRUCT_FIELD[field_canonical(rb, fl)][1]) for fl in flds]
 
 def struct_row_lines(sr, src, idx):
     """(its count fields, the lines writing the empty row, the lines writing the fields of the
@@ -7252,7 +7275,7 @@ def struct_row_lines(sr, src, idx):
     bandstats_record writes for it, as PostGIS's ST_SummaryStats answers a band whose every pixel
     is nodata, its count fields 0 and its other fields NULL."""
     rb, _dt, flds = sr
-    ctype = {x["name"]: x["cType"] for x in STRUCTS[rb]["fields"]}
+    ctype = {x["name"]: field_canonical(rb, x) for x in STRUCTS[rb]["fields"]}
     counts = [(j, fl) for j, (fl, _cpp) in enumerate(flds) if ctype[fl] == "uint32_t"]
     empty = (["for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], %s, true);"
               % idx] +
@@ -10112,9 +10135,8 @@ AGG_SQL_PHYSICAL = {"integer": "int32_t", "bigint": "int64_t", "float": "double"
                     "date": "date_t", "timestamptz": "timestamp_tz_t", "interval": "interval_t",
                     **{c: "int64_t" for c in CELL_SQL}}
 # The C value of a by-value parameter from the column value `v`: (field type, expression).
-AGG_BYVALUE = {"int": ("int32_t", "v"), "int32": ("int32_t", "v"), "int32_t": ("int32_t", "v"),
-               "int64": ("int64_t", "v"), "int64_t": ("int64_t", "v"),
-               "double": ("double", "v"), "float8": ("double", "v"), "bool": ("bool", "v"),
+AGG_BYVALUE = {"int": ("int32_t", "v"), "int32_t": ("int32_t", "v"), "int64_t": ("int64_t", "v"),
+               "double": ("double", "v"), "bool": ("bool", "v"),
                "uint64_t": ("uint64_t", "(uint64_t) v"),
                "TimestampTz": ("TimestampTz", "(TimestampTz) DuckDBToMeosTimestamp(v).value"),
                "DateADT": ("DateADT", "ToMeosDate(v)")}
@@ -10350,6 +10372,58 @@ def gen_aggregates(d, out_path, scalars):
     return sum(len(v) for v in sets.values()), len(sets), left
 
 
+def check_cell_slots(fns):
+    """Stop the generator where the catalog names a type of its own over a width that no DuckDB
+    type maps, or where a cell id would be typed as a cell other than the one its slot's
+    `typedef` names: a slot whose `typedef` CELL_TYPEDEF lacks, a uint64 slot of a function
+    scoped to one cell temporal type (CELL_BASEVAL, as #ret_type and #arg_type type it) or
+    declared a cell type by a signature (CELL_SQL, as #static_cell_arg and #static_cell_ret type
+    it) whose `typedef` names another cell or none. The mirror of the `BASE_CBASE` check of
+    #main: a catalog the maps do not match reports here instead of emitting a mistyped UDF."""
+    bad = []
+    for f in fns:
+        slots = list(f.get("params") or []) + [f["returnType"]]
+        for p in slots:
+            td = p.get("typedef")
+            if td is not None and td not in CELL_TYPEDEF:
+                bad.append("%s: slot %s names typedef %s, which no DuckDB type maps"
+                           % (f["name"], p.get("name", "<return>"), td))
+        if f.get("api") != "public" or not f.get("sqlfn"):
+            continue
+        sc = reg_scope(f["name"])
+        if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
+            want = CELL_BASEVAL[sc[1][0]]
+            for p in slots:
+                if base(p["canonical"]) in CELL_UINT and CELL_TYPEDEF.get(p.get("typedef")) != want:
+                    bad.append("%s: slot %s (%s) is typed %s by its scope, its typedef is %s"
+                               % (f["name"], p.get("name", "<return>"), p["canonical"], want,
+                                  p.get("typedef")))
+        params = f.get("params") or []
+        for s in f.get("sqlSignatures") or []:
+            args = s.get("args") or []
+            pairs = list(zip(params, args)) if len(args) == len(params) else []
+            pairs.append((f["returnType"], s.get("ret")))
+            for p, t in pairs:
+                if (t in CELL_SQL and base(p["canonical"]) in CELL_UINT
+                        and "*" not in norm(p["canonical"])
+                        and CELL_TYPEDEF.get(p.get("typedef")) != CELL_SQL[t]):
+                    bad.append("%s: slot %s (%s) is declared %s, its typedef is %s"
+                               % (f["name"], p.get("name", "<return>"), p["canonical"], t,
+                                  p.get("typedef")))
+    if bad:
+        raise SystemExit("cell types the catalog does not support:\n   " + "\n   ".join(bad))
+
+def unmapped_types(reasons):
+    """The C types of the `arg:`/`ret:` exclusions of #supported, each with its count, a function
+    it excludes and, for a name PostgreSQL declares, its definition in the catalog's `typedefs`,
+    so the report states every type the maps do not carry instead of a bare count."""
+    out = []
+    for (kind, t), (n, fn) in sorted(reasons.items(), key=lambda x: (-x[1][0], x[0])):
+        d = TYPEDEFS.get(base(t))
+        out.append("%s %s%s x%d (e.g. %s)"
+                   % (kind, t, " (%s = %s)" % (base(t), d) if d else "", n, fn))
+    return out
+
 def main():
     global RETIRED_GROUPS
     pos = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -10426,6 +10500,7 @@ def main():
     # name -> catalog entry, so the name-keyed scope rules can read the function's own
     # sqlSignatures (the tspatial_* surface asks which types MobilityDB declares it for).
     FN_BY_NAME.update({f["name"]: f for f in fns})
+    check_cell_slots(fns)
     # portable bare-name renderings: operator (@sqlop) -> bareName, straight from the
     # catalog's portableAliases (itself generated from the MEOS doxygen @sqlop tags +
     # the comparison dialect). The SoT; nothing invented here.
@@ -10434,16 +10509,24 @@ def main():
         for e in fam:
             aliases[e["operator"]] = e["bareName"]
     emittable, reasons, by_fam = [], Counter(), defaultdict(list)
+    untyped = {}
     for f in fns:
         why = supported(f)
         if why is None:
             emittable.append(f); by_fam[family(f)].append(f)
         else:
             reasons[why.split(":")[0]] += 1
+            kind, _, t = why.partition(":")
+            if kind in ("arg", "ret"):
+                n, fn = untyped.get((kind, t), (0, f["name"]))
+                untyped[(kind, t)] = (n + 1, fn)
     sqlfns = [f for f in fns if f.get("sqlfn")]
     print(f"catalog: {len(fns)} fns, {len(sqlfns)} with sqlfn")
     print(f"EMITTABLE (POC scalar shapes): {len(emittable)}")
     print("top exclusion reasons:", dict(reasons.most_common(8)))
+    print("C types the scalar shapes do not map (arg/ret exclusions):")
+    for line in unmapped_types(untyped):
+        print("   " + line)
     print(f"families: {len(by_fam)} ->", dict(sorted(((k, len(v)) for k, v in by_fam.items()), key=lambda x:-x[1])[:10]))
     poc = [f for f in fns if shape_emittable(f)]
     print(f"\nCOMPILABLE-POC subset (unary generic-Temporal*, full bodies): {len(poc)}")
