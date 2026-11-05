@@ -68,7 +68,7 @@ extern "C" {
 extern "C" {
     typedef struct Pcpoint Pcpoint;
     extern Pcpoint *pcpoint_hex_in(const char *str);
-    extern char *pcpoint_hex_out(const Pcpoint *pt, int maxdd);
+    extern char *pcpoint_hex_out(const Pcpoint *pt, int maxdd, size_t *size_out);
 }
 
 
@@ -140,7 +140,7 @@ bool TpcpointFunctions::Pcpoint_out_cast(
             uint8_t *copy = (uint8_t *)malloc(sz);
             memcpy(copy, blob.GetData(), sz);
             Pcpoint *pt = reinterpret_cast<Pcpoint *>(copy);
-            char *str = pcpoint_hex_out(pt, 15);
+            char *str = pcpoint_hex_out(pt, 15, UnreadSize());
             free(pt);
             if (!str)
                 throw InvalidInputException("Failed to convert pcpoint value to text");

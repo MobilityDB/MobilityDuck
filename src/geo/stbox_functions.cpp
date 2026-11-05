@@ -118,7 +118,7 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
                 free(data_copy);
                 throw InternalException("Failure in Stbox_out: unable to cast binary to stbox");
             }
-            char *ret = stbox_out(stbox, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *ret = stbox_out(stbox, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             if (!ret) {
                 free(data_copy);
                 throw InternalException("Failure in Stbox_out: unable to cast binary to stbox");

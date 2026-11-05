@@ -42,7 +42,7 @@ extern "C" {
  * Forward-declare the two entry points used by this translation unit. */
 extern "C" {
     extern Temporal *tjsonb_in(const char *str);
-    extern char     *tjsonb_out(const Temporal *temp);
+    extern char     *tjsonb_out(const Temporal *temp, size_t *size_out);
 }
 
 namespace duckdb {
@@ -67,7 +67,7 @@ bool TjsonbFunctions::TjsonbToString(Vector &source, Vector &result, idx_t count
         source, result, count,
         [&](string_t input_blob) -> string_t {
             Temporal *temp = BlobToTemporal(input_blob);
-            char *str = tjsonb_out(temp);
+            char *str = tjsonb_out(temp, UnreadSize());
             free(temp);
             if (!str)
                 throw InvalidInputException("Failed to serialize tjsonb to string");

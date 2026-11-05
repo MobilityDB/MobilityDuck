@@ -162,7 +162,7 @@ struct Band {
 };
 
 Band ReadBand(const Raster *rast, int band) {
-	CharsPtr name(raster_band_pixel_type(rast, band));
+	CharsPtr name(raster_band_pixel_type(rast, band, UnreadSize()));
 	if (!name) {
 		throw InvalidInputException("raster: cannot read the pixel type of band %d", band);
 	}

@@ -62,6 +62,13 @@ extern "C" {
     #include <pg_timestamp.h>
 }
 
+// The size a string writer of MEOS states and a hand-written call does not read: MEOS refuses a
+// null size, and this slot lasts for the expression calling the writer.
+struct UnreadSize {
+    size_t size = 0;
+    operator size_t *() { return &size; }
+};
+
 // Create explicit aliases for MEOS types
 // Use the original MEOS type names but with explicit qualification
 using MeosInterval = ::Interval;  // Explicitly use global MEOS Interval

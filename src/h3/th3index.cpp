@@ -133,7 +133,7 @@ bool H3indexFunctions::H3index_out_cast(
     UnaryExecutor::Execute<int64_t, string_t>(
         source, result, count,
         [&](int64_t v) -> string_t {
-            char *str = h3index_out(static_cast<H3Index>(v));
+            char *str = h3index_out(static_cast<H3Index>(v), UnreadSize());
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
@@ -165,7 +165,7 @@ bool H3indexFunctions::Th3index_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(t);
             std::string copy(str);
             free(str);

@@ -122,7 +122,7 @@ bool S2cellFunctions::S2cell_out_cast(
     UnaryExecutor::Execute<int64_t, string_t>(
         source, result, count,
         [&](int64_t v) -> string_t {
-            char *str = s2cell_out(static_cast<uint64_t>(v));
+            char *str = s2cell_out(static_cast<uint64_t>(v), UnreadSize());
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
@@ -154,7 +154,7 @@ bool S2cellFunctions::Ts2cell_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(t);
             std::string copy(str);
             free(str);

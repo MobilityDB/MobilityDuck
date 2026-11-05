@@ -69,7 +69,7 @@ extern "C" {
 extern "C" {
     typedef struct Pcpatch Pcpatch;
     extern Pcpatch *pcpatch_hex_in(const char *str);
-    extern char *pcpatch_hex_out(const Pcpatch *pt, int maxdd);
+    extern char *pcpatch_hex_out(const Pcpatch *pt, int maxdd, size_t *size_out);
 }
 
 
@@ -141,7 +141,7 @@ bool TpcpatchFunctions::Pcpatch_out_cast(
             uint8_t *copy = (uint8_t *)malloc(sz);
             memcpy(copy, blob.GetData(), sz);
             Pcpatch *pt = reinterpret_cast<Pcpatch *>(copy);
-            char *str = pcpatch_hex_out(pt, 15);
+            char *str = pcpatch_hex_out(pt, 15, UnreadSize());
             free(pt);
             if (!str)
                 throw InvalidInputException("Failed to convert pcpatch value to text");

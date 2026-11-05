@@ -86,7 +86,7 @@ bool TpcboxFunctions::Tpcbox_out_cast(Vector &source, Vector &result, idx_t coun
                 throw InvalidInputException("Invalid tpcbox value: insufficient size");
             TPCBox box;
             memcpy(&box, blob.GetData(), sizeof(TPCBox));
-            char *str = tpcbox_out(&box, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = tpcbox_out(&box, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             if (!str)
                 throw InternalException("Failure in Tpcbox_out: tpcbox_out returned null");
             std::string s(str);

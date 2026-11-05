@@ -145,11 +145,11 @@ static void spatialarr_wkt_array(DataChunk &args, ExpressionState &state, Vector
 				uint8_t *data_copy = (uint8_t *)malloc(data_size);
 				memcpy(data_copy, blob.GetData(), data_size);
 				Temporal *temp = reinterpret_cast<Temporal *>(data_copy);
-				wkt = extended ? tspatial_as_ewkt(temp, maxdd) : tspatial_as_text(temp, maxdd);
+				wkt = extended ? tspatial_as_ewkt(temp, maxdd, UnreadSize()) : tspatial_as_text(temp, maxdd, UnreadSize());
 				free(data_copy);
 			} else {
 				GSERIALIZED *gs = GeometryToGSerialized(blob, crs);
-				wkt = extended ? geo_as_ewkt(gs, maxdd) : geo_as_text(gs, maxdd);
+				wkt = extended ? geo_as_ewkt(gs, maxdd, UnreadSize()) : geo_as_text(gs, maxdd, UnreadSize());
 				free(gs);
 			}
 			if (!wkt) {

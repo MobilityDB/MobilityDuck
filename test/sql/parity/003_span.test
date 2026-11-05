@@ -541,15 +541,15 @@ SELECT round(floatspan '[1.123456789,2.123456789]', 6);
 ----
 [1.123457, 2.123457]
 
-query I
+statement error
 SELECT round(floatspan '[-inf,2.123456789]', 6);
 ----
-[-Infinity, 2.123457]
+The value must be finite
 
-query I
+statement error
 SELECT round(floatspan '[1.123456789,inf]', 6);
 ----
-[1.123457, Infinity]
+The value must be finite
 
 query I
 SELECT round(floatspan '[1.5,1.6]');

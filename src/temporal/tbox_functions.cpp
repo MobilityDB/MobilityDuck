@@ -98,7 +98,7 @@ bool TboxFunctions::Tbox_out(Vector &source, Vector &result, idx_t count, CastPa
                 success = false;
                 return string_t();
             }
-            char *str = tbox_out(tbox, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = tbox_out(tbox, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             if (!str) {
                 free(tbox);
                 throw InternalException("Failure in Tbox_out: tbox_out returned null");

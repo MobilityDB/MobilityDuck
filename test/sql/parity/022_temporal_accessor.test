@@ -87,7 +87,7 @@ query III
 SELECT typeof(segmentMinDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day')),
   getValues(segmentMinDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day')),
   getTime(segmentMinDuration(tfloat '[1.5@2001-01-01, 2.5@2001-01-02, 1.5@2001-01-03]', interval '1 day'))
-    = getTime(tfloat '[1.5@2001-01-01, 1.5@2001-01-03)');
+    = getTime(tfloat '[1.5@2001-01-01, 1.5@2001-01-03]');
 ----
 tbool	[false]	true
 
