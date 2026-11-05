@@ -69,9 +69,9 @@ STRING_SIZE_OVERLOADS = []
 def fold_string_sizes(catalog):
     """Take out of ``catalog`` the ``size_t *`` of a public ``char *`` writer, and any literal a
     wrapper binds to it, appending to STRING_SIZE_OVERLOADS the overload that answers the string
-    at the arity left, as #project_bound_tail forwards a function at the arity SQL calls it. The
-    shapes read a string through TakeCString, by its terminator, and a public writer refuses a
-    null size, so none of them passes one. A hex writer keeps its size, which #container_wkb
+    with its size at the arity left, as #project_bound_tail forwards a function at the arity SQL
+    calls it. The shapes hold it in a SizedString, which TakeCString reads for that size. A hex
+    writer keeps its size, which #container_wkb
     reads, and so does a writer of a header no unit includes, which no shape emits."""
     included = set(TU_C_HEADERS) | {"meos_cellindex.h", "meos_raster.h"}
     for f in catalog["functions"]:
@@ -87,7 +87,8 @@ def fold_string_sizes(catalog):
         decl = ", ".join("%s p%d" % (p["cType"], i) for i, p in enumerate(inputs))
         call = ", ".join("&size" if p is size else "p%d" % inputs.index(p) for p in f["params"])
         STRING_SIZE_OVERLOADS.append(
-            "inline char *%s(%s) {\n    size_t size;\n    return ::%s(%s);\n}\n"
+            "inline SizedString %s(%s) {\n    size_t size = 0;\n    char *s = ::%s(%s);\n"
+            "    return SizedString(s, size);\n}\n"
             % (f["name"], decl, f["name"], call))
         f["params"] = inputs
         shape["outParams"] = [o for o in outs if o != size["name"]]
@@ -572,7 +573,7 @@ def scalar_ret4(f):
         if "const" in (f["returnType"]["canonical"] or ""):
             return ("LogicalType::VARCHAR", "const char *", "string_t",
                     "StringVector::AddString(result, r)")
-        return ("LogicalType::VARCHAR", "char *", "string_t", "TakeCString(result, r)")
+        return ("LogicalType::VARCHAR", "SizedString", "string_t", "TakeCString(result, r)")
     ct = SCALAR_RET_CPP[rb][0]
     sr = SQL_SCALAR_RET.get(f.get("sqlReturnType"))
     if sr and sr in NUMERIC_DUCK_CPP and rb not in UNSIGNED_C_RET and rb in NUMERIC_C_RET:
@@ -620,7 +621,7 @@ def byval_ret3(e):
     if e == "TimestampTz":  return ("TimestampTz", "timestamp_tz_t", "TakeTimestamp(r)")
     if e == "DateADT":      return ("DateADT", "date_t", "FromMeosDate((int32_t) r)")
     if e == "text":         return ("text *", "string_t", "TakeText(result, r)")
-    if e == "char":         return ("char *", "string_t", "TakeCString(result, r)")
+    if e == "char":         return ("SizedString", "string_t", "TakeCString(result, r)")
     return (SCALAR_RET_CPP[e][0], SCALAR_RET_CPP[e][0], "r")
 def byval_ret_duck(e):
     return {"Interval": "LogicalType::INTERVAL", "TimestampTz": "LogicalType::TIMESTAMP_TZ",
@@ -1686,7 +1687,7 @@ def emit_set(f, kind):
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t a, {cpp2} a2) {{\n"
-                f"            Set *s = BlobToSet(a);\n            char *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            Set *s = BlobToSet(a);\n            SizedString r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return TakeCString(result, r);\n        }});\n}}\n")
     if kind.startswith("u2text_d:"):  # the same, with the scalar bound to its SQL DEFAULT
         dflt = kind.split(':', 1)[1]
@@ -1694,7 +1695,7 @@ def emit_set(f, kind):
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
                 f"        [&](string_t a) {{\n"
-                f"            Set *s = BlobToSet(a);\n            char *r = {name}(s, {dflt});\n            free(s);\n"
+                f"            Set *s = BlobToSet(a);\n            SizedString r = {name}(s, {dflt});\n            free(s);\n"
                 f"            return TakeCString(result, r);\n        }});\n}}\n")
     if kind.startswith("setsc:"):   # (Set, scalar) -> bool
         e = kind.split(':')[1]
@@ -5708,7 +5709,7 @@ def emit_span(f, kind, C=SPAN_C):
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    BinaryExecutor::Execute<string_t, {cpp2}, string_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t a, {cpp2} a2) {{\n"
-                f"            {cb} *s = {bt}(a);\n            char *r = {name}(s, {marsh});\n            free(s);\n"
+                f"            {cb} *s = {bt}(a);\n            SizedString r = {name}(s, {marsh});\n            free(s);\n"
                 f"            return TakeCString(result, r);\n        }});\n}}\n")
     if kind.startswith("u2text_d:"):  # the same, with the scalar bound to its SQL DEFAULT
         dflt = kind.split(':', 1)[1]
@@ -5716,7 +5717,7 @@ def emit_span(f, kind, C=SPAN_C):
                 f"    EnsureMeosThreadInitialized();\n"
                 f"    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),\n"
                 f"        [&](string_t a) {{\n"
-                f"            {cb} *s = {bt}(a);\n            char *r = {name}(s, {dflt});\n            free(s);\n"
+                f"            {cb} *s = {bt}(a);\n            SizedString r = {name}(s, {dflt});\n            free(s);\n"
                 f"            return TakeCString(result, r);\n        }});\n}}\n")
     if kind.startswith("u2iv_d:"):  # the same, with the scalar bound to its SQL DEFAULT
         dflt = kind.split(':', 2)[2]
@@ -7627,7 +7628,7 @@ def sig_call_ret(f, s, outs, cexpr=None):
             return (acc, "string_t", ["%s *r = CALL;" % rb],
                     ["if (!r) { %s }" % null, "out[i] = %s;" % (PTR_RET[rb][1] % "r")], {})
         if rb == "char" and sqlr == "text":
-            return ("LogicalType::VARCHAR", "string_t", ["char *r = CALL;"],
+            return ("LogicalType::VARCHAR", "string_t", ["SizedString r = CALL;"],
                     ["if (!r) { %s }" % null, "out[i] = TakeCString(result, r);"], {})
         if rb == "text" and sqlr == "text":
             return ("LogicalType::VARCHAR", "string_t", ["text *r = CALL;"],
@@ -9569,9 +9570,12 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline string_t TakeText(Vector &result, text *t) {\n"
            "    string_t out = StringVector::AddString(result, (const char *) VARDATA(t), VARSIZE(t) - VARHDRSZ);\n"
            "    free(t);\n    return out;\n}\n"
-           "// Owned MEOS C-string (NUL-terminated, malloc'd) -> DuckDB VARCHAR; frees it.\n"
-           "inline string_t TakeCString(Vector &result, char *s) {\n"
-           "    string_t out = StringVector::AddString(result, s);\n    free(s);\n    return out;\n}\n\n"
+           "// Owned MEOS C-string (NUL-terminated, malloc'd) -> DuckDB VARCHAR; frees it. A size counts\n"
+           "// the terminator; a writer stating none is read by its terminator.\n"
+           "inline string_t TakeCString(Vector &result, SizedString s) {\n"
+           "    string_t out = s.size ? StringVector::AddString(result, s.s, s.size - 1)\n"
+           "                          : StringVector::AddString(result, s.s);\n"
+           "    free(s.s);\n    return out;\n}\n\n"
            )
     if STRING_SIZE_OVERLOADS:
         # At global scope, beside the writers they overload, where `::f(...)` in a forwarding

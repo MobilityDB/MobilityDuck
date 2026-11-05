@@ -32,441 +32,550 @@
 
 // The string writers at the arity the shapes call them, each size left
 // unread (fold_string_sizes).
-inline char *bool_out(bool p0) {
-    size_t size;
-    return ::bool_out(p0, &size);
-}
-inline char *float8_out(double p0, int p1) {
-    size_t size;
-    return ::float8_out(p0, p1, &size);
-}
-inline char *date_out(DateADT p0) {
-    size_t size;
-    return ::date_out(p0, &size);
-}
-inline char *interval_out(const Interval * p0) {
-    size_t size;
-    return ::interval_out(p0, &size);
-}
-inline char *time_out(TimeADT p0) {
-    size_t size;
-    return ::time_out(p0, &size);
-}
-inline char *timestamp_out(Timestamp p0) {
-    size_t size;
-    return ::timestamp_out(p0, &size);
-}
-inline char *timestamptz_out(TimestampTz p0) {
-    size_t size;
-    return ::timestamptz_out(p0, &size);
-}
-inline char *text_out(const text * p0) {
-    size_t size;
-    return ::text_out(p0, &size);
-}
-inline char *meos_get_datestyle() {
-    size_t size;
-    return ::meos_get_datestyle(&size);
-}
-inline char *meos_get_intervalstyle() {
-    size_t size;
-    return ::meos_get_intervalstyle(&size);
-}
-inline char *meos_version() {
-    size_t size;
-    return ::meos_version(&size);
-}
-inline char *meos_full_version() {
-    size_t size;
-    return ::meos_full_version(&size);
-}
-inline char *mobilitydb_version() {
-    size_t size;
-    return ::mobilitydb_version(&size);
-}
-inline char *mobilitydb_full_version() {
-    size_t size;
-    return ::mobilitydb_full_version(&size);
-}
-inline char *bigintset_out(const Set * p0) {
-    size_t size;
-    return ::bigintset_out(p0, &size);
-}
-inline char *bigintspan_out(const Span * p0) {
-    size_t size;
-    return ::bigintspan_out(p0, &size);
-}
-inline char *bigintspanset_out(const SpanSet * p0) {
-    size_t size;
-    return ::bigintspanset_out(p0, &size);
-}
-inline char *dateset_out(const Set * p0) {
-    size_t size;
-    return ::dateset_out(p0, &size);
-}
-inline char *datespan_out(const Span * p0) {
-    size_t size;
-    return ::datespan_out(p0, &size);
-}
-inline char *datespanset_out(const SpanSet * p0) {
-    size_t size;
-    return ::datespanset_out(p0, &size);
-}
-inline char *floatset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::floatset_out(p0, p1, &size);
-}
-inline char *floatspan_out(const Span * p0, int p1) {
-    size_t size;
-    return ::floatspan_out(p0, p1, &size);
-}
-inline char *floatspanset_out(const SpanSet * p0, int p1) {
-    size_t size;
-    return ::floatspanset_out(p0, p1, &size);
-}
-inline char *intset_out(const Set * p0) {
-    size_t size;
-    return ::intset_out(p0, &size);
-}
-inline char *intspan_out(const Span * p0) {
-    size_t size;
-    return ::intspan_out(p0, &size);
-}
-inline char *intspanset_out(const SpanSet * p0) {
-    size_t size;
-    return ::intspanset_out(p0, &size);
-}
-inline char *textset_out(const Set * p0) {
-    size_t size;
-    return ::textset_out(p0, &size);
-}
-inline char *tstzset_out(const Set * p0) {
-    size_t size;
-    return ::tstzset_out(p0, &size);
-}
-inline char *tstzspan_out(const Span * p0) {
-    size_t size;
-    return ::tstzspan_out(p0, &size);
-}
-inline char *tstzspanset_out(const SpanSet * p0) {
-    size_t size;
-    return ::tstzspanset_out(p0, &size);
-}
-inline char *tbox_out(const TBox * p0, int p1) {
-    size_t size;
-    return ::tbox_out(p0, p1, &size);
-}
-inline char *tbool_out(const Temporal * p0) {
-    size_t size;
-    return ::tbool_out(p0, &size);
-}
-inline char *temporal_as_mfjson(const Temporal * p0, int p1, int p2, int p3, const char * p4) {
-    size_t size;
-    return ::temporal_as_mfjson(p0, p1, p2, p3, p4, &size);
-}
-inline char *tfloat_out(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tfloat_out(p0, p1, &size);
-}
-inline char *tint_out(const Temporal * p0) {
-    size_t size;
-    return ::tint_out(p0, &size);
-}
-inline char *tbigint_out(const Temporal * p0) {
-    size_t size;
-    return ::tbigint_out(p0, &size);
-}
-inline char *ttext_out(const Temporal * p0) {
-    size_t size;
-    return ::ttext_out(p0, &size);
-}
-inline char *box3d_out(const BOX3D * p0, int p1) {
-    size_t size;
-    return ::box3d_out(p0, p1, &size);
-}
-inline char *gbox_out(const GBOX * p0, int p1) {
-    size_t size;
-    return ::gbox_out(p0, p1, &size);
-}
-inline char *geo_as_ewkt(const GSERIALIZED * p0, int p1) {
-    size_t size;
-    return ::geo_as_ewkt(p0, p1, &size);
-}
-inline char *geo_as_geojson(const GSERIALIZED * p0, int p1, int p2, const char * p3) {
-    size_t size;
-    return ::geo_as_geojson(p0, p1, p2, p3, &size);
-}
-inline char *geo_as_text(const GSERIALIZED * p0, int p1) {
-    size_t size;
-    return ::geo_as_text(p0, p1, &size);
-}
-inline char *geo_out(const GSERIALIZED * p0) {
-    size_t size;
-    return ::geo_out(p0, &size);
-}
-inline char *geom_relate(const GSERIALIZED * p0, const GSERIALIZED * p1) {
-    size_t size;
-    return ::geom_relate(p0, p1, &size);
-}
-inline char *spatialset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::spatialset_out(p0, p1, &size);
-}
-inline char *spatialset_as_text(const Set * p0, int p1) {
-    size_t size;
-    return ::spatialset_as_text(p0, p1, &size);
-}
-inline char *spatialset_as_ewkt(const Set * p0, int p1) {
-    size_t size;
-    return ::spatialset_as_ewkt(p0, p1, &size);
-}
-inline char *stbox_out(const STBox * p0, int p1) {
-    size_t size;
-    return ::stbox_out(p0, p1, &size);
-}
-inline char *tspatial_out(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tspatial_out(p0, p1, &size);
-}
-inline char *tspatial_as_ewkt(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tspatial_as_ewkt(p0, p1, &size);
-}
-inline char *tspatial_as_text(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tspatial_as_text(p0, p1, &size);
-}
-inline char *cbuffer_as_ewkt(const Cbuffer * p0, int p1) {
-    size_t size;
-    return ::cbuffer_as_ewkt(p0, p1, &size);
-}
-inline char *cbuffer_as_text(const Cbuffer * p0, int p1) {
-    size_t size;
-    return ::cbuffer_as_text(p0, p1, &size);
-}
-inline char *cbuffer_out(const Cbuffer * p0, int p1) {
-    size_t size;
-    return ::cbuffer_out(p0, p1, &size);
-}
-inline char *cbufferset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::cbufferset_out(p0, p1, &size);
-}
-inline char *h3index_out(uint64_t p0) {
-    size_t size;
-    return ::h3index_out(p0, &size);
-}
-inline char *th3index_out(const Temporal * p0) {
-    size_t size;
-    return ::th3index_out(p0, &size);
-}
-inline char *h3indexset_out(const Set * p0) {
-    size_t size;
-    return ::h3indexset_out(p0, &size);
-}
-inline char *json_out(const text * p0) {
-    size_t size;
-    return ::json_out(p0, &size);
-}
-inline char *jsonb_out(const Jsonb * p0) {
-    size_t size;
-    return ::jsonb_out(p0, &size);
-}
-inline char *jsonb_to_cstring(const Jsonb * p0) {
-    size_t size;
-    return ::jsonb_to_cstring(p0, &size);
-}
-inline char *jsonpath_out(const JsonPath * p0) {
-    size_t size;
-    return ::jsonpath_out(p0, &size);
-}
-inline char *jsonbset_out(const Set * p0) {
-    size_t size;
-    return ::jsonbset_out(p0, &size);
-}
-inline char *tjsonb_out(const Temporal * p0) {
-    size_t size;
-    return ::tjsonb_out(p0, &size);
-}
-inline char *npoint_as_ewkt(const Npoint * p0, int p1) {
-    size_t size;
-    return ::npoint_as_ewkt(p0, p1, &size);
-}
-inline char *npoint_as_text(const Npoint * p0, int p1) {
-    size_t size;
-    return ::npoint_as_text(p0, p1, &size);
-}
-inline char *npoint_out(const Npoint * p0, int p1) {
-    size_t size;
-    return ::npoint_out(p0, p1, &size);
-}
-inline char *nsegment_out(const Nsegment * p0, int p1) {
-    size_t size;
-    return ::nsegment_out(p0, p1, &size);
-}
-inline char *nsegment_as_ewkt(const Nsegment * p0, int p1) {
-    size_t size;
-    return ::nsegment_as_ewkt(p0, p1, &size);
-}
-inline char *nsegment_as_text(const Nsegment * p0, int p1) {
-    size_t size;
-    return ::nsegment_as_text(p0, p1, &size);
-}
-inline char *npointset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::npointset_out(p0, p1, &size);
-}
-inline char *tnpoint_out(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tnpoint_out(p0, p1, &size);
-}
-inline char *pcpointset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::pcpointset_out(p0, p1, &size);
-}
-inline char *pcpatchset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::pcpatchset_out(p0, p1, &size);
-}
-inline char *tpcbox_out(const TPCBox * p0, int p1) {
-    size_t size;
-    return ::tpcbox_out(p0, p1, &size);
-}
-inline char *tpcpoint_out(const Temporal * p0) {
-    size_t size;
-    return ::tpcpoint_out(p0, &size);
-}
-inline char *tpcpatch_out(const Temporal * p0) {
-    size_t size;
-    return ::tpcpatch_out(p0, &size);
-}
-inline char *pose_as_ewkt(const Pose * p0, int p1) {
-    size_t size;
-    return ::pose_as_ewkt(p0, p1, &size);
-}
-inline char *pose_as_text(const Pose * p0, int p1) {
-    size_t size;
-    return ::pose_as_text(p0, p1, &size);
-}
-inline char *pose_out(const Pose * p0, int p1) {
-    size_t size;
-    return ::pose_out(p0, p1, &size);
-}
-inline char *pose_as_geopose(const Pose * p0, int p1, int p2) {
-    size_t size;
-    return ::pose_as_geopose(p0, p1, p2, &size);
-}
-inline char *tpose_as_geopose(const Temporal * p0, int p1, int p2) {
-    size_t size;
-    return ::tpose_as_geopose(p0, p1, p2, &size);
-}
-inline char *tpose_as_geopose_stream_header(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tpose_as_geopose_stream_header(p0, p1, &size);
-}
-inline char *tpose_as_geopose_stream_element(const Temporal * p0, const TInstant * p1, int p2) {
-    size_t size;
-    return ::tpose_as_geopose_stream_element(p0, p1, p2, &size);
-}
-inline char *tpose_as_geopose_stream(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tpose_as_geopose_stream(p0, p1, &size);
-}
-inline char *geopose_frame_name(int32_t p0) {
-    size_t size;
-    return ::geopose_frame_name(p0, &size);
-}
-inline char *poseset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::poseset_out(p0, p1, &size);
-}
-inline char *posechain_out(const PoseChain * p0, int p1) {
-    size_t size;
-    return ::posechain_out(p0, p1, &size);
-}
-inline char *posechain_as_text(const PoseChain * p0, int p1) {
-    size_t size;
-    return ::posechain_as_text(p0, p1, &size);
-}
-inline char *posechain_as_ewkt(const PoseChain * p0, int p1) {
-    size_t size;
-    return ::posechain_as_ewkt(p0, p1, &size);
-}
-inline char *tposechain_as_geopose(const Temporal * p0, int p1) {
-    size_t size;
-    return ::tposechain_as_geopose(p0, p1, &size);
-}
-inline char *tposechainarr_as_geopose(const Temporal ** p0, int p1, int p2) {
-    size_t size;
-    return ::tposechainarr_as_geopose(p0, p1, p2, &size);
-}
-inline char *posechainset_out(const Set * p0, int p1) {
-    size_t size;
-    return ::posechainset_out(p0, p1, &size);
-}
-inline char *quadbin_out(uint64_t p0) {
-    size_t size;
-    return ::quadbin_out(p0, &size);
-}
-inline char *quadbin_index_to_string(uint64_t p0) {
-    size_t size;
-    return ::quadbin_index_to_string(p0, &size);
-}
-inline char *quadbin_cell_to_quadkey(uint64_t p0) {
-    size_t size;
-    return ::quadbin_cell_to_quadkey(p0, &size);
-}
-inline char *quadbinset_out(const Set * p0) {
-    size_t size;
-    return ::quadbinset_out(p0, &size);
-}
-inline char *tquadbin_out(const Temporal * p0) {
-    size_t size;
-    return ::tquadbin_out(p0, &size);
-}
-inline char *raquet_out(const Raquet * p0) {
-    size_t size;
-    return ::raquet_out(p0, &size);
-}
-inline char *raquet_band_pixel_type(const Raquet * p0) {
-    size_t size;
-    return ::raquet_band_pixel_type(p0, &size);
-}
-inline char *raster_band_pixel_type(const Raster * p0, int p1) {
-    size_t size;
-    return ::raster_band_pixel_type(p0, p1, &size);
-}
-inline char *raster_not_same_alignment_reason(const Raster * p0, const Raster * p1) {
-    size_t size;
-    return ::raster_not_same_alignment_reason(p0, p1, &size);
-}
-inline char *trgeometry_out(const Temporal * p0) {
-    size_t size;
-    return ::trgeometry_out(p0, &size);
-}
-inline char *trgeometry_as_text(const Temporal * p0, int p1) {
-    size_t size;
-    return ::trgeometry_as_text(p0, p1, &size);
-}
-inline char *trgeometry_as_ewkt(const Temporal * p0, int p1) {
-    size_t size;
-    return ::trgeometry_as_ewkt(p0, p1, &size);
-}
-inline char *s2cell_out(uint64_t p0) {
-    size_t size;
-    return ::s2cell_out(p0, &size);
-}
-inline char *s2cell_cell_to_token(uint64_t p0) {
-    size_t size;
-    return ::s2cell_cell_to_token(p0, &size);
-}
-inline char *s2cellset_out(const Set * p0) {
-    size_t size;
-    return ::s2cellset_out(p0, &size);
-}
-inline char *ts2cell_out(const Temporal * p0) {
-    size_t size;
-    return ::ts2cell_out(p0, &size);
+inline SizedString bool_out(bool p0) {
+    size_t size = 0;
+    char *s = ::bool_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString float8_out(double p0, int p1) {
+    size_t size = 0;
+    char *s = ::float8_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString date_out(DateADT p0) {
+    size_t size = 0;
+    char *s = ::date_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString interval_out(const Interval * p0) {
+    size_t size = 0;
+    char *s = ::interval_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString time_out(TimeADT p0) {
+    size_t size = 0;
+    char *s = ::time_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString timestamp_out(Timestamp p0) {
+    size_t size = 0;
+    char *s = ::timestamp_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString timestamptz_out(TimestampTz p0) {
+    size_t size = 0;
+    char *s = ::timestamptz_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString text_out(const text * p0) {
+    size_t size = 0;
+    char *s = ::text_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString meos_get_datestyle() {
+    size_t size = 0;
+    char *s = ::meos_get_datestyle(&size);
+    return SizedString(s, size);
+}
+inline SizedString meos_get_intervalstyle() {
+    size_t size = 0;
+    char *s = ::meos_get_intervalstyle(&size);
+    return SizedString(s, size);
+}
+inline SizedString meos_version() {
+    size_t size = 0;
+    char *s = ::meos_version(&size);
+    return SizedString(s, size);
+}
+inline SizedString meos_full_version() {
+    size_t size = 0;
+    char *s = ::meos_full_version(&size);
+    return SizedString(s, size);
+}
+inline SizedString mobilitydb_version() {
+    size_t size = 0;
+    char *s = ::mobilitydb_version(&size);
+    return SizedString(s, size);
+}
+inline SizedString mobilitydb_full_version() {
+    size_t size = 0;
+    char *s = ::mobilitydb_full_version(&size);
+    return SizedString(s, size);
+}
+inline SizedString bigintset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::bigintset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString bigintspan_out(const Span * p0) {
+    size_t size = 0;
+    char *s = ::bigintspan_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString bigintspanset_out(const SpanSet * p0) {
+    size_t size = 0;
+    char *s = ::bigintspanset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString dateset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::dateset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString datespan_out(const Span * p0) {
+    size_t size = 0;
+    char *s = ::datespan_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString datespanset_out(const SpanSet * p0) {
+    size_t size = 0;
+    char *s = ::datespanset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString floatset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::floatset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString floatspan_out(const Span * p0, int p1) {
+    size_t size = 0;
+    char *s = ::floatspan_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString floatspanset_out(const SpanSet * p0, int p1) {
+    size_t size = 0;
+    char *s = ::floatspanset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString intset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::intset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString intspan_out(const Span * p0) {
+    size_t size = 0;
+    char *s = ::intspan_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString intspanset_out(const SpanSet * p0) {
+    size_t size = 0;
+    char *s = ::intspanset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString textset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::textset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tstzset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::tstzset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tstzspan_out(const Span * p0) {
+    size_t size = 0;
+    char *s = ::tstzspan_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tstzspanset_out(const SpanSet * p0) {
+    size_t size = 0;
+    char *s = ::tstzspanset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tbox_out(const TBox * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tbox_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tbool_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tbool_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString temporal_as_mfjson(const Temporal * p0, int p1, int p2, int p3, const char * p4) {
+    size_t size = 0;
+    char *s = ::temporal_as_mfjson(p0, p1, p2, p3, p4, &size);
+    return SizedString(s, size);
+}
+inline SizedString tfloat_out(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tfloat_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tint_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tint_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tbigint_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tbigint_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString ttext_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::ttext_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString box3d_out(const BOX3D * p0, int p1) {
+    size_t size = 0;
+    char *s = ::box3d_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString gbox_out(const GBOX * p0, int p1) {
+    size_t size = 0;
+    char *s = ::gbox_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString geo_as_ewkt(const GSERIALIZED * p0, int p1) {
+    size_t size = 0;
+    char *s = ::geo_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString geo_as_geojson(const GSERIALIZED * p0, int p1, int p2, const char * p3) {
+    size_t size = 0;
+    char *s = ::geo_as_geojson(p0, p1, p2, p3, &size);
+    return SizedString(s, size);
+}
+inline SizedString geo_as_text(const GSERIALIZED * p0, int p1) {
+    size_t size = 0;
+    char *s = ::geo_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString geo_out(const GSERIALIZED * p0) {
+    size_t size = 0;
+    char *s = ::geo_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString geom_relate(const GSERIALIZED * p0, const GSERIALIZED * p1) {
+    size_t size = 0;
+    char *s = ::geom_relate(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString spatialset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::spatialset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString spatialset_as_text(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::spatialset_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString spatialset_as_ewkt(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::spatialset_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString stbox_out(const STBox * p0, int p1) {
+    size_t size = 0;
+    char *s = ::stbox_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tspatial_out(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tspatial_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tspatial_as_ewkt(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tspatial_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tspatial_as_text(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tspatial_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString cbuffer_as_ewkt(const Cbuffer * p0, int p1) {
+    size_t size = 0;
+    char *s = ::cbuffer_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString cbuffer_as_text(const Cbuffer * p0, int p1) {
+    size_t size = 0;
+    char *s = ::cbuffer_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString cbuffer_out(const Cbuffer * p0, int p1) {
+    size_t size = 0;
+    char *s = ::cbuffer_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString cbufferset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::cbufferset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString h3index_out(uint64_t p0) {
+    size_t size = 0;
+    char *s = ::h3index_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString th3index_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::th3index_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString h3indexset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::h3indexset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString json_out(const text * p0) {
+    size_t size = 0;
+    char *s = ::json_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString jsonb_out(const Jsonb * p0) {
+    size_t size = 0;
+    char *s = ::jsonb_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString jsonb_to_cstring(const Jsonb * p0) {
+    size_t size = 0;
+    char *s = ::jsonb_to_cstring(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString jsonpath_out(const JsonPath * p0) {
+    size_t size = 0;
+    char *s = ::jsonpath_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString jsonbset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::jsonbset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tjsonb_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tjsonb_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString npoint_as_ewkt(const Npoint * p0, int p1) {
+    size_t size = 0;
+    char *s = ::npoint_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString npoint_as_text(const Npoint * p0, int p1) {
+    size_t size = 0;
+    char *s = ::npoint_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString npoint_out(const Npoint * p0, int p1) {
+    size_t size = 0;
+    char *s = ::npoint_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString nsegment_out(const Nsegment * p0, int p1) {
+    size_t size = 0;
+    char *s = ::nsegment_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString nsegment_as_ewkt(const Nsegment * p0, int p1) {
+    size_t size = 0;
+    char *s = ::nsegment_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString nsegment_as_text(const Nsegment * p0, int p1) {
+    size_t size = 0;
+    char *s = ::nsegment_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString npointset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::npointset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tnpoint_out(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tnpoint_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString pcpointset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::pcpointset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString pcpatchset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::pcpatchset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpcbox_out(const TPCBox * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tpcbox_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpcpoint_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tpcpoint_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpcpatch_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tpcpatch_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString pose_as_ewkt(const Pose * p0, int p1) {
+    size_t size = 0;
+    char *s = ::pose_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString pose_as_text(const Pose * p0, int p1) {
+    size_t size = 0;
+    char *s = ::pose_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString pose_out(const Pose * p0, int p1) {
+    size_t size = 0;
+    char *s = ::pose_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString pose_as_geopose(const Pose * p0, int p1, int p2) {
+    size_t size = 0;
+    char *s = ::pose_as_geopose(p0, p1, p2, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpose_as_geopose(const Temporal * p0, int p1, int p2) {
+    size_t size = 0;
+    char *s = ::tpose_as_geopose(p0, p1, p2, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpose_as_geopose_stream_header(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tpose_as_geopose_stream_header(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpose_as_geopose_stream_element(const Temporal * p0, const TInstant * p1, int p2) {
+    size_t size = 0;
+    char *s = ::tpose_as_geopose_stream_element(p0, p1, p2, &size);
+    return SizedString(s, size);
+}
+inline SizedString tpose_as_geopose_stream(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tpose_as_geopose_stream(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString geopose_frame_name(int32_t p0) {
+    size_t size = 0;
+    char *s = ::geopose_frame_name(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString poseset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::poseset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString posechain_out(const PoseChain * p0, int p1) {
+    size_t size = 0;
+    char *s = ::posechain_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString posechain_as_text(const PoseChain * p0, int p1) {
+    size_t size = 0;
+    char *s = ::posechain_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString posechain_as_ewkt(const PoseChain * p0, int p1) {
+    size_t size = 0;
+    char *s = ::posechain_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tposechain_as_geopose(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::tposechain_as_geopose(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tposechainarr_as_geopose(const Temporal ** p0, int p1, int p2) {
+    size_t size = 0;
+    char *s = ::tposechainarr_as_geopose(p0, p1, p2, &size);
+    return SizedString(s, size);
+}
+inline SizedString posechainset_out(const Set * p0, int p1) {
+    size_t size = 0;
+    char *s = ::posechainset_out(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString quadbin_out(uint64_t p0) {
+    size_t size = 0;
+    char *s = ::quadbin_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString quadbin_index_to_string(uint64_t p0) {
+    size_t size = 0;
+    char *s = ::quadbin_index_to_string(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString quadbin_cell_to_quadkey(uint64_t p0) {
+    size_t size = 0;
+    char *s = ::quadbin_cell_to_quadkey(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString quadbinset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::quadbinset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString tquadbin_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::tquadbin_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString raquet_out(const Raquet * p0) {
+    size_t size = 0;
+    char *s = ::raquet_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString raquet_band_pixel_type(const Raquet * p0) {
+    size_t size = 0;
+    char *s = ::raquet_band_pixel_type(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString raster_band_pixel_type(const Raster * p0, int p1) {
+    size_t size = 0;
+    char *s = ::raster_band_pixel_type(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString raster_not_same_alignment_reason(const Raster * p0, const Raster * p1) {
+    size_t size = 0;
+    char *s = ::raster_not_same_alignment_reason(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString trgeometry_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::trgeometry_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString trgeometry_as_text(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::trgeometry_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString trgeometry_as_ewkt(const Temporal * p0, int p1) {
+    size_t size = 0;
+    char *s = ::trgeometry_as_ewkt(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString s2cell_out(uint64_t p0) {
+    size_t size = 0;
+    char *s = ::s2cell_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString s2cell_cell_to_token(uint64_t p0) {
+    size_t size = 0;
+    char *s = ::s2cell_cell_to_token(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString s2cellset_out(const Set * p0) {
+    size_t size = 0;
+    char *s = ::s2cellset_out(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString ts2cell_out(const Temporal * p0) {
+    size_t size = 0;
+    char *s = ::ts2cell_out(p0, &size);
+    return SizedString(s, size);
 }
 
 #include "duckdb_version_compat.hpp"
