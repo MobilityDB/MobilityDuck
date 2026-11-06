@@ -52,7 +52,7 @@ extern "C" {
     extern Jsonb     *tjsonb_end_value(const Temporal *temp);
     extern bool       tjsonb_value_at_timestamptz(const Temporal *temp, TimestampTz t,
                                                   bool strict, Jsonb **value);
-    extern char      *jsonb_out(const Jsonb *jb);
+    extern char      *jsonb_out(const Jsonb *jb, size_t *size_out);
 }
 
 namespace duckdb {
@@ -98,7 +98,7 @@ bool TjsonbFunctions::Jsonpath_out_cast(
             size_t sz = blob.GetSize();
             uint8_t *copy = (uint8_t *)malloc(sz);
             memcpy(copy, blob.GetData(), sz);
-            char *str = jsonpath_out(reinterpret_cast<JsonPath *>(copy));
+            char *str = jsonpath_out(reinterpret_cast<JsonPath *>(copy), UnreadSize());
             free(copy);
             if (!str)
                 throw InternalException("Failure in Jsonpath_out: jsonpath_out returned null");
@@ -134,7 +134,7 @@ bool TjsonbFunctions::Jsonb_out_cast(
             uint8_t *copy = (uint8_t *)malloc(sz);
             memcpy(copy, blob.GetData(), sz);
             Jsonb *jb = reinterpret_cast<Jsonb *>(copy);
-            char *str = jsonb_out(jb);
+            char *str = jsonb_out(jb, UnreadSize());
             free(jb);
             std::string s(str);
             free(str);

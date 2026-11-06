@@ -55,6 +55,47 @@ def catalog_path():
 
 CATALOG = json.load(open(catalog_path()))
 
+# The MEOS C headers a generated unit #includes through meos_wrapper_simple.hpp, for #header_symbols.
+TU_C_HEADERS = ("meos.h", "meos_catalog.h", "meos_internal.h",
+                "meos_geo.h", "meos_internal_geo.h",
+                "meos_cbuffer.h", "meos_h3.h", "meos_json.h", "meos_npoint.h",
+                "meos_pointcloud.h", "meos_pose.h", "meos_quadbin.h",
+                "meos_rgeo.h", "meos_s2cell.h",
+                "pg_date.h", "pg_timestamp.h")
+
+# The overloads a generated unit defines for a string writer whose size no shape reads.
+STRING_SIZE_OVERLOADS = []
+
+def fold_string_sizes(catalog):
+    """Take out of ``catalog`` the ``size_t *`` of a public ``char *`` writer, and any literal a
+    wrapper binds to it, appending to STRING_SIZE_OVERLOADS the overload that answers the string
+    at the arity left, as #project_bound_tail forwards a function at the arity SQL calls it. The
+    shapes read a string through TakeCString, by its terminator, and a public writer refuses a
+    null size, so none of them passes one. A hex writer keeps its size, which #container_wkb
+    reads, and so does a writer of a header no unit includes, which no shape emits."""
+    included = set(TU_C_HEADERS) | {"meos_cellindex.h", "meos_raster.h"}
+    for f in catalog["functions"]:
+        shape = f.get("shape") or {}
+        outs = shape.get("outParams") or []
+        size = next((p for p in f["params"] if p["name"] in outs
+                     and " ".join(p["cType"].split()) == "size_t *"), None)
+        if (size is None or f.get("api") != "public" or "hex" in f["name"]
+                or f.get("file") not in included
+                or " ".join(f["returnType"]["c"].split()) != "char *"):
+            continue
+        inputs = [p for p in f["params"] if p is not size]
+        decl = ", ".join("%s p%d" % (p["cType"], i) for i, p in enumerate(inputs))
+        call = ", ".join("&size" if p is size else "p%d" % inputs.index(p) for p in f["params"])
+        STRING_SIZE_OVERLOADS.append(
+            "inline char *%s(%s) {\n    size_t size;\n    return ::%s(%s);\n}\n"
+            % (f["name"], decl, f["name"], call))
+        f["params"] = inputs
+        shape["outParams"] = [o for o in outs if o != size["name"]]
+        for holder in [shape] + (f.get("sqlSignatures") or []):
+            (holder.get("boundArgs") or {}).pop(size["name"], None)
+
+fold_string_sizes(CATALOG)
+
 # The licence banner, copied from tools/license/banner.txt; a generated file
 # opens with it and one empty line, as MobilityDB's h3pg_import/extract.py
 # writes its MDB_LICENSE
@@ -2174,12 +2215,6 @@ def header_symbols(incl_dir):
     # every per-family public header (cross-family conversions like tbigint_to_th3index,
     # tgeometry_to_tcbuffer, ttext_to_tjsonb live there, not in the meos.h umbrella —
     # the port builds all families so all are installed), so the gate must see them too.
-    TU_C_HEADERS = ("meos.h", "meos_catalog.h", "meos_internal.h",
-                    "meos_geo.h", "meos_internal_geo.h",
-                    "meos_cbuffer.h", "meos_h3.h", "meos_json.h", "meos_npoint.h",
-                    "meos_pointcloud.h", "meos_pose.h", "meos_quadbin.h",
-                    "meos_rgeo.h", "meos_s2cell.h",
-                    "pg_date.h", "pg_timestamp.h")
     syms = set()
     for name in TU_C_HEADERS:
         h = os.path.join(incl_dir, name)
@@ -9538,6 +9573,15 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline string_t TakeCString(Vector &result, char *s) {\n"
            "    string_t out = StringVector::AddString(result, s);\n    free(s);\n    return out;\n}\n\n"
            )
+    if STRING_SIZE_OVERLOADS:
+        # At global scope, beside the writers they overload, where `::f(...)` in a forwarding
+        # overload finds them, and before any include brings DuckDB's Interval and Timestamp in
+        # scope beside the MEOS types they name.
+        src = src.replace('#include "meos_wrapper_simple.hpp"\n',
+                          '#include "meos_wrapper_simple.hpp"\n\n'
+                          "// The string writers at the arity the shapes call them, each size left\n"
+                          "// unread (fold_string_sizes).\n"
+                          + "".join(STRING_SIZE_OVERLOADS) + "\n", 1)
     if FORWARDED:
         src += ("// The functions whose last parameter every SQL signature fixes to one literal, at the\n"
                 "// arity the SQL surface calls them (project_bound_tail).\n"

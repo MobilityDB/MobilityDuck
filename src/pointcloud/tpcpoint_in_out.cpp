@@ -106,7 +106,7 @@ bool TpcpointFunctions::TpcpointToString(Vector &source, Vector &result, idx_t c
                 throw InvalidInputException("Invalid tpcpoint data: null pointer");
             }
 
-            char *str = temporal_out(temp, 15);
+            char *str = temporal_out(temp, 15, UnreadSize());
             if (!str) {
                 free(data_copy);
                 throw InvalidInputException("Failed to convert tpcpoint to string");

@@ -139,7 +139,7 @@ bool PoseFunctions::Pose_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Pose *p = BlobToPose(blob);
-            char *str = pose_as_text(p, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = pose_as_text(p, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(p);
             std::string copy(str);
             free(str);

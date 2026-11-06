@@ -126,7 +126,7 @@ bool RaquetFunctions::Raquet_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Raquet *rq = BlobToRaquet(blob);
-            char *str = raquet_out(rq);
+            char *str = raquet_out(rq, UnreadSize());
             free(rq);
             if (!str) throw InvalidInputException("raquet_out: invalid tile");
             std::string copy(str);

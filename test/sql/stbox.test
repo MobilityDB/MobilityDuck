@@ -365,25 +365,25 @@ SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' &> stbox 'STBOX XT(((1.0,2.0),(1.0,2
 ----
 true
 
-query I 
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' << stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-false
+The value must be finite
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' &< stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-true
+The value must be finite
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' >> stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-false
+The value must be finite
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' &> stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-true
+The value must be finite
 
 query I
 SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' <<| stbox 'STBOX XT(((1.0,2.0),(1.0,2.0)),[2001-01-03,2001-01-03])';
@@ -405,25 +405,25 @@ SELECT stbox 'STBOX X((1.0,1.0),(2.0,2.0))' |&> stbox 'STBOX XT(((1.0,2.0),(1.0,
 ----
 false
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' <<| stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-false
+The value must be finite
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' &<| stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-true
+The value must be finite
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' |>> stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-false
+The value must be finite
 
-query I
+statement error
 SELECT stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])' |&> stbox 'STBOX XT(((-inf,-inf),(inf,inf)),[2001-01-01,2001-01-02])';
 ----
-true
+The value must be finite
 
 query I
 SELECT stbox 'STBOX Z((1.0,1.0,1.0),(2.0,2.0,2.0))' <</ stbox 'STBOX Z((1.0,2.0,3.0),(1.0,2.0,3.0))';

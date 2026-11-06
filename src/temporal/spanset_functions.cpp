@@ -67,7 +67,7 @@ bool SpansetFunctions::Spanset_to_text(Vector &source, Vector &result, idx_t cou
         SpanSet *s = (SpanSet*)malloc(size);
         memcpy(s, data, size);        
 
-        char *cstr = spanset_out(s, 15);  
+        char *cstr = spanset_out(s, 15, UnreadSize());  
         result_data[i] = StringVector::AddString(result, cstr);
 
         free(cstr);

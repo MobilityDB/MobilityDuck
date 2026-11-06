@@ -233,7 +233,7 @@ SELECT ST_IsEmpty(buffer(geometry 'Point(0 0)', 0.0, ''));
 ----
 true
 
-statement error
+query I
 SELECT distance(geometry 'POINT Z (0 0 0)', geometry 'Point(3 4)');
 ----
-Operation on mixed 2D/3D dimensions
+5.0

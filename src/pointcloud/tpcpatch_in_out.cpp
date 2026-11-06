@@ -106,7 +106,7 @@ bool TpcpatchFunctions::TpcpatchToString(Vector &source, Vector &result, idx_t c
                 throw InvalidInputException("Invalid tpcpatch data: null pointer");
             }
 
-            char *str = temporal_out(temp, 15);
+            char *str = temporal_out(temp, 15, UnreadSize());
             if (!str) {
                 free(data_copy);
                 throw InvalidInputException("Failed to convert tpcpatch to string");

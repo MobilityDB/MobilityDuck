@@ -176,7 +176,7 @@ bool NpointFunctions::Npoint_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Npoint *np = BlobToNpoint(blob);
-            char *str = npoint_as_text(np, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = npoint_as_text(np, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(np);
             std::string copy(str);
             free(str);
@@ -209,7 +209,7 @@ bool NpointFunctions::Nsegment_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Nsegment *ns = BlobToNsegment(blob);
-            char *str = nsegment_as_text(ns, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = nsegment_as_text(ns, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(ns);
             std::string copy(str);
             free(str);

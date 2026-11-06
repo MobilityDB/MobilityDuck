@@ -139,7 +139,7 @@ bool CbufferFunctions::Cbuffer_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             Cbuffer *cb = BlobToCbuffer(blob);
-            char *str = cbuffer_as_text(cb, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = cbuffer_as_text(cb, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(cb);
             std::string copy(str);
             free(str);

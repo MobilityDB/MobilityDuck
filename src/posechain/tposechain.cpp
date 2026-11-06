@@ -140,7 +140,7 @@ bool PosechainFunctions::Posechain_out_cast(
         source, result, count,
         [&](string_t blob) -> string_t {
             PoseChain *pc = BlobToPosechain(blob);
-            char *str = posechain_as_text(pc, OUT_DEFAULT_DECIMAL_DIGITS);
+            char *str = posechain_as_text(pc, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             free(pc);
             std::string copy(str);
             free(str);

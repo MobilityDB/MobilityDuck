@@ -62,11 +62,11 @@ char *TemporalAsText(const Temporal *t, int maxdd) {
     case T_TNPOINT:
     case T_TPOSE:
     case T_TPOSECHAIN:
-        return tspatial_as_text(t, maxdd);
+        return tspatial_as_text(t, maxdd, UnreadSize());
     case T_TRGEOMETRY:
-        return trgeometry_as_text(t, maxdd);
+        return trgeometry_as_text(t, maxdd, UnreadSize());
     default:
-        return temporal_out(t, maxdd);
+        return temporal_out(t, maxdd, UnreadSize());
     }
 }
 
@@ -80,9 +80,9 @@ char *SetAsText(const Set *s, int maxdd) {
     case T_POSECHAINSET:
     case T_PCPOINTSET:
     case T_PCPATCHSET:
-        return spatialset_as_text(s, maxdd);
+        return spatialset_as_text(s, maxdd, UnreadSize());
     default:
-        return set_out(s, maxdd);
+        return set_out(s, maxdd, UnreadSize());
     }
 }
 

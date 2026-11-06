@@ -69,7 +69,7 @@ bool SpanFunctions::Span_to_text(Vector &source, Vector &result, idx_t count, Ca
             // Cast directly to Span*
             const Span *s = reinterpret_cast<const Span*>(span_data);
             
-            char *cstr = span_out(s, 15);
+            char *cstr = span_out(s, 15, UnreadSize());
             std::string output(cstr);
             free(cstr);
             

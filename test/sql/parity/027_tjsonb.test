@@ -170,6 +170,13 @@ SELECT tjsonbPathQueryFirst(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), '$.a.b'::j
 ----
 "7"@2000-01-01 00:00:00+01	"[7]"@2000-01-01 00:00:00+01
 
+# The predicates of a JSON path take its variables from the caller
+query II
+SELECT tjsonbPathExists(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), '$.a.b ? (@ == $x)'::jsonpath, '{"x":7}'::jsonb, false)::VARCHAR,
+       tjsonbPathMatch(TJSONB('"{\"a\":{\"b\":7}}"@2000-01-01'), '$.a.b == $x'::jsonpath, '{"x":8}'::jsonb, false)::VARCHAR;
+----
+t@2000-01-01 00:00:00+01	f@2000-01-01 00:00:00+01
+
 # Each path function has a Tz twin, one C function binding tz, and a three-argument form
 # whose silent flag takes its SQL default.
 query III
