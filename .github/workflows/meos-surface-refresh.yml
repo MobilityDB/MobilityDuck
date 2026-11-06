@@ -41,14 +41,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Catalog only (build-libmeos: false): the generator is pure Python and
-      # reads the catalog JSON, so no libmeos build is needed here.
+      # The catalog is parsed from the headers libmeos installs (build-libmeos: true),
+      # as every binding that links libmeos derives it. The catalog-only path parses
+      # the source tree, whose headers MobilityDB's install folds into others
+      # (postgres_ext_defs.in.h into meos.h, h3_ext_defs.in.h into meos_h3.h), so
+      # its `file` names headers no unit includes, and the generator, which keys
+      # the string writers it folds on that header, then leaves h3index_out called
+      # at an arity no overload defines.
       - name: Derive the MEOS catalog at master
         id: provision
         uses: MobilityDB/MEOS-API/.github/actions/provision-meos@master
         with:
           mobilitydb-ref: master
-          build-libmeos: "false"
+          build-libmeos: "true"
 
       - name: Stage the catalog and regenerate the UDF surface
         run: |

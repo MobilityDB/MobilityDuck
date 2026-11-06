@@ -14,12 +14,12 @@ builds libmeos from.
   drift surfaces, and the distribution pipeline then gates that pull request like
   any other change.
 
-- **Locally**, derive it from the recorded `_MEOS_REF` commit with the MEOS-API
-  generator:
+- **Locally**, derive it from the recorded `_MEOS_REF` commit with the script the
+  action runs, which builds libmeos and parses the headers it installs:
 
   ```sh
-  MDB_SRC_ROOT=<mobilitydb-checkout> \
-    python3 <meos-api>/run.py <mobilitydb-checkout>/meos/include
+  <meos-api>/tools/provision-meos.sh --mdb-src <mobilitydb-checkout> \
+    --build-libmeos --parse-prefix <empty-prefix>
   cp <meos-api>/output/meos-idl.json tools/catalog/meos-idl.json
   python3 tools/codegen_duck_udfs.py \
     tools/catalog/meos-idl.json src/generated/generated_temporal_udfs.cpp
