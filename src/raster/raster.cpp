@@ -121,7 +121,9 @@ bool RasterFunctions::Raster_out_cast(
             char *str = raster_as_hexwkb(rast, WKB_NDR, &sz);
             free(rast);
             if (!str) throw InvalidInputException("raster: cannot write the raster as text");
-            std::string copy(str, sz);
+            /* The size MEOS states counts the terminating null character,
+             * so the text is read up to that character */
+            std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
         });
