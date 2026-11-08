@@ -62,6 +62,15 @@ extern "C" {
     #include <pg_timestamp.h>
 }
 
+// A string of MEOS with the size its writer states, terminator included, or 0 from a writer
+// stating none.
+struct SizedString {
+    char *s;
+    size_t size;
+    SizedString(char *str, size_t str_size = 0) : s(str), size(str_size) {}
+    operator char *() const { return s; }
+};
+
 // The size a string writer of MEOS states and a hand-written call does not read: MEOS refuses a
 // null size, and this slot lasts for the expression calling the writer.
 struct UnreadSize {
