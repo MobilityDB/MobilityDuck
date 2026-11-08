@@ -1048,6 +1048,12 @@ inline double tpoint_length(const Temporal * p0) {
 inline Temporal * tpoint_speed(const Temporal * p0) {
     return ::tpoint_speed(p0, true);
 }
+inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
+    return ::adwithin_geo_tgeo(p0, p1, p2, true);
+}
+inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
+    return ::adwithin_tgeo_geo(p0, p1, p2, true);
+}
 inline int adwithin_tgeo_tgeo(const Temporal * p0, const Temporal * p1, double p2) {
     return ::adwithin_tgeo_tgeo(p0, p1, p2, true);
 }
@@ -1119,12 +1125,6 @@ inline TSequenceSet * tpointseqset_cumulative_length(const TSequenceSet * p0) {
 }
 inline double tpointseqset_length(const TSequenceSet * p0) {
     return ::tpointseqset_length(p0, true);
-}
-inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
-    return ::adwithin_geo_tgeo(p0, p1, p2, true);
-}
-inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
-    return ::adwithin_tgeo_geo(p0, p1, p2, true);
 }
 inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Temporal ** p2, int p3, double p4, int * p5, SpanSet *** p6) {
     return ::tdwithin_tgeoarr_tgeoarr(p0, p1, p2, p3, p4, true, p5, p6);
@@ -1805,6 +1805,17 @@ static void Gen_tcbuffer_to_tgeompoint(DataChunk &args, ExpressionState &, Vecto
         });
 }
 
+static void Gen_tcbuffer_to_tgeogpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tcbuffer_to_tgeogpoint(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tgeometry_to_tcbuffer(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -2144,6 +2155,28 @@ static void Gen_geoset_to_geo(DataChunk &args, ExpressionState &state, Vector &r
             string_t out = GSerializedToGeometry(r, state, result);
             free(r);
             return out;
+        });
+}
+
+static void Gen_geomset_to_geogset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            Set * r = geomset_to_geogset(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_geogset_to_geomset(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *p0 = BlobToSet(a0);
+            Set * r = geogset_to_geomset(p0);
+            free(p0); 
+            return SetToBlobN(result, r, mask, idx);
         });
 }
 
@@ -3241,12 +3274,34 @@ static void Gen_tpcpoint_to_tgeompoint(DataChunk &args, ExpressionState &, Vecto
         });
 }
 
+static void Gen_tpcpoint_to_tgeogpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpcpoint_to_tgeogpoint(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tpcpatch_to_tgeometry(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tpcpatch_to_tgeometry(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpatch_to_tgeography(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpcpatch_to_tgeography(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -6775,6 +6830,7 @@ void RegisterGenerated_meos_cbuffer_accessor(ExtensionLoader &loader) {
 void RegisterGenerated_meos_cbuffer_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tfloat", {CbufferTypes::tcbuffer()}, TemporalTypes::tfloat(), Gen_tcbuffer_to_tfloat));
     RegisterMeosFunction(loader, ScalarFunction("tgeompoint", {CbufferTypes::tcbuffer()}, TgeompointType::tgeompoint(), Gen_tcbuffer_to_tgeompoint));
+    RegisterMeosFunction(loader, ScalarFunction("tgeogpoint", {CbufferTypes::tcbuffer()}, TgeogpointType::tgeogpoint(), Gen_tcbuffer_to_tgeogpoint));
     RegisterMeosFunction(loader, ScalarFunction("tcbuffer", {TGeometryTypes::tgeometry()}, CbufferTypes::tcbuffer(), Gen_tgeometry_to_tcbuffer));
 }
 
@@ -6839,6 +6895,8 @@ void RegisterGenerated_meos_geo_set_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("set", {MobilityDuckGeometryType()}, SpatialSetType::geomset(), Gen_geo_to_set));
     RegisterMeosFunction(loader, ScalarFunction("geometry", {SpatialSetType::geomset()}, MobilityDuckGeometryType(), Gen_geoset_to_geo));
     RegisterMeosFunction(loader, ScalarFunction("geography", {SpatialSetType::geogset()}, MobilityDuckGeometryType(), Gen_geoset_to_geo));
+    RegisterMeosFunction(loader, ScalarFunction("geogset", {SpatialSetType::geomset()}, SpatialSetType::geogset(), Gen_geomset_to_geogset));
+    RegisterMeosFunction(loader, ScalarFunction("geomset", {SpatialSetType::geogset()}, SpatialSetType::geomset(), Gen_geogset_to_geomset));
 }
 
 void RegisterGenerated_meos_geo_set_srid(ExtensionLoader &loader) {
@@ -6967,7 +7025,9 @@ void RegisterGenerated_meos_pointcloud_box_pos(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_pointcloud_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tgeompoint", {TPcpointTypes::tpcpoint()}, TgeompointType::tgeompoint(), Gen_tpcpoint_to_tgeompoint));
+    RegisterMeosFunction(loader, ScalarFunction("tgeogpoint", {TPcpointTypes::tpcpoint()}, TgeogpointType::tgeogpoint(), Gen_tpcpoint_to_tgeogpoint));
     RegisterMeosFunction(loader, ScalarFunction("tgeometry", {TPcpatchTypes::tpcpatch()}, TGeometryTypes::tgeometry(), Gen_tpcpatch_to_tgeometry));
+    RegisterMeosFunction(loader, ScalarFunction("tgeography", {TPcpatchTypes::tpcpatch()}, TGeographyTypes::tgeography(), Gen_tpcpatch_to_tgeography));
 }
 
 void RegisterGenerated_meos_pointcloud_restrict(ExtensionLoader &loader) {

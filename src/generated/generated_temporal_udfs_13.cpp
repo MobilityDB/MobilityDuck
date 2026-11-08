@@ -1048,6 +1048,12 @@ inline double tpoint_length(const Temporal * p0) {
 inline Temporal * tpoint_speed(const Temporal * p0) {
     return ::tpoint_speed(p0, true);
 }
+inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
+    return ::adwithin_geo_tgeo(p0, p1, p2, true);
+}
+inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
+    return ::adwithin_tgeo_geo(p0, p1, p2, true);
+}
 inline int adwithin_tgeo_tgeo(const Temporal * p0, const Temporal * p1, double p2) {
     return ::adwithin_tgeo_tgeo(p0, p1, p2, true);
 }
@@ -1119,12 +1125,6 @@ inline TSequenceSet * tpointseqset_cumulative_length(const TSequenceSet * p0) {
 }
 inline double tpointseqset_length(const TSequenceSet * p0) {
     return ::tpointseqset_length(p0, true);
-}
-inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
-    return ::adwithin_geo_tgeo(p0, p1, p2, true);
-}
-inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
-    return ::adwithin_tgeo_geo(p0, p1, p2, true);
 }
 inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Temporal ** p2, int p3, double p4, int * p5, SpanSet *** p6) {
     return ::tdwithin_tgeoarr_tgeoarr(p0, p1, p2, p3, p4, true, p5, p6);
@@ -2496,6 +2496,98 @@ static void Gen_tpose_minus_elevation(DataChunk &args, ExpressionState &, Vector
 
 
 // ===== @ingroup meos_rgeo_rel_temp =====
+static void Gen_tdisjoint_geo_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) tdisjoint_geo_trgeometry(gs, t);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tdisjoint_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) tdisjoint_trgeometry_geo(t, gs);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tdisjoint_trgeometry_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = (Temporal *) tdisjoint_trgeometry_trgeometry(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tintersects_geo_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_g, string_t in_t, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) tintersects_geo_trgeometry(gs, t);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tintersects_trgeometry_geo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) tintersects_trgeometry_geo(t, gs);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tintersects_trgeometry_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = (Temporal *) tintersects_trgeometry_trgeometry(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_tdwithin_geo_trgeometry(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
@@ -3813,6 +3905,12 @@ void RegisterGenerated_meos_pose_restrict(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_rgeo_rel_temp(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {MobilityDuckGeometryType(), TrgeometryTypes::trgeometry()}, TemporalTypes::tbool(), Gen_tdisjoint_geo_trgeometry));
+    RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TrgeometryTypes::trgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tdisjoint_trgeometry_geo));
+    RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TemporalTypes::tbool(), Gen_tdisjoint_trgeometry_trgeometry));
+    RegisterMeosFunction(loader, ScalarFunction("tIntersects", {MobilityDuckGeometryType(), TrgeometryTypes::trgeometry()}, TemporalTypes::tbool(), Gen_tintersects_geo_trgeometry));
+    RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TrgeometryTypes::trgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tintersects_trgeometry_geo));
+    RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry()}, TemporalTypes::tbool(), Gen_tintersects_trgeometry_trgeometry));
     RegisterMeosFunction(loader, ScalarFunction("tDwithin", {MobilityDuckGeometryType(), TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_geo_trgeometry));
     RegisterMeosFunction(loader, ScalarFunction("tDwithin", {TrgeometryTypes::trgeometry(), MobilityDuckGeometryType(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_trgeometry_geo));
     RegisterMeosFunction(loader, ScalarFunction("tDwithin", {TrgeometryTypes::trgeometry(), TrgeometryTypes::trgeometry(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_trgeometry_trgeometry));

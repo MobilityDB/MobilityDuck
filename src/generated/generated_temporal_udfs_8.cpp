@@ -1048,6 +1048,12 @@ inline double tpoint_length(const Temporal * p0) {
 inline Temporal * tpoint_speed(const Temporal * p0) {
     return ::tpoint_speed(p0, true);
 }
+inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
+    return ::adwithin_geo_tgeo(p0, p1, p2, true);
+}
+inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
+    return ::adwithin_tgeo_geo(p0, p1, p2, true);
+}
 inline int adwithin_tgeo_tgeo(const Temporal * p0, const Temporal * p1, double p2) {
     return ::adwithin_tgeo_tgeo(p0, p1, p2, true);
 }
@@ -1119,12 +1125,6 @@ inline TSequenceSet * tpointseqset_cumulative_length(const TSequenceSet * p0) {
 }
 inline double tpointseqset_length(const TSequenceSet * p0) {
     return ::tpointseqset_length(p0, true);
-}
-inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
-    return ::adwithin_geo_tgeo(p0, p1, p2, true);
-}
-inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
-    return ::adwithin_tgeo_geo(p0, p1, p2, true);
 }
 inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Temporal ** p2, int p3, double p4, int * p5, SpanSet *** p6) {
     return ::tdwithin_tgeoarr_tgeoarr(p0, p1, p2, p3, p4, true, p5, p6);
@@ -2631,6 +2631,17 @@ static void Gen_tnpoint_to_tgeompoint(DataChunk &args, ExpressionState &, Vector
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Temporal *r = tnpoint_to_tgeompoint(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tnpoint_to_tgeogpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tnpoint_to_tgeogpoint(t);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -5508,6 +5519,7 @@ void RegisterGenerated_meos_npoint_base_comp(ExtensionLoader &loader) {
 void RegisterGenerated_meos_npoint_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tnpoint", {TgeompointType::tgeompoint()}, NpointTypes::tnpoint(), Gen_tgeompoint_to_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("tgeompoint", {NpointTypes::tnpoint()}, TgeompointType::tgeompoint(), Gen_tnpoint_to_tgeompoint));
+    RegisterMeosFunction(loader, ScalarFunction("tgeogpoint", {NpointTypes::tnpoint()}, TgeogpointType::tgeogpoint(), Gen_tnpoint_to_tgeogpoint));
 }
 
 void RegisterGenerated_meos_pointcloud_comp_temp(ExtensionLoader &loader) {
