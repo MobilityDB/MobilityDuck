@@ -1048,6 +1048,12 @@ inline double tpoint_length(const Temporal * p0) {
 inline Temporal * tpoint_speed(const Temporal * p0) {
     return ::tpoint_speed(p0, true);
 }
+inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
+    return ::adwithin_geo_tgeo(p0, p1, p2, true);
+}
+inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
+    return ::adwithin_tgeo_geo(p0, p1, p2, true);
+}
 inline int adwithin_tgeo_tgeo(const Temporal * p0, const Temporal * p1, double p2) {
     return ::adwithin_tgeo_tgeo(p0, p1, p2, true);
 }
@@ -1119,12 +1125,6 @@ inline TSequenceSet * tpointseqset_cumulative_length(const TSequenceSet * p0) {
 }
 inline double tpointseqset_length(const TSequenceSet * p0) {
     return ::tpointseqset_length(p0, true);
-}
-inline int adwithin_geo_tgeo(const GSERIALIZED * p0, const Temporal * p1, double p2) {
-    return ::adwithin_geo_tgeo(p0, p1, p2, true);
-}
-inline int adwithin_tgeo_geo(const Temporal * p0, const GSERIALIZED * p1, double p2) {
-    return ::adwithin_tgeo_geo(p0, p1, p2, true);
 }
 inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Temporal ** p2, int p3, double p4, int * p5, SpanSet *** p6) {
     return ::tdwithin_tgeoarr_tgeoarr(p0, p1, p2, p3, p4, true, p5, p6);
@@ -3151,12 +3151,26 @@ static void Gen_tstzspanset_to_stbox(DataChunk &args, ExpressionState &state, Ve
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_stbox_to_geo(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_stbox_to_geom(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             STBox *s = BlobToStbox(in);
-            GSERIALIZED *r = stbox_to_geo(s);
+            GSERIALIZED *r = stbox_to_geom(s);
+            free(s);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            string_t out = GSerializedToGeometry(r, state, result);
+            free(r);
+            return out;
+        });
+}
+
+static void Gen_stbox_to_geog(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox *s = BlobToStbox(in);
+            GSERIALIZED *r = stbox_to_geog(s);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             string_t out = GSerializedToGeometry(r, state, result);
@@ -4429,7 +4443,8 @@ void RegisterGenerated_meos_geo_box_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("stbox", {SetTypes::tstzset()}, StboxType::stbox(), Gen_tstzset_to_stbox));
     RegisterMeosFunction(loader, ScalarFunction("stbox", {SpanTypes::tstzspan()}, StboxType::stbox(), Gen_tstzspan_to_stbox));
     RegisterMeosFunction(loader, ScalarFunction("stbox", {SpansetTypes::tstzspanset()}, StboxType::stbox(), Gen_tstzspanset_to_stbox));
-    RegisterMeosFunction(loader, ScalarFunction("geometry", {StboxType::stbox()}, MobilityDuckGeometryType(), Gen_stbox_to_geo));
+    RegisterMeosFunction(loader, ScalarFunction("geometry", {StboxType::stbox()}, MobilityDuckGeometryType(), Gen_stbox_to_geom));
+    RegisterMeosFunction(loader, ScalarFunction("geography", {StboxType::stbox()}, MobilityDuckGeometryType(), Gen_stbox_to_geog));
 }
 
 void RegisterGenerated_meos_geo_rel_temp(ExtensionLoader &loader) {
@@ -4442,9 +4457,11 @@ void RegisterGenerated_meos_geo_rel_temp(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tCovers", {TGeometryTypes::tgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tcovers_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tCovers", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_tcovers_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, TemporalTypes::tbool(), Gen_tdisjoint_geo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {MobilityDuckGeometryType(), TgeogpointType::tgeogpoint()}, TemporalTypes::tbool(), Gen_tdisjoint_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {MobilityDuckGeometryType(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_tdisjoint_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {MobilityDuckGeometryType(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_tdisjoint_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TgeompointType::tgeompoint(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_geo));
+    RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TgeogpointType::tgeogpoint(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TGeometryTypes::tgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TGeographyTypes::tgeography(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tDisjoint", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, TemporalTypes::tbool(), Gen_tdisjoint_tgeo_tgeo));
@@ -4464,9 +4481,11 @@ void RegisterGenerated_meos_geo_rel_temp(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tDwithin", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tDwithin", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography(), LogicalType::DOUBLE}, TemporalTypes::tbool(), Gen_tdwithin_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, TemporalTypes::tbool(), Gen_tintersects_geo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("tIntersects", {MobilityDuckGeometryType(), TgeogpointType::tgeogpoint()}, TemporalTypes::tbool(), Gen_tintersects_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {MobilityDuckGeometryType(), TGeometryTypes::tgeometry()}, TemporalTypes::tbool(), Gen_tintersects_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {MobilityDuckGeometryType(), TGeographyTypes::tgeography()}, TemporalTypes::tbool(), Gen_tintersects_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TgeompointType::tgeompoint(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tintersects_tgeo_geo));
+    RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TgeogpointType::tgeogpoint(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tintersects_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TGeometryTypes::tgeometry(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tintersects_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TGeographyTypes::tgeography(), MobilityDuckGeometryType()}, TemporalTypes::tbool(), Gen_tintersects_tgeo_geo));
     RegisterMeosFunction(loader, ScalarFunction("tIntersects", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, TemporalTypes::tbool(), Gen_tintersects_tgeo_tgeo));
