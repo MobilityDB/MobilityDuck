@@ -944,13 +944,13 @@ TBOXFLOAT XT([1.5, 2.5],[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
 # extent(tgeogpoint)
 query I
-SELECT asText(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
+SELECT asEWKT(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeogpoint), ('Point(2 2)@2020-01-02'::tgeogpoint)) t(v);
 ----
 SRID=4326;GEODSTBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
 # extent(tgeography)
 query I
-SELECT asText(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
+SELECT asEWKT(extent(v), 6) FROM (VALUES ('Point(1 1)@2020-01-01'::tgeography), ('Point(2 2)@2020-01-02'::tgeography)) t(v);
 ----
 SRID=4326;GEODSTBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
@@ -968,7 +968,7 @@ STBOX XT(((1,1),(2,2)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
 # extent(th3index)
 query I
-SELECT asText(extent(v), 6) FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
+SELECT asEWKT(extent(v), 6) FROM (VALUES ('8a2a1072b59ffff@2020-01-01'::th3index), ('8a2a1072b597fff@2020-01-02'::th3index)) t(v);
 ----
 SRID=4326;GEODSTBOX XT(((-74.045692,40.688785),(-74.043521,40.691181)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
@@ -986,7 +986,7 @@ SELECT extent(v)::VARCHAR FROM (VALUES ('"{\"a\": 1}"@2020-01-01'::tjsonb), ('"{
 
 # extent(tnpoint)
 query I
-SELECT asText(extent(v), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
+SELECT asEWKT(extent(v), 6) FROM (VALUES ('Npoint(1,0.5)@2020-01-01'::tnpoint), ('Npoint(1,0.7)@2020-01-02'::tnpoint)) t(v);
 ----
 SRID=5676;STBOX XT(((34.650693,75.384585),(48.718663,77.764071)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
@@ -1022,7 +1022,7 @@ STBOX XT(((0,0),(11.745379,5.088176)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:
 
 # extent(tquadbin)
 query I
-SELECT asText(extent(v), 6) FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
+SELECT asEWKT(extent(v), 6) FROM (VALUES ('4813ffffffffffff@2020-01-01'::tquadbin), ('4817ffffffffffff@2020-01-02'::tquadbin)) t(v);
 ----
 SRID=4326;STBOX XT(((-180,0),(180,85.051129)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
@@ -1034,7 +1034,7 @@ STBOX XT(((5,5),(7,7)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 
 # extent(ts2cell)
 query I
-SELECT asText(extent(v), 6) FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
+SELECT asEWKT(extent(v), 6) FROM (VALUES ('47c3c444c000000c@2020-01-01'::ts2cell), ('47c3c444c0000004@2020-01-02'::ts2cell)) t(v);
 ----
 SRID=4326;GEODSTBOX XT(((4.340366,50.82102),(4.340366,50.82102)),[2020-01-01 00:00:00+00, 2020-01-02 00:00:00+00])
 

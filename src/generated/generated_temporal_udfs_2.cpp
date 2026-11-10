@@ -102,84 +102,19 @@ inline SizedString mobilitydb_full_version() {
     char *s = ::mobilitydb_full_version(&size);
     return SizedString(s, size);
 }
-inline SizedString bigintset_out(const Set * p0) {
+inline SizedString set_out(const Set * p0, int p1) {
     size_t size = 0;
-    char *s = ::bigintset_out(p0, &size);
+    char *s = ::set_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString bigintspan_out(const Span * p0) {
+inline SizedString span_out(const Span * p0, int p1) {
     size_t size = 0;
-    char *s = ::bigintspan_out(p0, &size);
+    char *s = ::span_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString bigintspanset_out(const SpanSet * p0) {
+inline SizedString spanset_out(const SpanSet * p0, int p1) {
     size_t size = 0;
-    char *s = ::bigintspanset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString dateset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::dateset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString datespan_out(const Span * p0) {
-    size_t size = 0;
-    char *s = ::datespan_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString datespanset_out(const SpanSet * p0) {
-    size_t size = 0;
-    char *s = ::datespanset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString floatset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::floatset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString floatspan_out(const Span * p0, int p1) {
-    size_t size = 0;
-    char *s = ::floatspan_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString floatspanset_out(const SpanSet * p0, int p1) {
-    size_t size = 0;
-    char *s = ::floatspanset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString intset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::intset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString intspan_out(const Span * p0) {
-    size_t size = 0;
-    char *s = ::intspan_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString intspanset_out(const SpanSet * p0) {
-    size_t size = 0;
-    char *s = ::intspanset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString textset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::textset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tstzset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::tstzset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tstzspan_out(const Span * p0) {
-    size_t size = 0;
-    char *s = ::tstzspan_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tstzspanset_out(const SpanSet * p0) {
-    size_t size = 0;
-    char *s = ::tstzspanset_out(p0, &size);
+    char *s = ::spanset_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString tbox_out(const TBox * p0, int p1) {
@@ -187,34 +122,14 @@ inline SizedString tbox_out(const TBox * p0, int p1) {
     char *s = ::tbox_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString tbool_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tbool_out(p0, &size);
-    return SizedString(s, size);
-}
 inline SizedString temporal_as_mfjson(const Temporal * p0, int p1, int p2, int p3, const char * p4) {
     size_t size = 0;
     char *s = ::temporal_as_mfjson(p0, p1, p2, p3, p4, &size);
     return SizedString(s, size);
 }
-inline SizedString tfloat_out(const Temporal * p0, int p1) {
+inline SizedString temporal_out(const Temporal * p0, int p1) {
     size_t size = 0;
-    char *s = ::tfloat_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tint_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tint_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tbigint_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tbigint_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString ttext_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::ttext_out(p0, &size);
+    char *s = ::temporal_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString box3d_out(const BOX3D * p0, int p1) {
@@ -252,11 +167,6 @@ inline SizedString geom_relate(const GSERIALIZED * p0, const GSERIALIZED * p1) {
     char *s = ::geom_relate(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString spatialset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::spatialset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString spatialset_as_text(const Set * p0, int p1) {
     size_t size = 0;
     char *s = ::spatialset_as_text(p0, p1, &size);
@@ -267,14 +177,14 @@ inline SizedString spatialset_as_ewkt(const Set * p0, int p1) {
     char *s = ::spatialset_as_ewkt(p0, p1, &size);
     return SizedString(s, size);
 }
+inline SizedString stbox_as_text(const STBox * p0, int p1) {
+    size_t size = 0;
+    char *s = ::stbox_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
 inline SizedString stbox_out(const STBox * p0, int p1) {
     size_t size = 0;
     char *s = ::stbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tspatial_out(const Temporal * p0, int p1) {
-    size_t size = 0;
-    char *s = ::tspatial_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString tspatial_as_ewkt(const Temporal * p0, int p1) {
@@ -302,24 +212,9 @@ inline SizedString cbuffer_out(const Cbuffer * p0, int p1) {
     char *s = ::cbuffer_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString cbufferset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::cbufferset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString h3index_out(uint64_t p0) {
     size_t size = 0;
     char *s = ::h3index_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString th3index_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::th3index_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString h3indexset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::h3indexset_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString json_out(const text * p0) {
@@ -340,16 +235,6 @@ inline SizedString jsonb_to_cstring(const Jsonb * p0) {
 inline SizedString jsonpath_out(const JsonPath * p0) {
     size_t size = 0;
     char *s = ::jsonpath_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString jsonbset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::jsonbset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tjsonb_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tjsonb_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString npoint_as_ewkt(const Npoint * p0, int p1) {
@@ -382,39 +267,14 @@ inline SizedString nsegment_as_text(const Nsegment * p0, int p1) {
     char *s = ::nsegment_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString npointset_out(const Set * p0, int p1) {
+inline SizedString tpcbox_as_text(const TPCBox * p0, int p1) {
     size_t size = 0;
-    char *s = ::npointset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tnpoint_out(const Temporal * p0, int p1) {
-    size_t size = 0;
-    char *s = ::tnpoint_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString pcpointset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::pcpointset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString pcpatchset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::pcpatchset_out(p0, p1, &size);
+    char *s = ::tpcbox_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString tpcbox_out(const TPCBox * p0, int p1) {
     size_t size = 0;
     char *s = ::tpcbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tpcpoint_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tpcpoint_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tpcpatch_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tpcpatch_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString pose_as_ewkt(const Pose * p0, int p1) {
@@ -462,11 +322,6 @@ inline SizedString geopose_frame_name(int32_t p0) {
     char *s = ::geopose_frame_name(p0, &size);
     return SizedString(s, size);
 }
-inline SizedString poseset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::poseset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString posechain_out(const PoseChain * p0, int p1) {
     size_t size = 0;
     char *s = ::posechain_out(p0, p1, &size);
@@ -492,11 +347,6 @@ inline SizedString tposechainarr_as_geopose(const Temporal ** p0, int p1, int p2
     char *s = ::tposechainarr_as_geopose(p0, p1, p2, &size);
     return SizedString(s, size);
 }
-inline SizedString posechainset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::posechainset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString quadbin_out(uint64_t p0) {
     size_t size = 0;
     char *s = ::quadbin_out(p0, &size);
@@ -510,16 +360,6 @@ inline SizedString quadbin_index_to_string(uint64_t p0) {
 inline SizedString quadbin_cell_to_quadkey(uint64_t p0) {
     size_t size = 0;
     char *s = ::quadbin_cell_to_quadkey(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString quadbinset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::quadbinset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tquadbin_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tquadbin_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString raquet_out(const Raquet * p0) {
@@ -565,16 +405,6 @@ inline SizedString s2cell_out(uint64_t p0) {
 inline SizedString s2cell_cell_to_token(uint64_t p0) {
     size_t size = 0;
     char *s = ::s2cell_cell_to_token(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString s2cellset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::s2cellset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString ts2cell_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::ts2cell_out(p0, &size);
     return SizedString(s, size);
 }
 
@@ -1141,6 +971,15 @@ inline double tpoint_length_full(const Temporal * p0, bool p1) {
 inline Temporal * tpoint_speed_full(const Temporal * p0, bool p1) {
     return ::tpoint_speed(p0, p1);
 }
+inline char * set_out_maxdd(const Set * p0) {
+    return ::set_out(p0, 15);
+}
+inline char * span_out_maxdd(const Span * p0) {
+    return ::span_out(p0, 15);
+}
+inline char * spanset_out_maxdd(const SpanSet * p0) {
+    return ::spanset_out(p0, 15);
+}
 inline Span * bigintspan_make_lower_inc_upper_inc(int64_t p0, int64_t p1) {
     return ::bigintspan_make(p0, p1, true, false);
 }
@@ -1339,6 +1178,9 @@ inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int 
 inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
     return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
 }
+inline char * temporal_out_maxdd(const Temporal * p0) {
+    return ::temporal_out(p0, 15);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -1525,11 +1367,11 @@ inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
 inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
     return ::tspatial_as_ewkt(p0, 15);
 }
-inline bool tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, const STBox * p1, int32_t p2, GSERIALIZED ** p3, int64_t ** p4, int * p5) {
-    return ::tpoint_as_mvtgeom(p0, p1, p2, 256, true, p3, p4, p5);
+inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, const STBox * p1, int32_t p2, int64_t ** p3, int * p4) {
+    return ::tpoint_as_mvtgeom(p0, p1, p2, 256, true, p3, p4);
 }
-inline bool tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, GSERIALIZED ** p2, int64_t ** p3, int * p4) {
-    return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3, p4);
+inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, int64_t ** p2, int * p3) {
+    return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -1570,9 +1412,6 @@ inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
 }
-inline char * cbufferset_out_maxdd(const Set * p0) {
-    return ::cbufferset_out(p0, 15);
-}
 inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
     return ::concat_tjsonb_jsonb(p0, p1, false);
 }
@@ -1580,13 +1419,13 @@ inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const J
     return ::concat_tjsonb_jsonb(p0, p1, true);
 }
 inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
-    return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+    return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, const char * p1) {
-    return ::tjsonb_to_tgeogpoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+    return ::tjsonb_to_tgeogpoint(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
-    return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+    return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline char * npoint_out_maxdd(const Npoint * p0) {
     return ::npoint_out(p0, 15);
@@ -1594,35 +1433,17 @@ inline char * npoint_out_maxdd(const Npoint * p0) {
 inline char * nsegment_out_maxdd(const Nsegment * p0) {
     return ::nsegment_out(p0, 15);
 }
-inline char * npointset_out_maxdd(const Set * p0) {
-    return ::npointset_out(p0, 15);
-}
-inline char * tnpoint_out_maxdd(const Temporal * p0) {
-    return ::tnpoint_out(p0, 15);
-}
-inline char * pcpointset_out_maxdd(const Set * p0) {
-    return ::pcpointset_out(p0, 15);
-}
-inline char * pcpatchset_out_maxdd(const Set * p0) {
-    return ::pcpatchset_out(p0, 15);
-}
 inline char * pose_out_maxdd(const Pose * p0) {
     return ::pose_out(p0, 15);
 }
 inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
     return ::pose_transform_pipeline(p0, p1, 0, true);
 }
-inline char * poseset_out_maxdd(const Set * p0) {
-    return ::poseset_out(p0, 15);
-}
 inline char * posechain_out_maxdd(const PoseChain * p0) {
     return ::posechain_out(p0, 15);
 }
 inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
     return ::posechain_transform_pipeline(p0, p1, 0, true);
-}
-inline char * posechainset_out_maxdd(const Set * p0) {
-    return ::posechainset_out(p0, 15);
 }
 inline GeomVal * raster_dump_as_polygons_band_exclude_nodata(const Raster * p0, int * p1) {
     return ::raster_dump_as_polygons(p0, 1, true, p1);
@@ -2902,17 +2723,6 @@ static void Gen_tjsonb_in(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
-static void Gen_tjsonb_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Temporal *t = BlobToTemporal(in);
-            SizedString r = tjsonb_out(t);
-            free(t);
-            return TakeCString(result, r);
-        });
-}
-
 
 // ===== @ingroup meos_json_transf =====
 struct Unnest_tjsonb_unnestState : public LocalTableFunctionState {
@@ -3871,17 +3681,6 @@ static void Gen_s2cellset_in(DataChunk &args, ExpressionState &, Vector &result)
         [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
             Set *r = s2cellset_in(in.GetString().c_str());
             return SetToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_s2cellset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            SizedString r = s2cellset_out(s);
-            free(s);
-            return TakeCString(result, r);
         });
 }
 
@@ -4905,210 +4704,100 @@ static void Gen_tstzspanset_in(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
-static void Gen_bigintset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            SizedString r = bigintset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_dateset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            SizedString r = dateset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_set_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2) {
             Set *s = BlobToSet(a);
-            SizedString r = floatset_out(s, a2);
+            SizedString r = set_out(s, a2);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_floatset_out_d(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_set_out_d(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t a) {
             Set *s = BlobToSet(a);
-            SizedString r = floatset_out(s, 15);
+            SizedString r = set_out(s, 15);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_intset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_set_out_maxdd(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in) {
             Set *s = BlobToSet(in);
-            SizedString r = intset_out(s);
+            SizedString r = set_out_maxdd(s);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_textset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            SizedString r = textset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_tstzset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Set *s = BlobToSet(in);
-            SizedString r = tstzset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_bigintspan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            SizedString r = bigintspan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_datespan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            SizedString r = datespan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatspan_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_span_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2) {
             Span *s = BlobToSpan(a);
-            SizedString r = floatspan_out(s, a2);
+            SizedString r = span_out(s, a2);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_floatspan_out_d(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_span_out_d(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t a) {
             Span *s = BlobToSpan(a);
-            SizedString r = floatspan_out(s, 15);
+            SizedString r = span_out(s, 15);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_intspan_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_span_out_maxdd(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in) {
             Span *s = BlobToSpan(in);
-            SizedString r = intspan_out(s);
+            SizedString r = span_out_maxdd(s);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_tstzspan_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            Span *s = BlobToSpan(in);
-            SizedString r = tstzspan_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_bigintspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            SpanSet *s = BlobToSpanSet(in);
-            SizedString r = bigintspanset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_datespanset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            SpanSet *s = BlobToSpanSet(in);
-            SizedString r = datespanset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_floatspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_spanset_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2) {
             SpanSet *s = BlobToSpanSet(a);
-            SizedString r = floatspanset_out(s, a2);
+            SizedString r = spanset_out(s, a2);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_floatspanset_out_d(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_spanset_out_d(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t a) {
             SpanSet *s = BlobToSpanSet(a);
-            SizedString r = floatspanset_out(s, 15);
+            SizedString r = spanset_out(s, 15);
             free(s);
             return TakeCString(result, r);
         });
 }
 
-static void Gen_intspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_spanset_out_maxdd(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
         [&](string_t in) {
             SpanSet *s = BlobToSpanSet(in);
-            SizedString r = intspanset_out(s);
-            free(s);
-            return TakeCString(result, r);
-        });
-}
-
-static void Gen_tstzspanset_out(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
-        [&](string_t in) {
-            SpanSet *s = BlobToSpanSet(in);
-            SizedString r = tstzspanset_out(s);
+            SizedString r = spanset_out_maxdd(s);
             free(s);
             return TakeCString(result, r);
         });
@@ -6386,7 +6075,6 @@ void RegisterGenerated_meos_json_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tjsonbFromMFJSON", {LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_from_mfjson));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbFromText", {LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_in));
     RegisterMeosFunction(loader, ScalarFunction("tjsonb", {LogicalType::VARCHAR}, TJsonbTypes::tjsonb(), Gen_tjsonb_in));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {TJsonbTypes::tjsonb()}, LogicalType::VARCHAR, Gen_tjsonb_out));
 }
 
 void RegisterGenerated_meos_json_transf(ExtensionLoader &loader) {
@@ -6484,7 +6172,6 @@ void RegisterGenerated_meos_s2cell_set_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("s2cellsetFromText", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
     RegisterMeosFunction(loader, ScalarFunction("s2cellsetFromEWKT", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
     RegisterMeosFunction(loader, ScalarFunction("s2cellset", {LogicalType::VARCHAR}, SetTypes::s2cellset(), Gen_s2cellset_in));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_s2cellset_out));
 }
 
 void RegisterGenerated_meos_setspan_dist(ExtensionLoader &loader) {
@@ -6823,25 +6510,27 @@ void RegisterGenerated_meos_setspan_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tstzspan", {LogicalType::VARCHAR}, SpanTypes::tstzspan(), Gen_tstzspan_in));
     RegisterMeosFunction(loader, ScalarFunction("tstzspansetFromText", {LogicalType::VARCHAR}, SpansetTypes::tstzspanset(), Gen_tstzspanset_in));
     RegisterMeosFunction(loader, ScalarFunction("tstzspanset", {LogicalType::VARCHAR}, SpansetTypes::tstzspanset(), Gen_tstzspanset_in));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::bigintset()}, LogicalType::VARCHAR, Gen_bigintset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::dateset()}, LogicalType::VARCHAR, Gen_dateset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::floatset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::floatset()}, LogicalType::VARCHAR, Gen_floatset_out_d));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::intset()}, LogicalType::VARCHAR, Gen_intset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::textset()}, LogicalType::VARCHAR, Gen_textset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::tstzset()}, LogicalType::VARCHAR, Gen_tstzset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::bigintspan()}, LogicalType::VARCHAR, Gen_bigintspan_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::datespan()}, LogicalType::VARCHAR, Gen_datespan_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::floatspan(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatspan_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::floatspan()}, LogicalType::VARCHAR, Gen_floatspan_out_d));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::intspan()}, LogicalType::VARCHAR, Gen_intspan_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::tstzspan()}, LogicalType::VARCHAR, Gen_tstzspan_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::bigintspanset()}, LogicalType::VARCHAR, Gen_bigintspanset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::datespanset()}, LogicalType::VARCHAR, Gen_datespanset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::floatspanset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_floatspanset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::floatspanset()}, LogicalType::VARCHAR, Gen_floatspanset_out_d));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::intspanset()}, LogicalType::VARCHAR, Gen_intspanset_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::tstzspanset()}, LogicalType::VARCHAR, Gen_tstzspanset_out));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::floatset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_set_out));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::floatset()}, LogicalType::VARCHAR, Gen_set_out_d));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::h3indexset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::jsonbset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::quadbinset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::s2cellset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::intset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::bigintset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::textset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::dateset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SetTypes::tstzset()}, LogicalType::VARCHAR, Gen_set_out_maxdd));
+    for (auto &type : SpanTypes::AllTypes()) {
+        RegisterMeosFunction(loader, ScalarFunction("asText", {type}, LogicalType::VARCHAR, Gen_span_out_maxdd));
+    }
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::floatspan(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_span_out));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SpanTypes::floatspan()}, LogicalType::VARCHAR, Gen_span_out_d));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::floatspanset(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_spanset_out));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {SpansetTypes::floatspanset()}, LogicalType::VARCHAR, Gen_spanset_out_d));
+    for (auto &type : SpansetTypes::AllTypes()) {
+        RegisterMeosFunction(loader, ScalarFunction("asText", {type}, LogicalType::VARCHAR, Gen_spanset_out_maxdd));
+    }
 }
 
 void RegisterGenerated_meos_temporal_analytics_similarity(ExtensionLoader &loader) {

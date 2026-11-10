@@ -61,12 +61,13 @@ SELECT ST_AsText(round((asMVTGeom(tgeompoint '[Point(0 0 0)@2001-01-01, Point(10
 ----
 LINESTRING Z (-256 4352 38.75, 4352 -256 61.25)
 
-# A value that meets nothing in the bounds answers NULL, as MobilityDB's does
+# A value meeting the bounds at one corner answers that point, as MobilityDB's does
+# (mobilitydb/test/geo/expected/076_tpoint_analytics.test.out)
 query I
-SELECT asMVTGeom(tgeompoint '{[Point(0 0)@2001-01-01], [Point(100 100)@2001-04-10]}',
-                 stbox 'STBOX X((0,0),(60,60))') IS NULL;
+SELECT ST_AsText((asMVTGeom(tgeompoint '{[Point(0 0)@2001-01-01], [Point(100 100)@2001-04-10]}',
+                              stbox 'STBOX X((0,0),(60,60))')).geom);
 ----
-true
+POINT (0 4096)
 
 statement error
 SELECT asMVTGeom(tgeompoint '[Point(0 0)@2001-01-01, Point(100 100)@2001-04-10]',

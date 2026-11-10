@@ -102,84 +102,19 @@ inline SizedString mobilitydb_full_version() {
     char *s = ::mobilitydb_full_version(&size);
     return SizedString(s, size);
 }
-inline SizedString bigintset_out(const Set * p0) {
+inline SizedString set_out(const Set * p0, int p1) {
     size_t size = 0;
-    char *s = ::bigintset_out(p0, &size);
+    char *s = ::set_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString bigintspan_out(const Span * p0) {
+inline SizedString span_out(const Span * p0, int p1) {
     size_t size = 0;
-    char *s = ::bigintspan_out(p0, &size);
+    char *s = ::span_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString bigintspanset_out(const SpanSet * p0) {
+inline SizedString spanset_out(const SpanSet * p0, int p1) {
     size_t size = 0;
-    char *s = ::bigintspanset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString dateset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::dateset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString datespan_out(const Span * p0) {
-    size_t size = 0;
-    char *s = ::datespan_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString datespanset_out(const SpanSet * p0) {
-    size_t size = 0;
-    char *s = ::datespanset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString floatset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::floatset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString floatspan_out(const Span * p0, int p1) {
-    size_t size = 0;
-    char *s = ::floatspan_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString floatspanset_out(const SpanSet * p0, int p1) {
-    size_t size = 0;
-    char *s = ::floatspanset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString intset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::intset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString intspan_out(const Span * p0) {
-    size_t size = 0;
-    char *s = ::intspan_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString intspanset_out(const SpanSet * p0) {
-    size_t size = 0;
-    char *s = ::intspanset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString textset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::textset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tstzset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::tstzset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tstzspan_out(const Span * p0) {
-    size_t size = 0;
-    char *s = ::tstzspan_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tstzspanset_out(const SpanSet * p0) {
-    size_t size = 0;
-    char *s = ::tstzspanset_out(p0, &size);
+    char *s = ::spanset_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString tbox_out(const TBox * p0, int p1) {
@@ -187,34 +122,14 @@ inline SizedString tbox_out(const TBox * p0, int p1) {
     char *s = ::tbox_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString tbool_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tbool_out(p0, &size);
-    return SizedString(s, size);
-}
 inline SizedString temporal_as_mfjson(const Temporal * p0, int p1, int p2, int p3, const char * p4) {
     size_t size = 0;
     char *s = ::temporal_as_mfjson(p0, p1, p2, p3, p4, &size);
     return SizedString(s, size);
 }
-inline SizedString tfloat_out(const Temporal * p0, int p1) {
+inline SizedString temporal_out(const Temporal * p0, int p1) {
     size_t size = 0;
-    char *s = ::tfloat_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tint_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tint_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tbigint_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tbigint_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString ttext_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::ttext_out(p0, &size);
+    char *s = ::temporal_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString box3d_out(const BOX3D * p0, int p1) {
@@ -252,11 +167,6 @@ inline SizedString geom_relate(const GSERIALIZED * p0, const GSERIALIZED * p1) {
     char *s = ::geom_relate(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString spatialset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::spatialset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString spatialset_as_text(const Set * p0, int p1) {
     size_t size = 0;
     char *s = ::spatialset_as_text(p0, p1, &size);
@@ -267,14 +177,14 @@ inline SizedString spatialset_as_ewkt(const Set * p0, int p1) {
     char *s = ::spatialset_as_ewkt(p0, p1, &size);
     return SizedString(s, size);
 }
+inline SizedString stbox_as_text(const STBox * p0, int p1) {
+    size_t size = 0;
+    char *s = ::stbox_as_text(p0, p1, &size);
+    return SizedString(s, size);
+}
 inline SizedString stbox_out(const STBox * p0, int p1) {
     size_t size = 0;
     char *s = ::stbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tspatial_out(const Temporal * p0, int p1) {
-    size_t size = 0;
-    char *s = ::tspatial_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString tspatial_as_ewkt(const Temporal * p0, int p1) {
@@ -302,24 +212,9 @@ inline SizedString cbuffer_out(const Cbuffer * p0, int p1) {
     char *s = ::cbuffer_out(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString cbufferset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::cbufferset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString h3index_out(uint64_t p0) {
     size_t size = 0;
     char *s = ::h3index_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString th3index_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::th3index_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString h3indexset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::h3indexset_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString json_out(const text * p0) {
@@ -340,16 +235,6 @@ inline SizedString jsonb_to_cstring(const Jsonb * p0) {
 inline SizedString jsonpath_out(const JsonPath * p0) {
     size_t size = 0;
     char *s = ::jsonpath_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString jsonbset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::jsonbset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tjsonb_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tjsonb_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString npoint_as_ewkt(const Npoint * p0, int p1) {
@@ -382,39 +267,14 @@ inline SizedString nsegment_as_text(const Nsegment * p0, int p1) {
     char *s = ::nsegment_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString npointset_out(const Set * p0, int p1) {
+inline SizedString tpcbox_as_text(const TPCBox * p0, int p1) {
     size_t size = 0;
-    char *s = ::npointset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tnpoint_out(const Temporal * p0, int p1) {
-    size_t size = 0;
-    char *s = ::tnpoint_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString pcpointset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::pcpointset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString pcpatchset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::pcpatchset_out(p0, p1, &size);
+    char *s = ::tpcbox_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString tpcbox_out(const TPCBox * p0, int p1) {
     size_t size = 0;
     char *s = ::tpcbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tpcpoint_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tpcpoint_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tpcpatch_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tpcpatch_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString pose_as_ewkt(const Pose * p0, int p1) {
@@ -462,11 +322,6 @@ inline SizedString geopose_frame_name(int32_t p0) {
     char *s = ::geopose_frame_name(p0, &size);
     return SizedString(s, size);
 }
-inline SizedString poseset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::poseset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString posechain_out(const PoseChain * p0, int p1) {
     size_t size = 0;
     char *s = ::posechain_out(p0, p1, &size);
@@ -492,11 +347,6 @@ inline SizedString tposechainarr_as_geopose(const Temporal ** p0, int p1, int p2
     char *s = ::tposechainarr_as_geopose(p0, p1, p2, &size);
     return SizedString(s, size);
 }
-inline SizedString posechainset_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::posechainset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString quadbin_out(uint64_t p0) {
     size_t size = 0;
     char *s = ::quadbin_out(p0, &size);
@@ -510,16 +360,6 @@ inline SizedString quadbin_index_to_string(uint64_t p0) {
 inline SizedString quadbin_cell_to_quadkey(uint64_t p0) {
     size_t size = 0;
     char *s = ::quadbin_cell_to_quadkey(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString quadbinset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::quadbinset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString tquadbin_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::tquadbin_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString raquet_out(const Raquet * p0) {
@@ -565,16 +405,6 @@ inline SizedString s2cell_out(uint64_t p0) {
 inline SizedString s2cell_cell_to_token(uint64_t p0) {
     size_t size = 0;
     char *s = ::s2cell_cell_to_token(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString s2cellset_out(const Set * p0) {
-    size_t size = 0;
-    char *s = ::s2cellset_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString ts2cell_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::ts2cell_out(p0, &size);
     return SizedString(s, size);
 }
 
@@ -1141,6 +971,15 @@ inline double tpoint_length_full(const Temporal * p0, bool p1) {
 inline Temporal * tpoint_speed_full(const Temporal * p0, bool p1) {
     return ::tpoint_speed(p0, p1);
 }
+inline char * set_out_maxdd(const Set * p0) {
+    return ::set_out(p0, 15);
+}
+inline char * span_out_maxdd(const Span * p0) {
+    return ::span_out(p0, 15);
+}
+inline char * spanset_out_maxdd(const SpanSet * p0) {
+    return ::spanset_out(p0, 15);
+}
 inline Span * bigintspan_make_lower_inc_upper_inc(int64_t p0, int64_t p1) {
     return ::bigintspan_make(p0, p1, true, false);
 }
@@ -1339,6 +1178,9 @@ inline char * temporal_as_mfjson_precision_srs(const Temporal * p0, int p1, int 
 inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_digits_srs_null(const Temporal * p0) {
     return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
 }
+inline char * temporal_out_maxdd(const Temporal * p0) {
+    return ::temporal_out(p0, 15);
+}
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
 }
@@ -1525,11 +1367,11 @@ inline STBox * union_stbox_stbox_strict(const STBox * p0, const STBox * p1) {
 inline char * tspatial_as_ewkt_maxdd(const Temporal * p0) {
     return ::tspatial_as_ewkt(p0, 15);
 }
-inline bool tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, const STBox * p1, int32_t p2, GSERIALIZED ** p3, int64_t ** p4, int * p5) {
-    return ::tpoint_as_mvtgeom(p0, p1, p2, 256, true, p3, p4, p5);
+inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, const STBox * p1, int32_t p2, int64_t ** p3, int * p4) {
+    return ::tpoint_as_mvtgeom(p0, p1, p2, 256, true, p3, p4);
 }
-inline bool tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, GSERIALIZED ** p2, int64_t ** p3, int * p4) {
-    return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3, p4);
+inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, int64_t ** p2, int * p3) {
+    return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3);
 }
 inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
     return ::bearing_tpoint_point(p0, p1, false);
@@ -1570,9 +1412,6 @@ inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
 }
-inline char * cbufferset_out_maxdd(const Set * p0) {
-    return ::cbufferset_out(p0, 15);
-}
 inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
     return ::concat_tjsonb_jsonb(p0, p1, false);
 }
@@ -1580,13 +1419,13 @@ inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const J
     return ::concat_tjsonb_jsonb(p0, p1, true);
 }
 inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
-    return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+    return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline Temporal * tjsonb_to_tgeogpoint_interp_null_handle(const Temporal * p0, const char * p1) {
-    return ::tjsonb_to_tgeogpoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+    return ::tjsonb_to_tgeogpoint(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, const char * p1) {
-    return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), null_handle_type_from_string("raise_exception"));
+    return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline char * npoint_out_maxdd(const Npoint * p0) {
     return ::npoint_out(p0, 15);
@@ -1594,35 +1433,17 @@ inline char * npoint_out_maxdd(const Npoint * p0) {
 inline char * nsegment_out_maxdd(const Nsegment * p0) {
     return ::nsegment_out(p0, 15);
 }
-inline char * npointset_out_maxdd(const Set * p0) {
-    return ::npointset_out(p0, 15);
-}
-inline char * tnpoint_out_maxdd(const Temporal * p0) {
-    return ::tnpoint_out(p0, 15);
-}
-inline char * pcpointset_out_maxdd(const Set * p0) {
-    return ::pcpointset_out(p0, 15);
-}
-inline char * pcpatchset_out_maxdd(const Set * p0) {
-    return ::pcpatchset_out(p0, 15);
-}
 inline char * pose_out_maxdd(const Pose * p0) {
     return ::pose_out(p0, 15);
 }
 inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
     return ::pose_transform_pipeline(p0, p1, 0, true);
 }
-inline char * poseset_out_maxdd(const Set * p0) {
-    return ::poseset_out(p0, 15);
-}
 inline char * posechain_out_maxdd(const PoseChain * p0) {
     return ::posechain_out(p0, 15);
 }
 inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
     return ::posechain_transform_pipeline(p0, p1, 0, true);
-}
-inline char * posechainset_out_maxdd(const Set * p0) {
-    return ::posechainset_out(p0, 15);
 }
 inline GeomVal * raster_dump_as_polygons_band_exclude_nodata(const Raster * p0, int * p1) {
     return ::raster_dump_as_polygons(p0, 1, true, p1);
@@ -2133,7 +1954,7 @@ static void Gen_tjson_array_element(DataChunk &args, ExpressionState &, Vector &
     TernaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, int32_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjson_array_element(t, a2, null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjson_array_element(t, a2, nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2144,7 +1965,7 @@ static void Gen_tjson_array_element_d(DataChunk &args, ExpressionState &, Vector
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjson_array_element(t, a2, null_handle_type_from_string(string_t("use_json_null").GetString().c_str()));
+            Temporal *r = tjson_array_element(t, a2, nullhandletype_from_string(string_t("use_json_null").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2188,7 +2009,7 @@ static void Gen_tjsonb_array_element(DataChunk &args, ExpressionState &, Vector 
     TernaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, int32_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_array_element(t, a2, null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_array_element(t, a2, nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2199,7 +2020,7 @@ static void Gen_tjsonb_array_element_d(DataChunk &args, ExpressionState &, Vecto
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_array_element(t, a2, null_handle_type_from_string(string_t("use_json_null").GetString().c_str()));
+            Temporal *r = tjsonb_array_element(t, a2, nullhandletype_from_string(string_t("use_json_null").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2210,7 +2031,7 @@ static void Gen_tjsonb_array_element_text(DataChunk &args, ExpressionState &, Ve
     TernaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, int32_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_array_element_text(t, a2, null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_array_element_text(t, a2, nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2221,7 +2042,7 @@ static void Gen_tjsonb_array_element_text_d(DataChunk &args, ExpressionState &, 
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_array_element_text(t, a2, null_handle_type_from_string(string_t("use_json_null").GetString().c_str()));
+            Temporal *r = tjsonb_array_element_text(t, a2, nullhandletype_from_string(string_t("use_json_null").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2431,7 +2252,7 @@ static void Gen_tjsonb_to_tbigint(DataChunk &args, ExpressionState &, Vector &re
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, string_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tbigint(t, a2.GetString().c_str(), null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_to_tbigint(t, a2.GetString().c_str(), nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2442,7 +2263,7 @@ static void Gen_tjsonb_to_tbigint_d(DataChunk &args, ExpressionState &, Vector &
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tbigint(t, a2.GetString().c_str(), null_handle_type_from_string(string_t("raise_exception").GetString().c_str()));
+            Temporal *r = tjsonb_to_tbigint(t, a2.GetString().c_str(), nullhandletype_from_string(string_t("raise_exception").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2453,7 +2274,7 @@ static void Gen_tjsonb_to_tbool(DataChunk &args, ExpressionState &, Vector &resu
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, string_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tbool(t, a2.GetString().c_str(), null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_to_tbool(t, a2.GetString().c_str(), nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2464,7 +2285,7 @@ static void Gen_tjsonb_to_tbool_d(DataChunk &args, ExpressionState &, Vector &re
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tbool(t, a2.GetString().c_str(), null_handle_type_from_string(string_t("raise_exception").GetString().c_str()));
+            Temporal *r = tjsonb_to_tbool(t, a2.GetString().c_str(), nullhandletype_from_string(string_t("raise_exception").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2486,7 +2307,7 @@ static void Gen_tjsonb_to_tfloat(DataChunk &args, ExpressionState &state, Vector
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Temporal *x0 = BlobToTemporal(in0[i]);
-        Temporal *r = (Temporal *) tjsonb_to_tfloat(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), null_handle_type_from_string(in3[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_to_tfloat(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), nullhandletype_from_string(in3[i].GetString().c_str()));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2509,7 +2330,7 @@ static void Gen_tjsonb_to_tfloat_d(DataChunk &args, ExpressionState &state, Vect
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Temporal *x0 = BlobToTemporal(in0[i]);
-        Temporal *r = (Temporal *) tjsonb_to_tfloat(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), null_handle_type_from_string("raise_exception"));
+        Temporal *r = (Temporal *) tjsonb_to_tfloat(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), nullhandletype_from_string("raise_exception"));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2544,7 +2365,7 @@ static void Gen_tjsonb_to_tgeogpoint(DataChunk &args, ExpressionState &state, Ve
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Temporal *x0 = BlobToTemporal(in0[i]);
-        Temporal *r = (Temporal *) tjsonb_to_tgeogpoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), null_handle_type_from_string(in3[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_to_tgeogpoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), nullhandletype_from_string(in3[i].GetString().c_str()));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2567,7 +2388,7 @@ static void Gen_tjsonb_to_tgeogpoint_d(DataChunk &args, ExpressionState &state, 
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Temporal *x0 = BlobToTemporal(in0[i]);
-        Temporal *r = (Temporal *) tjsonb_to_tgeogpoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), null_handle_type_from_string("raise_exception"));
+        Temporal *r = (Temporal *) tjsonb_to_tgeogpoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), nullhandletype_from_string("raise_exception"));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2591,7 +2412,7 @@ static void Gen_tjsonb_to_tgeography(DataChunk &args, ExpressionState &, Vector 
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, string_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tgeography(t, a2.GetString().c_str(), null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_to_tgeography(t, a2.GetString().c_str(), nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2602,7 +2423,7 @@ static void Gen_tjsonb_to_tgeography_d(DataChunk &args, ExpressionState &, Vecto
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tgeography(t, a2.GetString().c_str(), null_handle_type_from_string(string_t("raise_exception").GetString().c_str()));
+            Temporal *r = tjsonb_to_tgeography(t, a2.GetString().c_str(), nullhandletype_from_string(string_t("raise_exception").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2613,7 +2434,7 @@ static void Gen_tjsonb_to_tgeometry(DataChunk &args, ExpressionState &, Vector &
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, string_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tgeometry(t, a2.GetString().c_str(), null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_to_tgeometry(t, a2.GetString().c_str(), nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2624,7 +2445,7 @@ static void Gen_tjsonb_to_tgeometry_d(DataChunk &args, ExpressionState &, Vector
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tgeometry(t, a2.GetString().c_str(), null_handle_type_from_string(string_t("raise_exception").GetString().c_str()));
+            Temporal *r = tjsonb_to_tgeometry(t, a2.GetString().c_str(), nullhandletype_from_string(string_t("raise_exception").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2646,7 +2467,7 @@ static void Gen_tjsonb_to_tgeompoint(DataChunk &args, ExpressionState &state, Ve
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Temporal *x0 = BlobToTemporal(in0[i]);
-        Temporal *r = (Temporal *) tjsonb_to_tgeompoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), null_handle_type_from_string(in3[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_to_tgeompoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), nullhandletype_from_string(in3[i].GetString().c_str()));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2669,7 +2490,7 @@ static void Gen_tjsonb_to_tgeompoint_d(DataChunk &args, ExpressionState &state, 
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Temporal *x0 = BlobToTemporal(in0[i]);
-        Temporal *r = (Temporal *) tjsonb_to_tgeompoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), null_handle_type_from_string("raise_exception"));
+        Temporal *r = (Temporal *) tjsonb_to_tgeompoint(x0, in1[i].GetString().c_str(), interptype_from_string(in2[i].GetString().c_str()), nullhandletype_from_string("raise_exception"));
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2693,7 +2514,7 @@ static void Gen_tjsonb_to_tint(DataChunk &args, ExpressionState &, Vector &resul
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, string_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tint(t, a2.GetString().c_str(), null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_to_tint(t, a2.GetString().c_str(), nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2704,7 +2525,7 @@ static void Gen_tjsonb_to_tint_d(DataChunk &args, ExpressionState &, Vector &res
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_tint(t, a2.GetString().c_str(), null_handle_type_from_string(string_t("raise_exception").GetString().c_str()));
+            Temporal *r = tjsonb_to_tint(t, a2.GetString().c_str(), nullhandletype_from_string(string_t("raise_exception").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2715,7 +2536,7 @@ static void Gen_tjsonb_to_ttext_key(DataChunk &args, ExpressionState &, Vector &
     TernaryExecutor::ExecuteWithNulls<string_t, string_t, string_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
         [&](string_t in, string_t a2, string_t a3, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_ttext_key(t, a2.GetString().c_str(), null_handle_type_from_string(a3.GetString().c_str()));
+            Temporal *r = tjsonb_to_ttext_key(t, a2.GetString().c_str(), nullhandletype_from_string(a3.GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2726,7 +2547,7 @@ static void Gen_tjsonb_to_ttext_key_d(DataChunk &args, ExpressionState &, Vector
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tjsonb_to_ttext_key(t, a2.GetString().c_str(), null_handle_type_from_string(string_t("raise_exception").GetString().c_str()));
+            Temporal *r = tjsonb_to_ttext_key(t, a2.GetString().c_str(), nullhandletype_from_string(string_t("raise_exception").GetString().c_str()));
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2838,7 +2659,7 @@ static void Gen_tjson_extract_path(DataChunk &args, ExpressionState &, Vector &r
         Temporal *p0 = BlobToTemporal(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Temporal *r = (Temporal *) tjson_extract_path(p0, v1, (int) ne1, null_handle_type_from_string(in2[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjson_extract_path(p0, v1, (int) ne1, nullhandletype_from_string(in2[i].GetString().c_str()));
         free(p0);
         FreeTextArr(v1, ne1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2863,7 +2684,7 @@ static void Gen_tjson_extract_path_v1(DataChunk &args, ExpressionState &, Vector
         Temporal *p0 = BlobToTemporal(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Temporal *r = (Temporal *) tjson_extract_path(p0, v1, (int) ne1, null_handle_type_from_string("use_json_null"));
+        Temporal *r = (Temporal *) tjson_extract_path(p0, v1, (int) ne1, nullhandletype_from_string("use_json_null"));
         free(p0);
         FreeTextArr(v1, ne1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2887,7 +2708,7 @@ static void Gen_tjson_object_field(DataChunk &args, ExpressionState &, Vector &r
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Temporal *p0 = BlobToTemporal(in0[i]);
         text *p1 = MakeText(in1[i]);
-        Temporal *r = (Temporal *) tjson_object_field(p0, p1, null_handle_type_from_string(in2[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjson_object_field(p0, p1, nullhandletype_from_string(in2[i].GetString().c_str()));
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2909,7 +2730,7 @@ static void Gen_tjson_object_field_v1(DataChunk &args, ExpressionState &, Vector
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Temporal *p0 = BlobToTemporal(in0[i]);
         text *p1 = MakeText(in1[i]);
-        Temporal *r = (Temporal *) tjson_object_field(p0, p1, null_handle_type_from_string("use_json_null"));
+        Temporal *r = (Temporal *) tjson_object_field(p0, p1, nullhandletype_from_string("use_json_null"));
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2936,7 +2757,7 @@ static void Gen_tjsonb_extract_path(DataChunk &args, ExpressionState &, Vector &
         Temporal *p0 = BlobToTemporal(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Temporal *r = (Temporal *) tjsonb_extract_path(p0, v1, (int) ne1, null_handle_type_from_string(in2[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_extract_path(p0, v1, (int) ne1, nullhandletype_from_string(in2[i].GetString().c_str()));
         free(p0);
         FreeTextArr(v1, ne1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2961,7 +2782,7 @@ static void Gen_tjsonb_extract_path_v1(DataChunk &args, ExpressionState &, Vecto
         Temporal *p0 = BlobToTemporal(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Temporal *r = (Temporal *) tjsonb_extract_path(p0, v1, (int) ne1, null_handle_type_from_string("use_json_null"));
+        Temporal *r = (Temporal *) tjsonb_extract_path(p0, v1, (int) ne1, nullhandletype_from_string("use_json_null"));
         free(p0);
         FreeTextArr(v1, ne1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2988,7 +2809,7 @@ static void Gen_tjsonb_extract_path_text(DataChunk &args, ExpressionState &, Vec
         Temporal *p0 = BlobToTemporal(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Temporal *r = (Temporal *) tjsonb_extract_path_text(p0, v1, (int) ne1, null_handle_type_from_string(in2[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_extract_path_text(p0, v1, (int) ne1, nullhandletype_from_string(in2[i].GetString().c_str()));
         free(p0);
         FreeTextArr(v1, ne1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3013,7 +2834,7 @@ static void Gen_tjsonb_extract_path_text_v1(DataChunk &args, ExpressionState &, 
         Temporal *p0 = BlobToTemporal(in0[i]);
         int ne1 = 0;
         text **v1 = ListToTextArr(ch1, in1[i], &ne1);
-        Temporal *r = (Temporal *) tjsonb_extract_path_text(p0, v1, (int) ne1, null_handle_type_from_string("use_json_null"));
+        Temporal *r = (Temporal *) tjsonb_extract_path_text(p0, v1, (int) ne1, nullhandletype_from_string("use_json_null"));
         free(p0);
         FreeTextArr(v1, ne1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3097,7 +2918,7 @@ static void Gen_tjsonb_object_field(DataChunk &args, ExpressionState &, Vector &
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Temporal *p0 = BlobToTemporal(in0[i]);
         text *p1 = MakeText(in1[i]);
-        Temporal *r = (Temporal *) tjsonb_object_field(p0, p1, null_handle_type_from_string(in2[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_object_field(p0, p1, nullhandletype_from_string(in2[i].GetString().c_str()));
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3119,7 +2940,7 @@ static void Gen_tjsonb_object_field_v1(DataChunk &args, ExpressionState &, Vecto
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Temporal *p0 = BlobToTemporal(in0[i]);
         text *p1 = MakeText(in1[i]);
-        Temporal *r = (Temporal *) tjsonb_object_field(p0, p1, null_handle_type_from_string("use_json_null"));
+        Temporal *r = (Temporal *) tjsonb_object_field(p0, p1, nullhandletype_from_string("use_json_null"));
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3143,7 +2964,7 @@ static void Gen_tjsonb_object_field_text(DataChunk &args, ExpressionState &, Vec
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Temporal *p0 = BlobToTemporal(in0[i]);
         text *p1 = MakeText(in1[i]);
-        Temporal *r = (Temporal *) tjsonb_object_field_text(p0, p1, null_handle_type_from_string(in2[i].GetString().c_str()));
+        Temporal *r = (Temporal *) tjsonb_object_field_text(p0, p1, nullhandletype_from_string(in2[i].GetString().c_str()));
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3165,7 +2986,7 @@ static void Gen_tjsonb_object_field_text_v1(DataChunk &args, ExpressionState &, 
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Temporal *p0 = BlobToTemporal(in0[i]);
         text *p1 = MakeText(in1[i]);
-        Temporal *r = (Temporal *) tjsonb_object_field_text(p0, p1, null_handle_type_from_string("use_json_null"));
+        Temporal *r = (Temporal *) tjsonb_object_field_text(p0, p1, nullhandletype_from_string("use_json_null"));
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -3763,6 +3584,28 @@ static void Gen_tjsonb_set_lax_v2(DataChunk &args, ExpressionState &, Vector &re
 
 
 // ===== @ingroup meos_pointcloud_box_inout =====
+static void Gen_tpcbox_as_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, int32_t a2) {
+            TPCBox *s = BlobToTpcbox(a);
+            SizedString r = tpcbox_as_text(s, a2);
+            free(s);
+            return TakeCString(result, r);
+        });
+}
+
+static void Gen_tpcbox_as_text_d(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::Execute<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t a) {
+            TPCBox *s = BlobToTpcbox(a);
+            SizedString r = tpcbox_as_text(s, 15);
+            free(s);
+            return TakeCString(result, r);
+        });
+}
+
 static void Gen_tpcbox_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -6998,6 +6841,17 @@ static void Gen_temporal_ext_kalman_filter_d(DataChunk &args, ExpressionState &s
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_temporal_reachability_filter(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_reachability_filter(t, a2);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 
 // ===== @ingroup meos_temporal_comp_ever =====
 static void Gen_always_eq_bool_tbool(DataChunk &args, ExpressionState &, Vector &result) {
@@ -8475,8 +8329,10 @@ void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_pointcloud_box_inout(ExtensionLoader &loader) {
-    RegisterMeosFunction(loader, ScalarFunction("asText", {TpcboxType::tpcbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tpcbox_out));
-    RegisterMeosFunction(loader, ScalarFunction("asText", {TpcboxType::tpcbox()}, LogicalType::VARCHAR, Gen_tpcbox_out_d));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {TpcboxType::tpcbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tpcbox_as_text));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {TpcboxType::tpcbox()}, LogicalType::VARCHAR, Gen_tpcbox_as_text_d));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {TpcboxType::tpcbox(), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tpcbox_out));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {TpcboxType::tpcbox()}, LogicalType::VARCHAR, Gen_tpcbox_out_d));
 }
 
 void RegisterGenerated_meos_pointcloud_set_conversion(ExtensionLoader &loader) {
@@ -9337,6 +9193,9 @@ void RegisterGenerated_meos_temporal_analytics_simplify(ExtensionLoader &loader)
     RegisterMeosFunction(loader, ScalarFunction("extendedKalmanFilter", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_ext_kalman_filter_d));
     RegisterMeosFunction(loader, ScalarFunction("extendedKalmanFilter", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, TgeompointType::tgeompoint(), Gen_temporal_ext_kalman_filter));
     RegisterMeosFunction(loader, ScalarFunction("extendedKalmanFilter", {TgeompointType::tgeompoint(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_ext_kalman_filter_d));
+    RegisterMeosFunction(loader, ScalarFunction("reachabilityFilter", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_temporal_reachability_filter));
+    RegisterMeosFunction(loader, ScalarFunction("reachabilityFilter", {TgeompointType::tgeompoint(), LogicalType::DOUBLE}, TgeompointType::tgeompoint(), Gen_temporal_reachability_filter));
+    RegisterMeosFunction(loader, ScalarFunction("reachabilityFilter", {TgeogpointType::tgeogpoint(), LogicalType::DOUBLE}, TgeogpointType::tgeogpoint(), Gen_temporal_reachability_filter));
 }
 
 void RegisterGenerated_meos_temporal_comp_ever(ExtensionLoader &loader) {
