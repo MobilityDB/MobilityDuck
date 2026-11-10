@@ -42,8 +42,9 @@ extern "C" {
  * Forward-declare the two entry points used by this translation unit. */
 extern "C" {
     extern Temporal *tjsonb_in(const char *str);
-    extern char     *tjsonb_out(const Temporal *temp, size_t *size_out);
 }
+/* The text of a tjsonb is written by temporal_out, the writer of every temporal value (meos.h):
+ * MEOS reads a value per type and writes it per template. */
 
 namespace duckdb {
 
@@ -67,7 +68,7 @@ bool TjsonbFunctions::TjsonbToString(Vector &source, Vector &result, idx_t count
         source, result, count,
         [&](string_t input_blob) -> string_t {
             Temporal *temp = BlobToTemporal(input_blob);
-            char *str = tjsonb_out(temp, UnreadSize());
+            char *str = temporal_out(temp, 0, UnreadSize());
             free(temp);
             if (!str)
                 throw InvalidInputException("Failed to serialize tjsonb to string");
