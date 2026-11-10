@@ -1163,6 +1163,22 @@ def set_scalar_param_sigs(f):
             out.append((acc, SET_SQL_TO_ACC.get(s["ret"], acc), defs[1]))
     return out                                        # may be [] (only extended sets)
 
+def trailing_default_cpp(f):
+    """The C++ argument the trailing SQL DEFAULT of f stands for, typed by the parameter it
+    defaults (#forward_literal: an enum's NULL is its member of value 0, a timestamp goes through
+    its parser), else the untyped literal of #sql_default_to_cpp."""
+    raw = trailing_arg_default(f)
+    for s in f.get("sqlSignatures") or []:
+        defs = s.get("argDefaults") or []
+        if defs and defs[-1] is not None:
+            k = len(s["args"]) - 1
+            if k < len(f["params"]):
+                v = forward_literal(f["params"][k], raw)
+                if v is not None:
+                    return v
+            break
+    return sql_default_to_cpp(raw)
+
 def sql_default_to_cpp(val):
     """A SQL DEFAULT literal -> the C++ literal to substitute for the omitted argument.
     NULL -> nullptr, TRUE/FALSE -> true/false, a numeric literal (0/15/0.0) verbatim."""
@@ -1324,6 +1340,10 @@ def forward_literal(p, raw):
     # passes them (tools/codegen_jvm.py): `interp` LINEAR, `maxt` NULL
     if "*" not in n and text in ENUM_MEMBERS.get(b, ()):
         return text
+    # an enum the SQL leaves NULL is the member of value 0 the catalog states (interp NULL is
+    # INTERP_NONE, as Temporal_as_tsequenceset reads a NULL interpolation)
+    if "*" not in n and text.upper() == "NULL" and b in ENUM_ZERO:
+        return ENUM_ZERO[b]
     # an enum the SQL names in text (tsample's interp DEFAULT 'discrete'), read through the reader
     # #shape_arg reads its argument with
     if "*" not in n and b in ENUM_READER:
@@ -1465,18 +1485,44 @@ MACRO_VALUES = {}
 # (interptype_from_string), from the catalog's `enums` and `functions`, as JMEOS's _enum_parsers
 # reads them (tools/codegen_jvm.py). Filled in main().
 ENUM_MEMBERS = {}
+# Enum name -> its member of value 0, the one a SQL NULL stands for (INTERP_NONE). Filled in main().
+ENUM_ZERO = {}
 ENUM_READER = {}
+
+def declared_receiver_accs(f):
+    """The accessors of the types f's own SQL signatures take first, through
+    TEMPORAL_TO_CONTAINER_ACC, the type-support signatures a type's CREATE TYPE binds left out:
+    the receivers of a template writer (span_out writes asText of intspan, floatspan, ...),
+    which neither a single type nor a name scope states. The twin of #declared_text_sigs, which
+    reads the declared set receivers through SET_SIG_ACC."""
+    accs = []
+    for s in f.get("sqlSignatures") or []:
+        a = TEMPORAL_TO_CONTAINER_ACC.get(s["args"][0]) if s.get("args") else None
+        if a and not s.get("typeSupport") and a not in accs:
+            accs.append(a)
+    return accs
+
+def set_text_by_declared(f):
+    """Whether the text renderings of set function f register over the set types its own text
+    signatures declare (#declared_text_sigs): a function no name scopes, and a template writer
+    the `set_` prefix would scope over every set type (set_out writes asText of the alphanumeric
+    sets, spatialset_as_text that of the spatial ones), as sig_declared_accs narrows the
+    temporal loop's "all"."""
+    sc = set_reg_scope(f["name"])
+    return sc is None or (sc[0] == "all" and bool(declared_text_sigs(f)))
 
 def declared_text_sigs(f):
     """[(set accessor, two, one)] for the text signatures the catalog declares for f over the set
     types a declared signature can name (SET_SIG_ACC, as declared_element_pairs reads them): two
     where the digit count is an argument, one where the one-argument form answers, declared alone
     (asText(pcpointset)) or through the count's SQL default (asText(cbufferset, integer DEFAULT
-    15)). geomset and geogset carry a hand-written text surface of their own and are left to it."""
+    15)). geomset and geogset carry a hand-written text surface of their own and are left to it.
+    A type-support signature a type's CREATE TYPE binds (set_out's cbufferset_out) declares no
+    text rendering: the type's asText is another function's (spatialset_as_text)."""
     out = []
     for s in f.get("sqlSignatures") or []:
         acc = SET_SIG_ACC.get(s["args"][0]) if s["args"] else None
-        if not acc:
+        if not acc or s.get("typeSupport"):
             continue
         n = len(s["args"])
         dflt = (s.get("argDefaults") or [None] * n)[-1] if n == 2 else None
@@ -2000,8 +2046,8 @@ SCALAR_ARG = {
 }
 # The VARCHAR half of a shape argument, beside SCALAR_ARG's by-value half: a C string, and the
 # null-handling enum MEOS itself parses from one. MobilityDB spells the latter `null_handle text`
-# (mobilitydb/sql/json/454_tjsonb_jsonfuncs.in.sql), and null_handle_type_from_string is the public
-# MEOS parser, so the binding delegates the mapping instead of carrying its own name table.
+# (mobilitydb/sql/json/454_tjsonb_jsonfuncs.in.sql), and the public MEOS parser the catalog states
+# for it (ENUM_READER, read in main()) does the mapping, so the binding carries no name table.
 VARCHAR_ARG = {
     "char":           ("LogicalType::VARCHAR", "string_t", "a2.GetString().c_str()"),
     "nullHandleType": ("LogicalType::VARCHAR", "string_t",
@@ -4179,7 +4225,13 @@ def _row_arg(p, sqlt):
 
 def _row_col(f, col, arrays, lenp):
     """(DuckDB type, C type of the out-parameter's target, kind, element C++ type) for a column of
-    #shape_row_out: a geometry handed back alone, or an array of by-value elements read whole."""
+    #shape_row_out: a geometry handed back alone, or an array of by-value elements read whole. A
+    column the catalog states `from: return` is the function's own result, a geometry here."""
+    if col.get("from") == "return":
+        rt = norm(f["returnType"]["canonical"])
+        if rt == "GSERIALIZED *" and col["type"] in ("geometry", "geography"):
+            return ("MobilityDuckGeometryType()", rt, "geo", None)
+        return None
     p = next((q for q in f["params"] if q["name"] == col.get("from")), None)
     if p is None:
         return None
@@ -4205,7 +4257,11 @@ def shape_row_out(f):
     otherwise. `columns` holds the (column, marshal) of each declared column."""
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
-    if norm(f["returnType"]["canonical"]) != "bool":
+    # The row exists when the bool answers true, or when the result a column takes `from: return`
+    # is not null (tpoint_as_mvtgeom answers its geometry and hands back its times).
+    from_return = any(c.get("from") == "return" for s in f.get("sqlSignatures") or []
+                      for c in s.get("columns") or [])
+    if norm(f["returnType"]["canonical"]) != "bool" and not from_return:
         return None
     sh = f.get("shape") or {}
     outs = sh.get("outParams") or []
@@ -4217,7 +4273,8 @@ def shape_row_out(f):
     for s in sigs:
         cols = s.get("columns") or []
         froms = [c.get("from") for c in cols]
-        if s.get("retSet") or not cols or not set(froms) <= set(outs) or s.get("boundArgs"):
+        if (s.get("retSet") or not cols or not set(froms) - {"return"} <= set(outs)
+                or s.get("boundArgs")):
             return None
         rest = [o for o in outs if o not in froms]
         lenp = rest[0] if len(rest) == 1 and arrays else None
@@ -4288,7 +4345,10 @@ def emit_row_out(f, tag, s, ins, ms):
     if lenp:
         L.append(f"        int o_{lenp} = 0;")
     call += [f"&o_{o}" for o in outs]
-    L += [f"        bool found = {name}({', '.join(call)});",
+    # A column taken `from: return` is the result itself, and the row exists when it is not null
+    found = (f"        bool found = {name}({', '.join(call)});" if "return" not in tgt else
+             f"        {tgt['return']}o_return = {name}({', '.join(call)}); bool found = o_return != nullptr;")
+    L += [found,
           "        free(t);" + "".join(f" free({x});" for x in frees),
           "        if (!found" + "".join(f" || !o_{c['from']}" for c, m in ms if m[2] == "geo") + ") {",
           "            valid_out.SetInvalid(i);" + "".join(f" free(o_{o});" for o in outs if o in tgt) + empty,
@@ -8662,7 +8722,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # is callable at the shorter arity; emit the (temporal)->temporal overload with the
         # catalog default substituted, over the same types.
         if b and kind == "temporal" and dret == "MD_TEMPORAL" and trailing_arg_default(f):
-            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            dflt = trailing_default_cpp(f)
             subcast = "" if base(f["returnType"]["canonical"]) == "Temporal" else "(Temporal *) "
             bodies.append(emit_defaulted_unary_temporal(fn, subcast, dflt))
             if scope == "all":
@@ -8717,7 +8777,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # (insert(tint, tint) for insert(tint, tint, connect boolean DEFAULT TRUE)), registered
         # over the same pairs as the full call, as the ternary's above
         if tts and retired(f) and trailing_arg_default(f) and arg3[1] not in ("string_t",):
-            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            dflt = trailing_default_cpp(f)
             bodies.append(emit_binary_tt(f, kind, dflt=dflt))
             for a in (accs if scope != "all" else []):
                 r2 = dret
@@ -8732,7 +8792,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         # the 1-arg form is canonical SQL but geo-only-hand today — generate it for every type
         # so a new family inherits it too. The return type is the fixed scalar dret.
         if b and kind.startswith("scalar:") and trailing_arg_default(f):
-            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            dflt = trailing_default_cpp(f)
             bodies.append(emit_defaulted_unary_temporal_scalar(f, dflt))
             if scope == "all":
                 for nm in names:
@@ -8745,7 +8805,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                              f'"{reg_name(nm, f)}", {{{a}}}, {dret}, Gen_{fn}_d));')
         # the same shorter overload of a geometry-returning one (traversedArea(tgeometry))
         if b and kind == "geo" and trailing_arg_default(f) and scope != "all":
-            dflt = sql_default_to_cpp(trailing_arg_default(f))
+            dflt = trailing_default_cpp(f)
             bodies.append(emit_defaulted_unary_geo(f, dflt))
             for a in accs:
                 for nm in names:
@@ -8828,7 +8888,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                                  f'"{reg_name(nm, f)}", {{{acc}}}, {rett}, Gen_{fn}_d));')
             continue
         if kind.startswith("u2text_d:"):   # (Set)->text alone: asText(jsonbset), its digit count bound
-            if set_reg_scope(fn) is None:   # scoped by its declared signatures
+            if set_text_by_declared(f):   # scoped by its declared signatures
                 for a, _two, one in declared_text_sigs(f):
                     if one:
                         for nm in names:
@@ -8848,7 +8908,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             _, dflt = text_arities(f)
             if dflt is not None:
                 set_bodies.append(emit_set(f, "u2text_d:" + str(sql_default_to_cpp(dflt))))
-            if set_reg_scope(fn) is None:   # scoped by its declared signatures, each at its arity
+            if set_text_by_declared(f):   # scoped by its declared signatures, each at its arity
                 for a, two, one in declared_text_sigs(f):
                     for nm in names:
                         if two:
@@ -8910,6 +8970,18 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         sc = set_reg_scope(fn)
         scope, accs = sc if sc else ("all", None)   # b_set/b_bool (<op>_set_set) -> over AllTypes
         nargs = len(classify(f)[0])
+        # A function the `set_` prefix scopes over every set type registers over the set types its
+        # own signatures declare when it declares them, as sig_declared_accs narrows the temporal
+        # loop: set_out's bound one-argument asText reads the alphanumeric sets, the spatial ones
+        # being spatialset_as_text's. The geometry and geography sets keep their loop below.
+        if scope == "all":
+            _declared = []
+            for s in f.get("sqlSignatures") or []:
+                a = SET_TYPES.get(s["args"][0]) if s.get("args") else None
+                if a and not s.get("typeSupport") and len(s["args"]) == nargs and a not in _declared:
+                    _declared.append(a)
+            if _declared and len(_declared) < len(SET_TYPES):
+                scope, accs = "types", _declared
         argsig = "{type}" if nargs == 1 else "{type, type}"
         spec_sig = "{%s}" if nargs == 1 else "{%s, %s}"
         if scope == "all":
@@ -9019,7 +9091,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # text rendering alone at one argument: the digit count bound to the literal the
             # declared signature passes, as the set loop registers asText(jsonbset).
             if kind.startswith("u2text_d:"):
-                acc = C.get("single") or (C["scope"](fn) or (None, []))[1]
+                acc = C.get("single") or (C["scope"](fn) or (None, []))[1] or declared_receiver_accs(f)
                 accs_here = [acc] if isinstance(acc, str) else list(acc)
                 for a in accs_here:
                     for nm in names:
@@ -9029,7 +9101,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             # text rendering: the (X, int) form the MEOS entry declares, plus the shorter arity
             # the canonical SQL reaches through that argument's DEFAULT.
             if kind.startswith("u2text:"):
-                acc = C.get("single") or (C["scope"](fn) or (None, []))[1]
+                acc = C.get("single") or (C["scope"](fn) or (None, []))[1] or declared_receiver_accs(f)
                 accs_here = [acc] if isinstance(acc, str) else list(acc)
                 scd = SCALAR_ARG[kind.split(':', 1)[1]][0]
                 for a in accs_here:
@@ -10504,6 +10576,8 @@ def main():
     MACRO_VALUES.update({m["name"]: m["value"] for m in d.get("macros", []) if "value" in m})
     ENUM_MEMBERS.update({e["name"]: {v["name"] for v in e.get("values") or []}
                          for e in d.get("enums", [])})
+    ENUM_ZERO.update({e["name"]: v["name"] for e in d.get("enums", []) for v in e.get("values") or []
+                      if v.get("value") == 0})
     # An enum is read from its name; so is a by-value C type no SQL scalar carries and one public
     # function reads from a string, which the SQL text stands for: the WKB variant every writer
     # takes, read from its endian by wkb_variant_from_endian. The rule is JMEOS's
@@ -10518,6 +10592,13 @@ def main():
     for _rt, _names in _readers.items():
         if _rt in ENUM_MEMBERS or (len(_names) == 1 and _rt not in SCALAR_ARG):
             ENUM_READER.setdefault(_rt, _names[0])
+    # An enum VARCHAR_ARG and SETTING_ARG carry as its name (nullHandleType) parses through the
+    # reader the catalog states (nullhandletype_from_string), as shape_arg reads every other enum.
+    for _e, _reader in ENUM_READER.items():
+        if _e in VARCHAR_ARG:
+            VARCHAR_ARG[_e] = VARCHAR_ARG[_e][:2] + ("%s(a2.GetString().c_str())" % _reader,)
+        if _e in SETTING_ARG:
+            SETTING_ARG[_e] = SETTING_ARG[_e][:3] + ("%s(%%s.GetString().c_str())" % _reader,)
     # A typed text or binary output names two wrappers, its type's I/O function and its asText
     # (tint_out: `#Temporal_out(), #Temporal_as_text()`), so its first wrapper's SQL name is an
     # I/O name, which supported() drops as a cast, while one of its signatures carries the SQL name
