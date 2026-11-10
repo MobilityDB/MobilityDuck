@@ -70,6 +70,11 @@ inline std::string &MeosThreadTimezone() {
 // exception. The PROJ context and the RNGs are thread-local statics inside MEOS
 // that it creates lazily on first use, so a caller neither can nor needs to
 // initialise them.
+//
+// MEOS keeps its point cloud schemas per thread too, so the thread also hands its own
+// cache the schemas pcschema_register stated on another thread (pointcloud/pcschema.cpp).
+void SyncPcSchemas();
+
 inline void EnsureMeosThreadInitialized() {
 	static thread_local const bool meos_thread_ready = []() {
 		meos_initialize_timezone(MEOS_DEFAULT_TIMEZONE);
@@ -77,6 +82,7 @@ inline void EnsureMeosThreadInitialized() {
 		return true;
 	}();
 	(void) meos_thread_ready;
+	SyncPcSchemas();
 }
 
 // The session's TimeZone setting, or an empty string when the session states

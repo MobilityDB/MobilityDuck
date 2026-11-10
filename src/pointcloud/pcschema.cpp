@@ -29,6 +29,8 @@
 
 #include "pointcloud/pcschema.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include <atomic>
+#include <mutex>
 #include <string>
 #include <vector>
 #include "mobilityduck/meos_registration.hpp"
@@ -40,6 +42,79 @@ extern "C" {
 }
 
 namespace duckdb {
+
+//! A schema as pcschema_register states it, held by the extension for every thread
+//! @details MEOS keeps its point cloud schemas per thread, as its time zone, and DuckDB
+//! runs a query on worker threads other than the one that registered the schema. The
+//! extension keeps every schema registered through SQL, in order, and each thread hands
+//! the ones it has not seen to its own MEOS cache on its first MEOS call after them
+//! (SyncPcSchemas, from EnsureMeosThreadInitialized).
+struct PcSchemaEntry {
+    uint32_t pcid;
+    int32_t srid;
+    std::string compression;
+    std::vector<std::string> names, descriptions, interpretations;
+    std::vector<PCDimensionSpec> dims;
+};
+
+static std::mutex &PcSchemaMutex() {
+    static std::mutex m;
+    return m;
+}
+
+static std::vector<PcSchemaEntry> &PcSchemaEntries() {
+    static std::vector<PcSchemaEntry> entries;
+    return entries;
+}
+
+static std::atomic<size_t> &PcSchemaCount() {
+    static std::atomic<size_t> count {0};
+    return count;
+}
+
+void SyncPcSchemas() {
+    static thread_local size_t seen = 0;
+    if (seen == PcSchemaCount().load(std::memory_order_acquire)) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(PcSchemaMutex());
+    auto &entries = PcSchemaEntries();
+    for (; seen < entries.size(); seen++) {
+        auto &e = entries[seen];
+        meos_pc_schema_register_dims(e.pcid, e.srid, e.compression.c_str(), e.dims.data(),
+            (int) e.dims.size());
+    }
+}
+
+//! Keep a schema for every thread and register it in this one, answering what MEOS answers
+static bool RegisterPcSchemaForEveryThread(uint32_t pcid, int32_t srid, const std::string &compression,
+                                           const std::vector<PCDimensionSpec> &dims) {
+    PcSchemaEntry e;
+    e.pcid = pcid;
+    e.srid = srid;
+    e.compression = compression;
+    for (auto &d : dims) {
+        e.names.emplace_back(d.name);
+        e.descriptions.emplace_back(d.description ? d.description : "");
+        e.interpretations.emplace_back(d.interpretation);
+    }
+    for (size_t i = 0; i < dims.size(); i++) {
+        PCDimensionSpec s = dims[i];
+        s.name = e.names[i].c_str();
+        s.description = dims[i].description ? e.descriptions[i].c_str() : nullptr;
+        s.interpretation = e.interpretations[i].c_str();
+        e.dims.push_back(s);
+    }
+    bool ok = meos_pc_schema_register_dims(pcid, srid, compression.c_str(), dims.data(),
+        (int) dims.size());
+    if (!ok) {
+        return false;
+    }
+    std::lock_guard<std::mutex> guard(PcSchemaMutex());
+    PcSchemaEntries().push_back(std::move(e));
+    PcSchemaCount().store(PcSchemaEntries().size(), std::memory_order_release);
+    return true;
+}
 
 //! Register the schema a pcid names from the rows that state it
 //! @details Reads one schema — its SRID, its compression and the list of
@@ -149,8 +224,7 @@ static void Pcschema_register(DataChunk &args, ExpressionState &state, Vector &r
             continue;
         }
 
-        result_data[row] = meos_pc_schema_register_dims((uint32_t) pcid, srid,
-            compression.c_str(), dims.data(), (int) dims.size());
+        result_data[row] = RegisterPcSchemaForEveryThread((uint32_t) pcid, srid, compression, dims);
     }
 
     if (count == 1) {
