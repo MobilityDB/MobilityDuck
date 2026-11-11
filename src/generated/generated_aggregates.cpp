@@ -1374,12 +1374,6 @@ inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, con
 inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, int64_t ** p2, int * p3) {
     return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3);
 }
-inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
-    return ::bearing_tpoint_point(p0, p1, false);
-}
-inline Temporal * bearing_tpoint_point_invert_invert(const Temporal * p0, const GSERIALIZED * p1) {
-    return ::bearing_tpoint_point(p0, p1, true);
-}
 inline bool tgeo_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
     return ::tgeo_value_at_timestamptz(p0, p1, true, p2);
 }
@@ -1412,12 +1406,6 @@ inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
 }
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
-}
-inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
-    return ::concat_tjsonb_jsonb(p0, p1, false);
-}
-inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const Jsonb * p1) {
-    return ::concat_tjsonb_jsonb(p0, p1, true);
 }
 inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
     return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));

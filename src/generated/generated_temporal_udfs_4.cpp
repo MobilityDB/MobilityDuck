@@ -1373,12 +1373,6 @@ inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, con
 inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, int64_t ** p2, int * p3) {
     return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3);
 }
-inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
-    return ::bearing_tpoint_point(p0, p1, false);
-}
-inline Temporal * bearing_tpoint_point_invert_invert(const Temporal * p0, const GSERIALIZED * p1) {
-    return ::bearing_tpoint_point(p0, p1, true);
-}
 inline bool tgeo_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
     return ::tgeo_value_at_timestamptz(p0, p1, true, p2);
 }
@@ -1411,12 +1405,6 @@ inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
 }
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
-}
-inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
-    return ::concat_tjsonb_jsonb(p0, p1, false);
-}
-inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const Jsonb * p1) {
-    return ::concat_tjsonb_jsonb(p0, p1, true);
 }
 inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
     return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
@@ -1583,24 +1571,7 @@ static void Gen_bearing_point_point(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
-static void Gen_bearing_tpoint_point_invert_invert_no(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in_t);
-            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
-            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
-                GSERIALIZED *gs_geog = geom_to_geog(gs);
-                free(gs); gs = gs_geog;
-            }
-            Temporal *r = (Temporal *) bearing_tpoint_point_invert_invert_no(t, gs);
-            free(t); free(gs);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_bearing_tpoint_point_invert_invert(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bearing_point_tpoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -1611,7 +1582,24 @@ static void Gen_bearing_tpoint_point_invert_invert(DataChunk &args, ExpressionSt
                 GSERIALIZED *gs_geog = geom_to_geog(gs);
                 free(gs); gs = gs_geog;
             }
-            Temporal *r = (Temporal *) bearing_tpoint_point_invert_invert(t, gs);
+            Temporal *r = (Temporal *) bearing_point_tpoint(gs, t);
+            free(t); free(gs);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_bearing_tpoint_point(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const int32_t crs_g = GeometryCrsSrid(args.data[1].GetType());
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in_t, string_t in_g, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in_t);
+            GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : tspatial_srid(t));
+            if (MEOS_FLAGS_GET_GEODETIC(t->flags)) {
+                GSERIALIZED *gs_geog = geom_to_geog(gs);
+                free(gs); gs = gs_geog;
+            }
+            Temporal *r = (Temporal *) bearing_tpoint_point(t, gs);
             free(t); free(gs);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -7107,10 +7095,10 @@ void RegisterGenerated_meos_cellindex(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("bearing", {MobilityDuckGeometryType(), MobilityDuckGeometryType()}, LogicalType::DOUBLE, Gen_bearing_point_point));
-    RegisterMeosFunction(loader, ScalarFunction("bearing", {TgeompointType::tgeompoint(), MobilityDuckGeometryType()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_point_invert_invert_no));
-    RegisterMeosFunction(loader, ScalarFunction("bearing", {TgeogpointType::tgeogpoint(), MobilityDuckGeometryType()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_point_invert_invert_no));
-    RegisterMeosFunction(loader, ScalarFunction("bearing", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_point_invert_invert));
-    RegisterMeosFunction(loader, ScalarFunction("bearing", {MobilityDuckGeometryType(), TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_point_invert_invert));
+    RegisterMeosFunction(loader, ScalarFunction("bearing", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_bearing_point_tpoint));
+    RegisterMeosFunction(loader, ScalarFunction("bearing", {MobilityDuckGeometryType(), TgeogpointType::tgeogpoint()}, TemporalTypes::tfloat(), Gen_bearing_point_tpoint));
+    RegisterMeosFunction(loader, ScalarFunction("bearing", {TgeompointType::tgeompoint(), MobilityDuckGeometryType()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_point));
+    RegisterMeosFunction(loader, ScalarFunction("bearing", {TgeogpointType::tgeogpoint(), MobilityDuckGeometryType()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_point));
     RegisterMeosFunction(loader, ScalarFunction("bearing", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, TemporalTypes::tfloat(), Gen_bearing_tpoint_tpoint));
     RegisterMeosFunction(loader, ScalarFunction("centroid", {TGeometryTypes::tgeometry()}, TgeompointType::tgeompoint(), Gen_tgeo_centroid));
     RegisterMeosFunction(loader, ScalarFunction("centroid", {TGeographyTypes::tgeography()}, TgeogpointType::tgeogpoint(), Gen_tgeo_centroid));

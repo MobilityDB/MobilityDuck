@@ -1373,12 +1373,6 @@ inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom(const Temporal * p0, con
 inline GSERIALIZED * tpoint_as_mvtgeom_buffer_clip_geom_extent(const Temporal * p0, const STBox * p1, int64_t ** p2, int * p3) {
     return ::tpoint_as_mvtgeom(p0, p1, 4096, 256, true, p2, p3);
 }
-inline Temporal * bearing_tpoint_point_invert_invert_no(const Temporal * p0, const GSERIALIZED * p1) {
-    return ::bearing_tpoint_point(p0, p1, false);
-}
-inline Temporal * bearing_tpoint_point_invert_invert(const Temporal * p0, const GSERIALIZED * p1) {
-    return ::bearing_tpoint_point(p0, p1, true);
-}
 inline bool tgeo_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
     return ::tgeo_value_at_timestamptz(p0, p1, true, p2);
 }
@@ -1411,12 +1405,6 @@ inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
 }
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
-}
-inline Temporal * concat_tjsonb_jsonb_invert_invert_no(const Temporal * p0, const Jsonb * p1) {
-    return ::concat_tjsonb_jsonb(p0, p1, false);
-}
-inline Temporal * concat_tjsonb_jsonb_invert_invert(const Temporal * p0, const Jsonb * p1) {
-    return ::concat_tjsonb_jsonb(p0, p1, true);
 }
 inline Temporal * tjsonb_to_tfloat_interp_null_handle(const Temporal * p0, const char * p1) {
     return ::tjsonb_to_tfloat(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
@@ -1889,25 +1877,13 @@ static void Gen_jsonb_ne(DataChunk &args, ExpressionState &, Vector &result) {
 
 
 // ===== @ingroup meos_json_json =====
-static void Gen_concat_tjsonb_jsonb_invert_invert_no(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_concat_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
             Jsonb *a2p = BlobToJsonb(a2);
-            Temporal *r = concat_tjsonb_jsonb_invert_invert_no(t, a2p);
-            free(a2p); free(t);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_concat_tjsonb_jsonb_invert_invert_rev(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a2, string_t in, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t = BlobToTemporal(in);
-            Jsonb *a2p = BlobToJsonb(a2);
-            Temporal *r = concat_tjsonb_jsonb_invert_invert(t, a2p);
+            Temporal *r = concat_tjsonb_jsonb(t, a2p);
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -1925,6 +1901,42 @@ static void Gen_concat_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector 
         });
 }
 
+static void Gen_contained_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Jsonb *a2p = BlobToJsonb(a2);
+            Temporal *r = contained_tjsonb_jsonb(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_contained_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            Temporal *r = (Temporal *) contained_tjsonb_tjsonb(t1, t2);
+            free(t1); free(t2);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_contains_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Jsonb *a2p = BlobToJsonb(a2);
+            Temporal *r = contains_tjsonb_jsonb(t, a2p);
+            free(a2p); free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_contains_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -1932,18 +1944,6 @@ static void Gen_contains_tjsonb_tjsonb(DataChunk &args, ExpressionState &, Vecto
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             Temporal *r = (Temporal *) contains_tjsonb_tjsonb(t1, t2);
-            free(t1); free(t2);
-            return TemporalToBlobN(result, r, mask, idx);
-        });
-}
-
-static void Gen_contains_tjsonb_tjsonb_rev(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> string_t {
-            Temporal *t1 = BlobToTemporal(in1);
-            Temporal *t2 = BlobToTemporal(in2);
-            Temporal *r = (Temporal *) contains_tjsonb_tjsonb(t2, t1);
             free(t1); free(t2);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -2553,29 +2553,7 @@ static void Gen_tjsonb_to_ttext_key_d(DataChunk &args, ExpressionState &, Vector
         });
 }
 
-static void Gen_contains_tjsonb_jsonb(DataChunk &args, ExpressionState &, Vector &result) {
-    EnsureMeosThreadInitialized();
-    const idx_t rows = args.size();
-    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
-    auto out = FlatVector::GetData<string_t>(result);
-    auto &outv = FlatVector::Validity(result);
-    for (idx_t i = 0; i < rows; i++) {
-        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Temporal *p0 = BlobToTemporal(in0[i]);
-        Jsonb *p1 = BlobToJsonb(in1[i]);
-        Temporal *r = (Temporal *) contains_tjsonb_jsonb(p0, p1, false);
-        free(p0);
-        free(p1);
-        if (!r) { outv.SetInvalid(i); continue; }
-        out[i] = TemporalToBlob(result, r);
-    }
-    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
-}
-
-static void Gen_contains_tjsonb_jsonb_v1(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_concat_jsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
@@ -2588,7 +2566,7 @@ static void Gen_contains_tjsonb_jsonb_v1(DataChunk &args, ExpressionState &, Vec
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Jsonb *p0 = BlobToJsonb(in0[i]);
         Temporal *p1 = BlobToTemporal(in1[i]);
-        Temporal *r = (Temporal *) contains_tjsonb_jsonb(p1, p0, true);
+        Temporal *r = (Temporal *) concat_jsonb_tjsonb(p0, p1);
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2597,7 +2575,7 @@ static void Gen_contains_tjsonb_jsonb_v1(DataChunk &args, ExpressionState &, Vec
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_contains_tjsonb_jsonb_v2(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_contained_jsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
@@ -2610,7 +2588,7 @@ static void Gen_contains_tjsonb_jsonb_v2(DataChunk &args, ExpressionState &, Vec
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Jsonb *p0 = BlobToJsonb(in0[i]);
         Temporal *p1 = BlobToTemporal(in1[i]);
-        Temporal *r = (Temporal *) contains_tjsonb_jsonb(p1, p0, false);
+        Temporal *r = (Temporal *) contained_jsonb_tjsonb(p0, p1);
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -2619,7 +2597,7 @@ static void Gen_contains_tjsonb_jsonb_v2(DataChunk &args, ExpressionState &, Vec
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_contains_tjsonb_jsonb_v3(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_contains_jsonb_tjsonb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
@@ -2630,9 +2608,9 @@ static void Gen_contains_tjsonb_jsonb_v3(DataChunk &args, ExpressionState &, Vec
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Temporal *p0 = BlobToTemporal(in0[i]);
-        Jsonb *p1 = BlobToJsonb(in1[i]);
-        Temporal *r = (Temporal *) contains_tjsonb_jsonb(p0, p1, true);
+        Jsonb *p0 = BlobToJsonb(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        Temporal *r = (Temporal *) contains_jsonb_tjsonb(p0, p1);
         free(p0);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
@@ -8228,15 +8206,18 @@ void RegisterGenerated_meos_json_base_comp(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
-    RegisterMeosFunction(loader, ScalarFunction("tConcat", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_jsonb_invert_invert_no));
-    RegisterMeosFunction(loader, ScalarFunction("||", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_jsonb_invert_invert_no));
-    RegisterMeosFunction(loader, ScalarFunction("tConcat", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_jsonb_invert_invert_rev));
-    RegisterMeosFunction(loader, ScalarFunction("||", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_jsonb_invert_invert_rev));
+    RegisterMeosFunction(loader, ScalarFunction("tConcat", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_jsonb));
+    RegisterMeosFunction(loader, ScalarFunction("||", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_jsonb));
     RegisterMeosFunction(loader, ScalarFunction("tConcat", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_tjsonb));
     RegisterMeosFunction(loader, ScalarFunction("||", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_tjsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbContained", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contained_tjsonb_jsonb));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contained_tjsonb_jsonb));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbContained", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contained_tjsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contained_tjsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbContains", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb));
     RegisterMeosFunction(loader, ScalarFunction("tjsonbContains", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_tjsonb));
     RegisterMeosFunction(loader, ScalarFunction("@>", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_tjsonb));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbContained", {TJsonbTypes::tjsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_tjsonb_rev));
     RegisterMeosFunction(loader, ScalarFunction("tjsonArrayElement", {TemporalTypes::ttext(), LogicalType::INTEGER, LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjson_array_element));
     RegisterMeosFunction(loader, ScalarFunction("tjsonArrayElement", {TemporalTypes::ttext(), LogicalType::INTEGER}, TemporalTypes::ttext(), Gen_tjson_array_element_d));
     RegisterMeosFunction(loader, ScalarFunction("tjsonArrayLength", {TemporalTypes::ttext()}, TemporalTypes::tint(), Gen_tjson_array_length));
@@ -8284,12 +8265,12 @@ void RegisterGenerated_meos_json_json(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tint", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR}, TemporalTypes::tint(), Gen_tjsonb_to_tint_d));
     RegisterMeosFunction(loader, ScalarFunction("ttext", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR, LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjsonb_to_ttext_key));
     RegisterMeosFunction(loader, ScalarFunction("ttext", {TJsonbTypes::tjsonb(), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjsonb_to_ttext_key_d));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbContains", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb));
-    RegisterMeosFunction(loader, ScalarFunction("@>", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbContains", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb_v1));
-    RegisterMeosFunction(loader, ScalarFunction("@>", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb_v1));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbContained", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb_v2));
-    RegisterMeosFunction(loader, ScalarFunction("tjsonbContained", {TJsonbTypes::tjsonb(), TJsonbTypes::jsonb()}, TemporalTypes::tbool(), Gen_contains_tjsonb_jsonb_v3));
+    RegisterMeosFunction(loader, ScalarFunction("tConcat", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_jsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("||", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TJsonbTypes::tjsonb(), Gen_concat_jsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbContained", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contained_jsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("<@", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contained_jsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("tjsonbContains", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_jsonb_tjsonb));
+    RegisterMeosFunction(loader, ScalarFunction("@>", {TJsonbTypes::jsonb(), TJsonbTypes::tjsonb()}, TemporalTypes::tbool(), Gen_contains_jsonb_tjsonb));
     RegisterMeosFunction(loader, ScalarFunction("tjsonExtractPath", {TemporalTypes::ttext(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjson_extract_path));
     RegisterMeosFunction(loader, ScalarFunction("tjsonExtractPath", {TemporalTypes::ttext(), LogicalType::LIST(LogicalType::VARCHAR)}, TemporalTypes::ttext(), Gen_tjson_extract_path_v1));
     RegisterMeosFunction(loader, ScalarFunction("tjsonObjectField", {TemporalTypes::ttext(), LogicalType::VARCHAR, LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_tjson_object_field));
