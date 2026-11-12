@@ -121,7 +121,7 @@ SELECT tjsonbObjectField(TJSONB('"{\"a\":1}"@2000-01-01'), 'zz', 'use_json_null'
 query I
 SELECT tjsonbArrayElement(TJSONB('[[10,20,30]@2000-01-01]'), 1, 'use_json_null')::VARCHAR;
 ----
-{["20"@2000-01-01 00:00:00+01]}
+["20"@2000-01-01 00:00:00+01]
 
 # A path is one SQL argument: MobilityDB declares `text[]`, so DuckDB takes a list and
 # supplies the element count from the list's own length.
