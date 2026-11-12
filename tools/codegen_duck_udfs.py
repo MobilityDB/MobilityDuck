@@ -55,41 +55,73 @@ def catalog_path():
 
 CATALOG = json.load(open(catalog_path()))
 
-# The MEOS C headers a generated unit #includes through meos_wrapper_simple.hpp, for #header_symbols.
-TU_C_HEADERS = ("meos.h", "meos_catalog.h", "meos_internal.h",
-                "meos_geo.h", "meos_internal_geo.h",
-                "meos_cbuffer.h", "meos_h3.h", "meos_json.h", "meos_npoint.h",
-                "meos_pointcloud.h", "meos_pose.h", "meos_quadbin.h",
-                "meos_rgeo.h", "meos_s2cell.h",
-                "pg_date.h", "pg_timestamp.h")
+def is_type_support(f):
+    """Whether catalog function `f` backs a type support function of a SQL type, `<type>_in`,
+    `<type>_out`, `<type>_recv` or `<type>_send` (a signature's typeSupport). Its C name is
+    plumbing the dialect never names (rule 3 of MobilityDB's doc/contributing/io/00-INDEX.md):
+    the surface reaches it through its portable reader or writer alone."""
+    return any(s.get("typeSupport") for s in (f or {}).get("sqlSignatures") or [])
+
+# The SQL names of the type support functions (a signature's typeSupport), which the surface
+# never registers: the names a CREATE TYPE binds as its input, output, receive and send.
+TYPE_SUPPORT_NAMES = {s.get("sqlName") or f.get("sqlfn") for f in CATALOG["functions"]
+                      for s in f.get("sqlSignatures") or [] if s.get("typeSupport")}
+
+# The SQL types each function is the input of (a signature's typeSupport `input`), read from the
+# catalog as loaded, before #main narrows a function's signatures to its portable name.
+INPUT_OF = {}
+for _f in CATALOG["functions"]:
+    for _s in _f.get("sqlSignatures") or []:
+        if _s.get("typeSupport") == "input" and _s["ret"] not in INPUT_OF.get(_f["name"], []):
+            INPUT_OF.setdefault(_f["name"], []).append(_s["ret"])
+
+def type_support_name(name):
+    """Whether the SQL name `name` is the name of a type support function (#TYPE_SUPPORT_NAMES)."""
+    return name in TYPE_SUPPORT_NAMES
 
 # The overloads a generated unit defines for a string writer whose size no shape reads.
 STRING_SIZE_OVERLOADS = []
+# The type support writers (#is_type_support) whose size is folded: the shapes call them through
+# SizedCall (#sized_calls), so a generated unit defines nothing under their C name.
+SIZED_CALL = set()
+
+def sized_calls(text):
+    """The generated C++ `text` with every call of a writer of #SIZED_CALL, at the arity the
+    shapes call it (`stbox_out(s, a2)`, `::cbuffer_out(p0, 15)`), made through SizedCall
+    (`SizedCall(::stbox_out, s, a2)`), which reads the size the writer states."""
+    if not SIZED_CALL:
+        return text
+    names = "|".join(sorted(map(re.escape, SIZED_CALL)))
+    return re.sub(r"(?<![\w:])(?:::)?(%s)\(" % names, r"SizedCall(::\1, ", text)
 
 def fold_string_sizes(catalog):
     """Take out of ``catalog`` the ``size_t *`` of a public ``char *`` writer, and any literal a
-    wrapper binds to it, appending to STRING_SIZE_OVERLOADS the overload that answers the string
-    with its size at the arity left, as #project_bound_tail forwards a function at the arity SQL
-    calls it. The shapes hold it in a SizedString, which TakeCString reads for that size. A hex
-    writer keeps its size, which #container_wkb
-    reads, and so does a writer of a header no unit includes, which no shape emits."""
-    included = set(TU_C_HEADERS) | {"meos_cellindex.h", "meos_raster.h"}
+    wrapper binds to it, as #project_bound_tail forwards a function at the arity SQL calls it.
+    The shapes hold the string in a SizedString, which TakeCString reads for that size. A type
+    support writer (#is_type_support) is called through SizedCall (#sized_calls); any other writer
+    gets in STRING_SIZE_OVERLOADS the overload that answers the string with its size at the arity
+    left. A hex writer keeps its size, which #container_wkb reads, and so does a writer the SQL
+    does not name (no sqlfn), which no shape emits."""
     for f in catalog["functions"]:
         shape = f.get("shape") or {}
         outs = shape.get("outParams") or []
         size = next((p for p in f["params"] if p["name"] in outs
                      and " ".join(p["cType"].split()) == "size_t *"), None)
         if (size is None or f.get("api") != "public" or "hex" in f["name"]
-                or f.get("file") not in included
+                or not f.get("sqlfn")
                 or " ".join(f["returnType"]["c"].split()) != "char *"):
             continue
         inputs = [p for p in f["params"] if p is not size]
-        decl = ", ".join("%s p%d" % (p["cType"], i) for i, p in enumerate(inputs))
-        call = ", ".join("&size" if p is size else "p%d" % inputs.index(p) for p in f["params"])
-        STRING_SIZE_OVERLOADS.append(
-            "inline SizedString %s(%s) {\n    size_t size = 0;\n    char *s = ::%s(%s);\n"
-            "    return SizedString(s, size);\n}\n"
-            % (f["name"], decl, f["name"], call))
+        if is_type_support(f) and f["params"][-1] is size:
+            SIZED_CALL.add(f["name"])
+        else:
+            decl = ", ".join("%s p%d" % (p["cType"], i) for i, p in enumerate(inputs))
+            call = ", ".join("&size" if p is size else "p%d" % inputs.index(p)
+                             for p in f["params"])
+            STRING_SIZE_OVERLOADS.append(
+                "inline SizedString %s(%s) {\n    size_t size = 0;\n    char *s = ::%s(%s);\n"
+                "    return SizedString(s, size);\n}\n"
+                % (f["name"], decl, f["name"], call))
         f["params"] = inputs
         shape["outParams"] = [o for o in outs if o != size["name"]]
         for holder in [shape] + (f.get("sqlSignatures") or []):
@@ -459,7 +491,7 @@ def supported(f):
         return "no-sqlfn"            # not user-facing SQL surface
     # type I/O machinery (in/out/send/recv) — these are the VARCHAR/binary CASTS, registered
     # via RegisterCastFunctions, NOT standalone scalar UDFs. The real text fns are asText/interp.
-    if re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+    if type_support_name(f.get("sqlfn")):
         return "io-cast"
     # registered-type scope: a UDF touching a family whose DuckDB type is not registered yet
     # is out of scope until its fast-follow wave (see REGISTERED_FAMILIES above).
@@ -2249,43 +2281,6 @@ def emit_body_binary(f, kind, arg2):
             f"            {inner}\n"
             f"        }});\n}}\n")
 
-def header_symbols(incl_dir):
-    """Set of MEOS function names DECLARED in the target headers. The required
-    pin/ABI gate ([[meos-idl-for-binding-codegen]]): the catalog is version-fluid,
-    so only emit functions actually present at the BUILD pin (else link/compile
-    fails on catalog-ahead-of-pin functions like 14l tfloat_sin on an older pin)."""
-    import os
-    # Scan ONLY the MEOS C headers the generated TU actually #includes (its include
-    # closure). Globbing every *.h admits symbols from family headers we do NOT
-    # include — they pass the gate but are undeclared at compile time. Keep this list
-    # in lockstep with the preamble's C #includes: meos_wrapper_simple.hpp now pulls in
-    # every per-family public header (cross-family conversions like tbigint_to_th3index,
-    # tgeometry_to_tcbuffer, ttext_to_tjsonb live there, not in the meos.h umbrella —
-    # the port builds all families so all are installed), so the gate must see them too.
-    syms = set()
-    for name in TU_C_HEADERS:
-        h = os.path.join(incl_dir, name)
-        if not os.path.exists(h):
-            continue
-        try:
-            for line in open(h, errors="ignore"):
-                m = re.search(r'\b([a-z][a-z0-9_]+)\s*\(', line)
-                # A prototype counts if it is `extern`-qualified OR starts with a MEOS
-                # return type. The width-suffixed stdint types (int32_t/uint64/…) are
-                # included so by-value integer accessors like `int32_t tspatial_srid(...)`
-                # are seen by the gate — otherwise the plain `int `/`bool ` prefixes miss
-                # them and the function is silently dropped from the generated surface.
-                if m and ("extern" in line or line.lstrip().startswith((
-                        "int ", "bool ", "double ", "Temporal ", "void ",
-                        "int8 ", "int16 ", "int32 ", "int64 ",
-                        "uint8 ", "uint16 ", "uint32 ", "uint64 ",
-                        "int8_t ", "int16_t ", "int32_t ", "int64_t ",
-                        "uint8_t ", "uint16_t ", "uint32_t ", "uint64_t ", "size_t "))):
-                    syms.add(m.group(1))
-        except OSError:
-            pass
-    return syms
-
 def shape_ternary(f):
     """Ternary Temporal + 2 by-value scalars (TernaryExecutor). Same correctness rules."""
     if supported(f) is not None: return None
@@ -2917,7 +2912,7 @@ def shape_geo_temporal(f):
     name = f["name"]
     if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
         return None
-    if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+    if not f.get("sqlfn") or type_support_name(f.get("sqlfn")):
         return None
     if unregistered_family_ref(name) is not None:
         return None
@@ -3073,7 +3068,7 @@ def shape_path(f):
     name = f["name"]
     if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
         return None
-    if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+    if not f.get("sqlfn") or type_support_name(f.get("sqlfn")):
         return None
     ar = (f.get("shape") or {}).get("arrayReturn")
     if not ar: return None
@@ -3213,7 +3208,7 @@ def shape_tgeoarr(f):
     name = f["name"]
     if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
         return None
-    if not f.get("sqlfn") or re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+    if not f.get("sqlfn") or type_support_name(f.get("sqlfn")):
         return None
     ps = f["params"]
     def is_temp_arr(p): return norm(p["canonical"]) == "Temporal **"
@@ -5015,7 +5010,7 @@ def shape_array(f):
     if name.startswith("meos_internal") or (f.get("group") or "").startswith("meos_internal"):
         return None
     sqlfn = f.get("sqlfn")
-    if not sqlfn or re.search(r'_(out|in|send|recv)$', sqlfn):
+    if not sqlfn or type_support_name(sqlfn):
         return None
     if name.endswith("_p"):
         return None                       # internal pointer-preserving twin (temporal_sequences_p)
@@ -6597,11 +6592,11 @@ def io_acc(cont):
     return SIG_TEMPORAL_ACC if cont == "Temporal" else CONTAINER_FROMHEX_ACC
 def type_input(f):
     """(type, DuckDB accessor) when f is the input function of a type this surface registers, the
-    public `<type>_in` reading it from one C string (intspan_in, tgeompoint_in, cbuffer_in), else
-    None. A container or a temporal value is typed through #io_acc, a base value through the
-    accessor its #PTR_RET entry names, which names the type itself (CbufferTypes::cbuffer())."""
-    fn = f["name"]
-    if f.get("api") != "public" or not fn.endswith("_in"):
+    public function reading it from one C string that the catalog marks as the type's input
+    (#INPUT_OF: intspan_in, tgeompoint_in, cbuffer_in), else None. A container or a temporal value is typed through #io_acc, a
+    base value through the accessor its #PTR_RET entry names, which names the type itself
+    (CbufferTypes::cbuffer())."""
+    if f.get("api") != "public":
         return None
     ps = f.get("params") or []
     if len(ps) != 1 or norm(ps[0]["canonical"]) != "char *":
@@ -6609,9 +6604,11 @@ def type_input(f):
     rb, rn = base(f["returnType"]["canonical"]), norm(f["returnType"]["canonical"])
     if not rn.endswith("*") or "const" in f["returnType"]["canonical"]:
         return None
-    t = fn[:-len("_in")]
-    acc = reader_acc(rb, t)
-    return (t, acc) if acc else None
+    for t in INPUT_OF.get(f["name"], []):
+        acc = reader_acc(rb, t)
+        if acc:
+            return (t, acc)
+    return None
 
 def base_value_acc(rb, t):
     """The DuckDB accessor of the base value `rb` (Cbuffer) when it is the type `t` (cbuffer), the
@@ -7041,7 +7038,7 @@ def shape_static_cell(f):
     left to the hand `Value_to_set` loop, which registers `set(<base>)` for every SetTypes type."""
     if f.get("api") != "public" or not f.get("sqlfn"):
         return None
-    if re.search(r'_(out|in|send|recv)$', f["sqlfn"]):
+    if type_support_name(f["sqlfn"]):
         return None
     if reg_scope(f["name"]) is not None or unregistered_family_ref(f["name"]) is not None:
         return None
@@ -7081,7 +7078,7 @@ def shape_static_retired(f):
     no body yet, so it never takes a function from another shape."""
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
-    if re.search(r'_(out|in|send|recv)$', f["sqlfn"]):
+    if type_support_name(f["sqlfn"]):
         return None
     if unregistered_family_ref(f["name"]) is not None:
         return None
@@ -7102,7 +7099,7 @@ def shape_static_retired(f):
         return None
     sigs = []
     for s in f.get("sqlSignatures") or []:
-        if len(s["args"]) != len(ins) or re.search(r'_(out|in|send|recv)$', s.get("sqlName") or ""):
+        if len(s["args"]) != len(ins) or s.get("typeSupport"):
             continue
         args = [static_cell_arg(p, t, i, wide=True) for i, (p, t) in enumerate(zip(ins, s["args"]))]
         ret = static_cell_ret(f, s["ret"])
@@ -7733,7 +7730,7 @@ def shape_sig_call(f):
     #gen_cpp asks it last, of the functions with no body yet, after #shape_static_retired."""
     if not retired(f) or f.get("api") != "public" or not f.get("sqlfn"):
         return None
-    if re.search(r'_(out|in|send|recv)$', f["sqlfn"]) or unregistered_family_ref(f["name"]):
+    if type_support_name(f["sqlfn"]) or unregistered_family_ref(f["name"]):
         return None
     # the rows of a *Path function are the TABLE function #emit_path_table registers
     if shape_path(f):
@@ -7751,7 +7748,7 @@ def shape_sig_call(f):
     facing = [p for p in ps if p["name"] not in outn and p["name"] not in lenof]
     plans = []
     for s in f.get("sqlSignatures") or []:
-        if re.search(r'_(out|in|send|recv)$', s.get("sqlName") or "") or sig_claims(s, f) > 1:
+        if s.get("typeSupport") or sig_claims(s, f) > 1:
             continue
         # the C parameters in order, but for those the signature binds to a literal (tz of
         # tjsonbPathExists and tjsonbPathExistsTz, one C function under two SQL names)
@@ -7965,7 +7962,7 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
           "}", ""]
     return "\n".join(L)
 
-def gen_cpp(fns, out_path, declared=None, aliases=None):
+def gen_cpp(fns, out_path, aliases=None):
     bodies, generic_regs, specific_regs = GReg(), GReg(), GReg()
     set_bodies, set_generic_regs, set_specific_regs = GReg(), GReg(), GReg()
     span_bodies, span_generic_regs, span_specific_regs = GReg(), GReg(), GReg()
@@ -7973,8 +7970,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     temporal_box_bodies, temporal_box_regs = GReg(), GReg()
     n_un = n_bin = n_ter = n_set = n_span = 0
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue            # pin/ABI gate: skip catalog fns absent from the build headers
         tfb = shape_temporal_from_base(f)
         if tfb:
             # A temporal value from a base value and a time value, registered per declared
@@ -8042,7 +8037,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 nm = s.get("sqlName") or f["sqlfn"]
                 # a type I/O name (cbufferset_in over cstring) is PostgreSQL's type support and is
                 # not registered, as the WKB family below skips intset_send
-                if re.search(r'_(out|in|send|recv)$', nm):
+                if s.get("typeSupport"):
                     continue
                 specific_regs.append(
                     f'    RegisterMeosFunction(loader, ScalarFunction('
@@ -8069,7 +8064,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
             wseen = set()
             for s in f.get("sqlSignatures", []):
                 nm = s.get("sqlName") or f["sqlfn"]
-                if re.search(r'_(out|in|send|recv)$', nm):
+                if s.get("typeSupport"):
                     continue
                 # the spans and span sets this group parses itself (a typed <type>_in beside the
                 # writer: intspan_in .. tstzspanset_in), every set, the sets of the other families
@@ -8814,8 +8809,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     # CONTAINER SCALARS — one registration per declared signature, over the body whose operand
     # order it spells (shape_container_scalar).
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         ops = shape_container_scalar(f)
         if ops is None:
             continue
@@ -8835,8 +8828,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                                          f'"{reg_name(nm, f)}", {{{a0}, {a1}}}, {dret}, {body}));')
     # SET family — separate loop (the temporal path above is untouched).
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         s = shape_set(f)
         if s is None:
             continue
@@ -9021,8 +9012,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     for C in [SPAN_C, SPANSET_C, STBOX_C, TBOX_C, TPCBOX_C] + BASEVAL_C:
         gen = {"Span": span_generic_regs, "SpanSet": spanset_generic_regs}.get(C["cbase"])
         for f in fns:
-            if declared is not None and f["name"] not in declared:
-                continue
             if f["name"] in _already:
                 continue
             s = shape_span(f, C)
@@ -9243,8 +9232,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     # Temporal + box (STBox/TBox) -> bool: spatiotemporal/numeric topological predicates,
     # registered over the temporal accessors from reg_scope × the single box accessor.
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         s = shape_temporal_box(f)
         if s is None:
             continue
@@ -9276,8 +9263,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     # Temporal x span -> bool: numspan PAIRS to the tnumber value type (tint↔intspan,
     # tfloat↔floatspan); tstzspan is fixed and registered over every temporal type.
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         s = shape_temporal_span(f)
         if s is None:
             continue
@@ -9326,8 +9311,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     # as a coherent wave, so a not-yet-migrated hand @sqlfn (getTime/getValues/stbox/whenTrue,
     # other groups) is never double-registered against its hand reg.
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         if not retired(f):
             continue
         s = shape_temporal_to_container(f)
@@ -9647,7 +9630,13 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
            "inline string_t TakeCString(Vector &result, SizedString s) {\n"
            "    string_t out = s.size ? StringVector::AddString(result, s.s, s.size - 1)\n"
            "                          : StringVector::AddString(result, s.s);\n"
-           "    free(s.s);\n    return out;\n}\n\n"
+           "    free(s.s);\n    return out;\n}\n"
+           "// A type support writer of MEOS called at the arity the shapes call it, the size it\n"
+           "// states read into the SizedString (#SIZED_CALL of the generator).\n"
+           "template <typename... P, typename... A>\n"
+           "inline SizedString SizedCall(char *(*f)(P...), A... a) {\n"
+           "    size_t size = 0;\n    char *s = f(a..., &size);\n"
+           "    return SizedString(s, size);\n}\n\n"
            )
     if STRING_SIZE_OVERLOADS:
         # At global scope, beside the writers they overload, where `::f(...)` in a forwarding
@@ -9670,8 +9659,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     # loops above. Registration reuses each input family's scope + writer loop; the LIST child type
     # is fixed per fn by the catalog element type. ----
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         a = shape_array(f)
         if a is None:
             continue
@@ -9722,8 +9709,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
                 for _g, _line in acc.items
                 for m in re.findall(r'\bstatic void Gen_([A-Za-z0-9_]+)\(', _line)}
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         if f["name"] in _emitted:
             continue
         stc = shape_static_retired(f)
@@ -9764,8 +9749,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
     # <set>_values functions also answer getValues, which an earlier arm emits, so they are read
     # here in a pass of their own
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         _su = shape_set_unnest(f)
         if not _su:
             continue
@@ -9787,8 +9770,6 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
              for _g, _line in acc.items
              for m in [re.search(r'ScalarFunction\("([^"]+)", \{([^}]*)\}', _line)] if m}
     for f in fns:
-        if declared is not None and f["name"] not in declared:
-            continue
         if f["name"] in _made:
             continue
         plans = shape_sig_call(f)
@@ -9908,7 +9889,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
         chunk += "".join(u[2] for u in unit_list)
         chunk += "\n} // namespace duckdb\n"
         path = os.path.join(chunk_dir, "%s_%d.cpp" % (stem, k))
-        open(path, "w").write(MDB_LICENSE + chunk)
+        open(path, "w").write(MDB_LICENSE + sized_calls(chunk))
         written.append(path)
         chunk_texts.append(chunk)
 
@@ -9927,7 +9908,7 @@ def gen_cpp(fns, out_path, declared=None, aliases=None):
               + "\n".join("    RegisterGenerated_%s(loader);" % re.sub(r"[^A-Za-z0-9_]", "_", g)
                            for g in reg_groups)
               + "\n}\n\n} // namespace duckdb\n")
-    open(out_path, "w").write(MDB_LICENSE + master)
+    open(out_path, "w").write(MDB_LICENSE + sized_calls(master))
     GENERATED_TEXT.append(master + "".join(chunk_texts))
     n_reg = (len(generic_regs) + len(specific_regs) + len(set_generic_regs)
              + len(set_specific_regs) + len(span_generic_regs) + len(span_specific_regs)
@@ -10488,7 +10469,7 @@ def gen_aggregates(d, out_path, scalars):
             + "// The aggregates of the MEOS catalog, one function set per name.\n"
             + "void RegisterGeneratedAggregates(ExtensionLoader &loader) {\n"
             + "\n".join(regs) + "\n}\n\n} // namespace duckdb\n")
-    open(out_path, "w").write(MDB_LICENSE + text)
+    open(out_path, "w").write(MDB_LICENSE + sized_calls(text))
     return sum(len(v) for v in sets.values()), len(sets), left
 
 
@@ -10605,11 +10586,11 @@ def main():
     # the surface registers. Such a function takes that name when its signatures carry exactly
     # one non-I/O name, and keeps that name's signatures only.
     for f in fns:
-        if not re.search(r'_(out|in|send|recv)$', f.get("sqlfn") or ""):
+        if not type_support_name(f.get("sqlfn")):
             continue
         sigs = f.get("sqlSignatures") or []
         other = {s.get("sqlName") for s in sigs
-                 if s.get("sqlName") and not re.search(r'_(out|in|send|recv)$', s["sqlName"])}
+                 if s.get("sqlName") and not s.get("typeSupport")}
         if len(other) == 1:
             f["sqlfn"] = other.pop()
             f["sqlSignatures"] = [s for s in sigs if s.get("sqlName") == f["sqlfn"]]
@@ -10660,11 +10641,7 @@ def main():
     poc = [f for f in fns if shape_emittable(f)]
     print(f"\nCOMPILABLE-POC subset (unary generic-Temporal*, full bodies): {len(poc)}")
     if out:
-        hdr = pos[2] if len(pos) > 2 else None
-        declared = header_symbols(hdr) if hdr else None
-        if declared is not None:
-            print(f"pin/ABI gate: {len(declared)} fns declared in {hdr}")
-        nu, nb, nt, nr, ns, nsp = gen_cpp(fns, out, declared, aliases)
+        nu, nb, nt, nr, ns, nsp = gen_cpp(fns, out, aliases)
         print(f"wrote {nu} unary + {nb} binary + {nt} ternary + {ns} set + {nsp} span UDF bodies, {nr} registrations -> {out}")
         # Collection type registration (set/span/spanset) — the (base x container)
         # grid straight from the catalog MeosType enum, emitted as a sibling file.
@@ -10732,7 +10709,7 @@ def main():
             # surface never registers, as #supported drops it; the function's other signatures
             # (intsetFromBinary, asBinary) are what the shapes emit.
             if (f.get("group") in RETIRED_GROUPS) and f.get("sqlfn") and not f.get("sqlfnBackingOnly") \
-                    and not re.search(r'_(out|in|send|recv)$', f["sqlfn"]):
+                    and not type_support_name(f["sqlfn"]):
                 retired_sqlfns[f["group"]].add(f["sqlfn"])
         uncovered = [(g, nm) for g, nms in retired_sqlfns.items() for nm in sorted(nms)
                      if emitted.get(nm, 0) == 0 and nm not in RETIRE_UNCOVERED_OK]

@@ -32,66 +32,6 @@
 
 // The string writers at the arity the shapes call them, each size left
 // unread (fold_string_sizes).
-inline SizedString bool_out(bool p0) {
-    size_t size = 0;
-    char *s = ::bool_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString float8_out(double p0, int p1) {
-    size_t size = 0;
-    char *s = ::float8_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString date_out(DateADT p0) {
-    size_t size = 0;
-    char *s = ::date_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString interval_out(const Interval * p0) {
-    size_t size = 0;
-    char *s = ::interval_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString time_out(TimeADT p0) {
-    size_t size = 0;
-    char *s = ::time_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString timestamp_out(Timestamp p0) {
-    size_t size = 0;
-    char *s = ::timestamp_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString timestamptz_out(TimestampTz p0) {
-    size_t size = 0;
-    char *s = ::timestamptz_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString text_out(const text * p0) {
-    size_t size = 0;
-    char *s = ::text_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString meos_get_datestyle() {
-    size_t size = 0;
-    char *s = ::meos_get_datestyle(&size);
-    return SizedString(s, size);
-}
-inline SizedString meos_get_intervalstyle() {
-    size_t size = 0;
-    char *s = ::meos_get_intervalstyle(&size);
-    return SizedString(s, size);
-}
-inline SizedString meos_version() {
-    size_t size = 0;
-    char *s = ::meos_version(&size);
-    return SizedString(s, size);
-}
-inline SizedString meos_full_version() {
-    size_t size = 0;
-    char *s = ::meos_full_version(&size);
-    return SizedString(s, size);
-}
 inline SizedString mobilitydb_version() {
     size_t size = 0;
     char *s = ::mobilitydb_version(&size);
@@ -102,44 +42,9 @@ inline SizedString mobilitydb_full_version() {
     char *s = ::mobilitydb_full_version(&size);
     return SizedString(s, size);
 }
-inline SizedString set_out(const Set * p0, int p1) {
-    size_t size = 0;
-    char *s = ::set_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString span_out(const Span * p0, int p1) {
-    size_t size = 0;
-    char *s = ::span_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString spanset_out(const SpanSet * p0, int p1) {
-    size_t size = 0;
-    char *s = ::spanset_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString tbox_out(const TBox * p0, int p1) {
-    size_t size = 0;
-    char *s = ::tbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString temporal_as_mfjson(const Temporal * p0, int p1, int p2, int p3, const char * p4) {
     size_t size = 0;
     char *s = ::temporal_as_mfjson(p0, p1, p2, p3, p4, &size);
-    return SizedString(s, size);
-}
-inline SizedString temporal_out(const Temporal * p0, int p1) {
-    size_t size = 0;
-    char *s = ::temporal_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString box3d_out(const BOX3D * p0, int p1) {
-    size_t size = 0;
-    char *s = ::box3d_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString gbox_out(const GBOX * p0, int p1) {
-    size_t size = 0;
-    char *s = ::gbox_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString geo_as_ewkt(const GSERIALIZED * p0, int p1) {
@@ -155,11 +60,6 @@ inline SizedString geo_as_geojson(const GSERIALIZED * p0, int p1, int p2, const 
 inline SizedString geo_as_text(const GSERIALIZED * p0, int p1) {
     size_t size = 0;
     char *s = ::geo_as_text(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString geo_out(const GSERIALIZED * p0) {
-    size_t size = 0;
-    char *s = ::geo_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString geom_relate(const GSERIALIZED * p0, const GSERIALIZED * p1) {
@@ -182,11 +82,6 @@ inline SizedString stbox_as_text(const STBox * p0, int p1) {
     char *s = ::stbox_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString stbox_out(const STBox * p0, int p1) {
-    size_t size = 0;
-    char *s = ::stbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString tspatial_as_ewkt(const Temporal * p0, int p1) {
     size_t size = 0;
     char *s = ::tspatial_as_ewkt(p0, p1, &size);
@@ -207,29 +102,9 @@ inline SizedString cbuffer_as_text(const Cbuffer * p0, int p1) {
     char *s = ::cbuffer_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString cbuffer_out(const Cbuffer * p0, int p1) {
-    size_t size = 0;
-    char *s = ::cbuffer_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString h3index_out(uint64_t p0) {
     size_t size = 0;
     char *s = ::h3index_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString json_out(const text * p0) {
-    size_t size = 0;
-    char *s = ::json_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString jsonb_out(const Jsonb * p0) {
-    size_t size = 0;
-    char *s = ::jsonb_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString jsonb_to_cstring(const Jsonb * p0) {
-    size_t size = 0;
-    char *s = ::jsonb_to_cstring(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString jsonpath_out(const JsonPath * p0) {
@@ -247,16 +122,6 @@ inline SizedString npoint_as_text(const Npoint * p0, int p1) {
     char *s = ::npoint_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString npoint_out(const Npoint * p0, int p1) {
-    size_t size = 0;
-    char *s = ::npoint_out(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString nsegment_out(const Nsegment * p0, int p1) {
-    size_t size = 0;
-    char *s = ::nsegment_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString nsegment_as_ewkt(const Nsegment * p0, int p1) {
     size_t size = 0;
     char *s = ::nsegment_as_ewkt(p0, p1, &size);
@@ -272,11 +137,6 @@ inline SizedString tpcbox_as_text(const TPCBox * p0, int p1) {
     char *s = ::tpcbox_as_text(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString tpcbox_out(const TPCBox * p0, int p1) {
-    size_t size = 0;
-    char *s = ::tpcbox_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString pose_as_ewkt(const Pose * p0, int p1) {
     size_t size = 0;
     char *s = ::pose_as_ewkt(p0, p1, &size);
@@ -285,11 +145,6 @@ inline SizedString pose_as_ewkt(const Pose * p0, int p1) {
 inline SizedString pose_as_text(const Pose * p0, int p1) {
     size_t size = 0;
     char *s = ::pose_as_text(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString pose_out(const Pose * p0, int p1) {
-    size_t size = 0;
-    char *s = ::pose_out(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString pose_as_geopose(const Pose * p0, int p1, int p2) {
@@ -322,11 +177,6 @@ inline SizedString geopose_frame_name(int32_t p0) {
     char *s = ::geopose_frame_name(p0, &size);
     return SizedString(s, size);
 }
-inline SizedString posechain_out(const PoseChain * p0, int p1) {
-    size_t size = 0;
-    char *s = ::posechain_out(p0, p1, &size);
-    return SizedString(s, size);
-}
 inline SizedString posechain_as_text(const PoseChain * p0, int p1) {
     size_t size = 0;
     char *s = ::posechain_as_text(p0, p1, &size);
@@ -347,24 +197,9 @@ inline SizedString tposechainarr_as_geopose(const Temporal ** p0, int p1, int p2
     char *s = ::tposechainarr_as_geopose(p0, p1, p2, &size);
     return SizedString(s, size);
 }
-inline SizedString quadbin_out(uint64_t p0) {
-    size_t size = 0;
-    char *s = ::quadbin_out(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString quadbin_index_to_string(uint64_t p0) {
-    size_t size = 0;
-    char *s = ::quadbin_index_to_string(p0, &size);
-    return SizedString(s, size);
-}
 inline SizedString quadbin_cell_to_quadkey(uint64_t p0) {
     size_t size = 0;
     char *s = ::quadbin_cell_to_quadkey(p0, &size);
-    return SizedString(s, size);
-}
-inline SizedString raquet_out(const Raquet * p0) {
-    size_t size = 0;
-    char *s = ::raquet_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString raquet_band_pixel_type(const Raquet * p0) {
@@ -382,11 +217,6 @@ inline SizedString raster_not_same_alignment_reason(const Raster * p0, const Ras
     char *s = ::raster_not_same_alignment_reason(p0, p1, &size);
     return SizedString(s, size);
 }
-inline SizedString trgeometry_out(const Temporal * p0) {
-    size_t size = 0;
-    char *s = ::trgeometry_out(p0, &size);
-    return SizedString(s, size);
-}
 inline SizedString trgeometry_as_text(const Temporal * p0, int p1) {
     size_t size = 0;
     char *s = ::trgeometry_as_text(p0, p1, &size);
@@ -395,11 +225,6 @@ inline SizedString trgeometry_as_text(const Temporal * p0, int p1) {
 inline SizedString trgeometry_as_ewkt(const Temporal * p0, int p1) {
     size_t size = 0;
     char *s = ::trgeometry_as_ewkt(p0, p1, &size);
-    return SizedString(s, size);
-}
-inline SizedString s2cell_out(uint64_t p0) {
-    size_t size = 0;
-    char *s = ::s2cell_out(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString s2cell_cell_to_token(uint64_t p0) {
@@ -818,6 +643,14 @@ inline string_t TakeCString(Vector &result, SizedString s) {
     free(s.s);
     return out;
 }
+// A type support writer of MEOS called at the arity the shapes call it, the size it
+// states read into the SizedString (#SIZED_CALL of the generator).
+template <typename... P, typename... A>
+inline SizedString SizedCall(char *(*f)(P...), A... a) {
+    size_t size = 0;
+    char *s = f(a..., &size);
+    return SizedString(s, size);
+}
 
 // The functions whose last parameter every SQL signature fixes to one literal, at the
 // arity the SQL surface calls them (project_bound_tail).
@@ -972,13 +805,13 @@ inline Temporal * tpoint_speed_full(const Temporal * p0, bool p1) {
     return ::tpoint_speed(p0, p1);
 }
 inline char * set_out_maxdd(const Set * p0) {
-    return ::set_out(p0, 15);
+    return SizedCall(::set_out, p0, 15);
 }
 inline char * span_out_maxdd(const Span * p0) {
-    return ::span_out(p0, 15);
+    return SizedCall(::span_out, p0, 15);
 }
 inline char * spanset_out_maxdd(const SpanSet * p0) {
-    return ::spanset_out(p0, 15);
+    return SizedCall(::spanset_out, p0, 15);
 }
 inline Span * bigintspan_make_lower_inc_upper_inc(int64_t p0, int64_t p1) {
     return ::bigintspan_make(p0, p1, true, false);
@@ -1179,7 +1012,7 @@ inline char * temporal_as_mfjson_flags_0_option_0_precision_out_default_decimal_
     return ::temporal_as_mfjson(p0, 0, 0, 15, NULL);
 }
 inline char * temporal_out_maxdd(const Temporal * p0) {
-    return ::temporal_out(p0, 15);
+    return SizedCall(::temporal_out, p0, 15);
 }
 inline TSequenceSet * temporal_segm_duration_atleast_true(const Temporal * p0, const MeosInterval * p1, bool p2) {
     return ::temporal_segm_duration(p0, p1, true, p2);
@@ -1401,7 +1234,7 @@ inline STBox * stbox_time_tiles_border_inc_torigin(const STBox * p0, const MeosI
     return ::stbox_time_tiles(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
 }
 inline char * cbuffer_out_maxdd(const Cbuffer * p0) {
-    return ::cbuffer_out(p0, 15);
+    return SizedCall(::cbuffer_out, p0, 15);
 }
 inline Cbuffer * cbuffer_transform_pipeline_is_forward_srid(const Cbuffer * p0, const char * p1) {
     return ::cbuffer_transform_pipeline(p0, p1, 0, true);
@@ -1416,19 +1249,19 @@ inline Temporal * tjsonb_to_tgeompoint_interp_null_handle(const Temporal * p0, c
     return ::tjsonb_to_tgeompoint(p0, p1, interptype_from_string("linear"), nullhandletype_from_string("raise_exception"));
 }
 inline char * npoint_out_maxdd(const Npoint * p0) {
-    return ::npoint_out(p0, 15);
+    return SizedCall(::npoint_out, p0, 15);
 }
 inline char * nsegment_out_maxdd(const Nsegment * p0) {
-    return ::nsegment_out(p0, 15);
+    return SizedCall(::nsegment_out, p0, 15);
 }
 inline char * pose_out_maxdd(const Pose * p0) {
-    return ::pose_out(p0, 15);
+    return SizedCall(::pose_out, p0, 15);
 }
 inline Pose * pose_transform_pipeline_is_forward_srid(const Pose * p0, const char * p1) {
     return ::pose_transform_pipeline(p0, p1, 0, true);
 }
 inline char * posechain_out_maxdd(const PoseChain * p0) {
-    return ::posechain_out(p0, 15);
+    return SizedCall(::posechain_out, p0, 15);
 }
 inline PoseChain * posechain_transform_pipeline_is_forward_srid(const PoseChain * p0, const char * p1) {
     return ::posechain_transform_pipeline(p0, p1, 0, true);
@@ -3163,7 +2996,7 @@ static void Gen_quadbin_out(DataChunk &args, ExpressionState &, Vector &result) 
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
         [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            SizedString r = quadbin_out(static_cast<uint64_t>(a0));
+            SizedString r = SizedCall(::quadbin_out, static_cast<uint64_t>(a0));
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TakeCString(result, r);
         });
