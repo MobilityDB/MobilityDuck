@@ -45,6 +45,6 @@ true
 query T
 SELECT tjsonbSetLax(tjsonb '[{"speed": 10, "units": "km/h"}@2001-01-01, {"speed": 20}@2001-01-02]',
   ['units'], NULL, true, 'delete_key')
-  = tjsonb '{["{\"speed\": 10}"@2001-01-01, "{\"speed\": 20}"@2001-01-02]}';
+  = tjsonb '["{\"speed\": 10}"@2001-01-01, "{\"speed\": 20}"@2001-01-02]';
 ----
 true

@@ -2950,6 +2950,28 @@ static void Gen_nad_bigintspan_tbox_v1(DataChunk &args, ExpressionState &, Vecto
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_nad_tbox_tbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<double>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        TBox *p0 = BlobToTbox(in0[i]);
+        TBox *p1 = BlobToTbox(in1[i]);
+        double r = nad_tbox_tbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r == DBL_MAX) { outv.SetInvalid(i); continue; }
+        out[i] = (double) r;
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_nad_floatspan_tbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -3615,6 +3637,8 @@ void RegisterGenerated_meos_temporal_dist(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("|=|", {SpanTypes::bigintspan(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_bigintspan_tbox));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::DOUBLE, Gen_nad_bigintspan_tbox_v1));
     RegisterMeosFunction(loader, ScalarFunction("|=|", {TboxType::tbox(), SpanTypes::bigintspan()}, LogicalType::DOUBLE, Gen_nad_bigintspan_tbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tbox_tbox));
+    RegisterMeosFunction(loader, ScalarFunction("|=|", {TboxType::tbox(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_tbox_tbox));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_floatspan_tbox));
     RegisterMeosFunction(loader, ScalarFunction("|=|", {SpanTypes::floatspan(), TboxType::tbox()}, LogicalType::DOUBLE, Gen_nad_floatspan_tbox));
     RegisterMeosFunction(loader, ScalarFunction("nearestApproachDistance", {TboxType::tbox(), SpanTypes::floatspan()}, LogicalType::DOUBLE, Gen_nad_floatspan_tbox_v1));
