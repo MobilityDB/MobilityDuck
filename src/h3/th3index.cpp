@@ -29,7 +29,7 @@
 
 /* MobilityDuck binding for the MEOS H3 cell index types (h3index + th3index).
  *
- * H3INDEX is surfaced as BIGINT (the 64-bit cell id reinterprets losslessly).
+ * H3INDEX is surfaced as UBIGINT, the unsigned 64-bit cell id MEOS orders it by.
  * TH3INDEX is the temporal cell index, stored as a Temporal* blob (BLOB).
  * H3 cells are geography-like (inherently WGS84 / EPSG:4326).
  *
@@ -61,7 +61,7 @@ extern "C" {
 namespace duckdb {
 
 LogicalType H3indexTypes::h3index() {
-    LogicalType type = LogicalType::BIGINT;
+    LogicalType type = LogicalType::UBIGINT;
     type.SetAlias("h3index");
     return type;
 }
@@ -109,7 +109,7 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 } // namespace
 
 /* =====================================================================
- * In / out — static H3INDEX cell (BIGINT)
+ * In / out — static H3INDEX cell (UBIGINT)
  *
  * H3 cells are represented as lowercase hexadecimal cell ids.
  * ===================================================================== */
@@ -117,12 +117,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 bool H3indexFunctions::H3index_in_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
-    UnaryExecutor::Execute<string_t, int64_t>(
+    UnaryExecutor::Execute<string_t, uint64_t>(
         source, result, count,
-        [&](string_t s) -> int64_t {
+        [&](string_t s) -> uint64_t {
             std::string str(s.GetData(), s.GetSize());
-            H3Index cell = h3index_in(str.c_str());
-            return static_cast<int64_t>(cell);
+            return h3index_in(str.c_str());
         });
     return true;
 }
@@ -130,10 +129,10 @@ bool H3indexFunctions::H3index_in_cast(
 bool H3indexFunctions::H3index_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
-    UnaryExecutor::Execute<int64_t, string_t>(
+    UnaryExecutor::Execute<uint64_t, string_t>(
         source, result, count,
-        [&](int64_t v) -> string_t {
-            char *str = h3index_out(static_cast<H3Index>(v), UnreadSize());
+        [&](uint64_t v) -> string_t {
+            char *str = h3index_out(v, UnreadSize());
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);

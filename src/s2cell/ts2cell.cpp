@@ -31,7 +31,8 @@
  * Registers the two DuckDB types and the text I/O each of them casts through;
  * the callable surface is generated from the catalog into src/generated.
  *
- * S2CELL is surfaced as BIGINT (the 64-bit cell id reinterprets losslessly).
+ * S2CELL is surfaced as UBIGINT, the unsigned 64-bit cell id MEOS orders it by:
+ * a cell of face 4 or 5 sets the top bit, which a signed type would order first.
  * TS2CELL is the temporal cell index, stored as a Temporal* blob (BLOB).
  * The analogue of QUADBIN / TQUADBIN for the Google S2 spherical DGGS.
  *
@@ -53,7 +54,7 @@
 namespace duckdb {
 
 LogicalType S2cellTypes::s2cell() {
-    LogicalType type = LogicalType::BIGINT;
+    LogicalType type = LogicalType::UBIGINT;
     type.SetAlias("s2cell");
     return type;
 }
@@ -74,6 +75,10 @@ void S2cellTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         S2cellFunctions::S2cell_in_cast);
     RegisterMeosCastFunction(loader, s2cell(), LogicalType::VARCHAR,
         S2cellFunctions::S2cell_out_cast);
+    RegisterMeosCastFunction(loader, s2cell(), LogicalType::BIGINT,
+        S2cellFunctions::S2cell_to_bigint_cast);
+    RegisterMeosCastFunction(loader, LogicalType::BIGINT, s2cell(),
+        S2cellFunctions::Bigint_to_s2cell_cast);
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, ts2cell(),
         S2cellFunctions::Ts2cell_in_cast);
     RegisterMeosCastFunction(loader, ts2cell(), LogicalType::VARCHAR,
@@ -107,11 +112,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 bool S2cellFunctions::S2cell_in_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
-    UnaryExecutor::Execute<string_t, int64_t>(
+    UnaryExecutor::Execute<string_t, uint64_t>(
         source, result, count,
-        [&](string_t s) -> int64_t {
+        [&](string_t s) -> uint64_t {
             std::string str(s.GetData(), s.GetSize());
-            return static_cast<int64_t>(s2cell_in(str.c_str()));
+            return s2cell_in(str.c_str());
         });
     return true;
 }
@@ -119,15 +124,37 @@ bool S2cellFunctions::S2cell_in_cast(
 bool S2cellFunctions::S2cell_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
-    UnaryExecutor::Execute<int64_t, string_t>(
+    UnaryExecutor::Execute<uint64_t, string_t>(
         source, result, count,
-        [&](int64_t v) -> string_t {
-            char *str = s2cell_out(static_cast<uint64_t>(v), UnreadSize());
+        [&](uint64_t v) -> string_t {
+            char *str = s2cell_out(v, UnreadSize());
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
         });
     return true;
+}
+
+/* =====================================================================
+ * Bigint casts — the two MobilityDB declares (s2cell/600_s2cell.in.sql):
+ * s2cell AS bigint WITHOUT FUNCTION, the same 64 bits read signed, and
+ * bigint AS s2cell WITH FUNCTION s2cell(bigint), which raises when the
+ * integer encodes no cell. Built as #S2cellFunctions::S2cell_out_cast is.
+ * ===================================================================== */
+
+bool S2cellFunctions::S2cell_to_bigint_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<uint64_t, int64_t>(
+        source, result, count,
+        [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
+    return true;
+}
+
+bool S2cellFunctions::Bigint_to_s2cell_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    return BigintToCellCast(source, result, count, parameters, bigint_to_s2cell);
 }
 
 /* =====================================================================

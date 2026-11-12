@@ -30,7 +30,7 @@
 /* MobilityDuck binding for the MEOS QUADBIN cell index types (quadbin +
  * tquadbin).
  *
- * QUADBIN is surfaced as BIGINT (the 64-bit cell id reinterprets losslessly).
+ * QUADBIN is surfaced as UBIGINT, the unsigned 64-bit cell id MEOS orders it by.
  * TQUADBIN is the temporal cell index, stored as a Temporal* blob (BLOB).
  * The analogue of H3INDEX / TH3INDEX for the square Web-Mercator DGGS.
  *
@@ -62,7 +62,7 @@ extern "C" {
 namespace duckdb {
 
 LogicalType QuadbinTypes::quadbin() {
-    LogicalType type = LogicalType::BIGINT;
+    LogicalType type = LogicalType::UBIGINT;
     type.SetAlias("quadbin");
     return type;
 }
@@ -83,6 +83,10 @@ void QuadbinTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         QuadbinFunctions::Quadbin_in_cast);
     RegisterMeosCastFunction(loader, quadbin(), LogicalType::VARCHAR,
         QuadbinFunctions::Quadbin_out_cast);
+    RegisterMeosCastFunction(loader, quadbin(), LogicalType::BIGINT,
+        QuadbinFunctions::Quadbin_to_bigint_cast);
+    RegisterMeosCastFunction(loader, LogicalType::BIGINT, quadbin(),
+        QuadbinFunctions::Bigint_to_quadbin_cast);
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tquadbin(),
         QuadbinFunctions::Tquadbin_in_cast);
     RegisterMeosCastFunction(loader, tquadbin(), LogicalType::VARCHAR,
@@ -110,7 +114,7 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 } // namespace
 
 /* =====================================================================
- * In / out — static QUADBIN cell (BIGINT)
+ * In / out — static QUADBIN cell (UBIGINT)
  *
  * QUADBIN cells are represented as hexadecimal cell ids.
  * ===================================================================== */
@@ -118,12 +122,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 bool QuadbinFunctions::Quadbin_in_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
-    UnaryExecutor::Execute<string_t, int64_t>(
+    UnaryExecutor::Execute<string_t, uint64_t>(
         source, result, count,
-        [&](string_t s) -> int64_t {
+        [&](string_t s) -> uint64_t {
             std::string str(s.GetData(), s.GetSize());
-            Quadbin cell = quadbin_in(str.c_str());
-            return static_cast<int64_t>(cell);
+            return quadbin_in(str.c_str());
         });
     return true;
 }
@@ -131,15 +134,37 @@ bool QuadbinFunctions::Quadbin_in_cast(
 bool QuadbinFunctions::Quadbin_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
-    UnaryExecutor::Execute<int64_t, string_t>(
+    UnaryExecutor::Execute<uint64_t, string_t>(
         source, result, count,
-        [&](int64_t v) -> string_t {
-            char *str = quadbin_index_to_string(static_cast<Quadbin>(v), UnreadSize());
+        [&](uint64_t v) -> string_t {
+            char *str = quadbin_index_to_string(v, UnreadSize());
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
         });
     return true;
+}
+
+/* =====================================================================
+ * Bigint casts — the two MobilityDB declares (quadbin/350_quadbin.in.sql):
+ * quadbin AS bigint WITHOUT FUNCTION, the same 64 bits read signed, and
+ * bigint AS quadbin WITH FUNCTION quadbin(bigint), which raises when the
+ * integer encodes no cell. Built as #QuadbinFunctions::Quadbin_out_cast is.
+ * ===================================================================== */
+
+bool QuadbinFunctions::Quadbin_to_bigint_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    UnaryExecutor::Execute<uint64_t, int64_t>(
+        source, result, count,
+        [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
+    return true;
+}
+
+bool QuadbinFunctions::Bigint_to_quadbin_cast(
+    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
+{
+    return BigintToCellCast(source, result, count, parameters, bigint_to_quadbin);
 }
 
 /* =====================================================================

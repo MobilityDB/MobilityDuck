@@ -3238,7 +3238,7 @@ struct AggOps_49 {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<int64_t>(fmt[0])[j0]; row.a0 = (uint64_t) v; }
+        { auto &v = UnifiedVectorFormat::GetData<uint64_t>(fmt[0])[j0]; row.a0 = (uint64_t) v; }
         return true;
     }
     static void *Transition(void *s, Row &row) {
@@ -6155,7 +6155,7 @@ struct AggOps_124 {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<int64_t>(fmt[0])[j0]; row.a0 = (uint64_t) v; }
+        { auto &v = UnifiedVectorFormat::GetData<uint64_t>(fmt[0])[j0]; row.a0 = (uint64_t) v; }
         return true;
     }
     static void *Transition(void *s, Row &row) {
@@ -7057,7 +7057,7 @@ struct AggOps_146 {
         idx_t j0 = fmt[0].sel->get_index(i);
         bool n0 = !fmt[0].validity.RowIsValid(j0);
         if (n0) return false;
-        { auto &v = UnifiedVectorFormat::GetData<int64_t>(fmt[0])[j0]; row.a0 = (uint64_t) v; }
+        { auto &v = UnifiedVectorFormat::GetData<uint64_t>(fmt[0])[j0]; row.a0 = (uint64_t) v; }
         return true;
     }
     static void *Transition(void *s, Row &row) {

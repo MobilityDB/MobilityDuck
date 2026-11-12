@@ -281,14 +281,14 @@ SQL_SCALAR_RET = {"integer": "LogicalType::INTEGER", "int": "LogicalType::INTEGE
                   "boolean": "LogicalType::BOOLEAN", "text": "LogicalType::VARCHAR",
                   "date": "LogicalType::DATE", "timestamptz": "LogicalType::TIMESTAMP_TZ"}
 OUTPRIM = {"int *": "LogicalType::INTEGER", "int64_t *": "LogicalType::BIGINT",
-           "uint64_t *": "LogicalType::BIGINT",
+           "uint64_t *": "LogicalType::UBIGINT",
            "double *": "LogicalType::DOUBLE", "bool *": "LogicalType::BOOLEAN",
            "TimestampTz *": "LogicalType::TIMESTAMP_TZ", "DateADT *": "LogicalType::DATE",
            "text **": "LogicalType::VARCHAR"}
 # Out-param C pointer -> (by-value local the folded MEOS call writes into, DuckDB executor cpp).
-# A uint64 cell id rides in an int64_t (bit-preserving) to match the BIGINT-backed cell type.
+# A uint64 cell id is written as the uint64_t its UBIGINT-backed cell type holds.
 OUTPARAM_LOCAL = {"int *": ("int", "int32_t"), "int64_t *": ("int64_t", "int64_t"),
-                  "uint64_t *": ("uint64_t", "int64_t"), "double *": ("double", "double"),
+                  "uint64_t *": ("uint64_t", "uint64_t"), "double *": ("double", "double"),
                   "bool *": ("bool", "bool"), "TimestampTz *": ("TimestampTz", "timestamp_tz_t"),
                   "DateADT *": ("DateADT", "date_t"), "text **": ("text *", "string_t")}
 # Out-param C pointer -> the conversion its local needs on return, where a cast would not do: a
@@ -374,7 +374,7 @@ def outprim_ret3(f, out_canon):
     n = norm(out_canon)
     cloc, cpp = OUTPARAM_LOCAL[n]
     # a Tcell<T> cell id handed back (valueAtTimestamp(tquadbin, timestamptz)) is its cell type,
-    # BIGINT-backed, as the binary out-param fold types valueN (#shape_binary)
+    # UBIGINT-backed, as the binary out-param fold types valueN (#shape_binary)
     sc = reg_scope(f["name"])
     if base(out_canon) in CELL_UINT and sc and sc[0] == "types" and sc[1] and len(sc[1]) == 1 \
             and sc[1][0] in CELL_BASEVAL:
@@ -1909,7 +1909,7 @@ def emit_set(f, kind):
 
 # Tcell<T> cell-id base value. A cell id is a type of its own over a width: the catalog states
 # its slot as canonical `uint64_t` with `typedef` naming the cell (H3Index, Quadbin, S2CellId),
-# and CELL_TYPEDEF names the DuckDB type of each, the BIGINT-backed cell type its family
+# and CELL_TYPEDEF names the DuckDB type of each, the UBIGINT-backed cell type its family
 # registers. CELL_UINT is the width those slots carry, read from the catalog, so a cell id is
 # recognised by the width the catalog states for it and never by a spelling assumed here. A
 # per-type cell accessor (th3index_start_value; reg_scope keys the single cell temporal type)
@@ -2026,15 +2026,15 @@ def emit_body_unary(f, kind):
                 f"            free(t);\n"
                 f"            return {rb}ToBlobN(result, r, mask, idx);\n"
                 f"        }});\n}}\n")
-    if kind == "cellscalar":   # (Temporal) -> uint64 cell id -> BIGINT-backed cell DuckDB type
-        # The cell DuckDB type (h3index()/quadbin()) is BIGINT-backed, so the uint64 cell id
-        # writes as int64_t (bit-preserving; H3/quadbin cell ids clear the sign bit).
+    if kind == "cellscalar":   # (Temporal) -> uint64 cell id -> UBIGINT-backed cell DuckDB type
+        # The cell DuckDB type (h3index()/quadbin()/s2cell()) is UBIGINT-backed, so the uint64
+        # cell id writes as the uint64_t it is.
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
-                f"    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),\n"
-                f"        [&](string_t in) -> int64_t {{\n"
+                f"    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),\n"
+                f"        [&](string_t in) -> uint64_t {{\n"
                 f"            Temporal *t = BlobToTemporal(in);\n"
-                f"            int64_t r = (int64_t) {name}(t);\n"
+                f"            uint64_t r = {name}(t);\n"
                 f"            free(t);\n"
                 f"            return r;\n"
                 f"        }});\n}}\n")
@@ -2120,11 +2120,9 @@ def scalar_arg_for(f, p):
     if base(p["canonical"]) in CELL_UINT and "*" not in norm(p["canonical"]):
         sc = reg_scope(f["name"])
         if sc and sc[0] == "types" and len(sc[1]) == 1 and sc[1][0] in CELL_BASEVAL:
-            # A cell type is a BIGINT alias, so its vector is int64_t and the seed's
-            # uint64_t local reads it as the wrong physical type ("Expected vector of
-            # type UINT64, but found vector of type INT64"). The cell id keeps its bits
-            # across the cast, which is what the return side already writes back with.
-            return (CELL_BASEVAL[sc[1][0]], "int64_t", "(uint64_t) a2")
+            # A cell type is a UBIGINT alias, so its vector is uint64_t, the C type of the
+            # cell id; the seed's local and marshal expression read it as they are.
+            return (CELL_BASEVAL[sc[1][0]], "uint64_t", "a2")
     # A signed integer argument is registered as the SQL type every signature declares for it
     # when that type is no wider than the C one, as #scalar_ret4 registers a numeric return:
     # tbigint_value_n reads its position as an int64 where valueN(tbigint, integer) is declared,
@@ -2700,7 +2698,7 @@ def cont_out_ret4(f, out):
     if n in OUTPRIM:
         dt, cloc, cpp = outprim_ret3(f, out)
         # a cell id handed back (valueN(quadbinset, integer)) is the cell type its signature
-        # declares, BIGINT-backed, as #shape_static_cell types the start and end values
+        # declares, UBIGINT-backed, as #shape_static_cell types the start and end values
         if base(out) in CELL_UINT and f.get("sqlReturnType") in CELL_SQL:
             dt = CELL_SQL[f["sqlReturnType"]]
         return (dt, cloc, cpp, OUTPARAM_TAKE.get(n, f"({cpp}) %s") % "o")
@@ -3146,9 +3144,9 @@ ARRAY_ELEM = {
     "int":         ("LogicalType::INTEGER",      "int32_t",        "cd[off + j] = arr[j];"),
     "int32_t":     ("LogicalType::INTEGER",      "int32_t",        "cd[off + j] = arr[j];"),
     "int64_t":     ("LogicalType::BIGINT",       "int64_t",        "cd[off + j] = arr[j];"),
-    # Tcell<T> cell id (uint64_t) rides in a signed int64_t child (bit-preserving), matching the
-    # BIGINT-backed cell alias; the LIST's LOGICAL element type is the cell alias (array_ret_duck).
-    "uint64_t":    ("LogicalType::BIGINT",       "int64_t",        "cd[off + j] = (int64_t) arr[j];"),
+    # Tcell<T> cell id (uint64_t) is a uint64_t child, matching the UBIGINT-backed cell alias;
+    # the LIST's LOGICAL element type is the cell alias (array_ret_duck).
+    "uint64_t":    ("LogicalType::UBIGINT",      "uint64_t",       "cd[off + j] = arr[j];"),
     "double":      ("LogicalType::DOUBLE",       "double",         "cd[off + j] = arr[j];"),
     "bool":        ("LogicalType::BOOLEAN",      "bool",           "cd[off + j] = arr[j];"),
     # date/timestamp elements carry the MEOS (PG) epoch: convert to the DuckDB epoch with the
@@ -3367,10 +3365,10 @@ def shape_container_make(f):
             return (b in SCALAR_ARG and "*" not in n) or (b == "Interval" and n.count("*") == 1)
         if not ps or not _value(ps[0]):
             return None
-        # a cell id (h3index_to_set) is read from the int64_t vector of its BIGINT-backed cell
+        # a cell id (h3index_to_set) is read from the uint64_t vector of its UBIGINT-backed cell
         # type, as #scalar_arg_for reads one
         cell0 = base(ps[0]["canonical"]) in CELL_UINT and "*" not in norm(ps[0]["canonical"])
-        info = [("LogicalType::BIGINT", "int64_t", "(uint64_t) a2") if cell0 else shape_arg(ps[0])]
+        info = [("LogicalType::UBIGINT", "uint64_t", "a2") if cell0 else shape_arg(ps[0])]
         for k, p in enumerate(ps[1:], start=1):
             t = shape_arg(p) if _value(p) else span_operand(f, p, k)
             if t is None:
@@ -3404,10 +3402,10 @@ def shape_container_make(f):
         return ("spanarr", "Span", None, rb)
     if b0 in BASEVAL_PTR_IN:
         return ("structarr", b0, None, rb)
-    # a cell id (h3indexset_make), whose cell type is a BIGINT alias: its vector holds int64_t,
-    # the bits of the uint64 id, as #scalar_arg_for reads one
+    # a cell id (h3indexset_make), whose cell type is a UBIGINT alias: its vector holds the
+    # uint64_t id, as #scalar_arg_for reads one
     if b0 in CELL_UINT:
-        return ("basearr", b0, ("LogicalType::BIGINT", "int64_t", "(uint64_t) a2"), rb)
+        return ("basearr", b0, ("LogicalType::UBIGINT", "uint64_t", "a2"), rb)
     if b0 in SCALAR_ARG:
         return ("basearr", b0, SCALAR_ARG[b0], rb)
     return None
@@ -3552,7 +3550,7 @@ def shape_unnest(f):
     `SpanSet **<t>_unnest(const Temporal *, <v> **values, int *count)`, one row per distinct value
     with its time. The writer stores `values[k]` into the value column the way the scalar, text,
     geometry and base-value returns store theirs (TakeText, GSerializedToGeometry,
-    <Base>ToBlob); a cell id as the cellscalar return writes it into its BIGINT-backed cell type.
+    <Base>ToBlob); a cell id as the cellscalar return writes it into its UBIGINT-backed cell type.
     None otherwise."""
     if f.get("api") != "public":
         return None
@@ -3578,7 +3576,7 @@ def shape_unnest(f):
     if elem == "uint64_t *":
         if len(accs) != 1 or accs[0] not in CELL_BASEVAL:
             return None
-        byval[elem] = ("int64_t", CELL_BASEVAL[accs[0]])
+        byval[elem] = ("uint64_t", CELL_BASEVAL[accs[0]])
     if elem in byval:
         cpp, dt = byval[elem]
         write = f"FlatVector::GetData<{cpp}>(v0)[i] = ({cpp}) x;"
@@ -5102,9 +5100,8 @@ def emit_array(f, ec, ib, tail=()):
     passed through to the accessor, NULL in either argument yielding a NULL list."""
     name = f["name"]
     if ib == "cell":
-        # a by-value cell id, read as the int64 a cell type carries in DuckDB
-        read_in = ("        uint64_t in = static_cast<uint64_t>("
-                   "FlatVector::GetData<int64_t>(in_vec)[i]);\n")
+        # a by-value cell id, read as the uint64 a cell type carries in DuckDB
+        read_in = "        uint64_t in = FlatVector::GetData<uint64_t>(in_vec)[i];\n"
         free_in = ""
     else:
         cbase, blobto = ARRAY_IN[ib]
@@ -6762,7 +6759,7 @@ def shape_cell_prefilter(f):
         GSERIALIZED marshaller, and the geo-temporal path (shape_geo_temporal) sources the SRID
         from a temporal argument these lack.
       - (GSERIALIZED*, int) -> uint64_t: the one cell of a geometry, the same marshalling with a
-        BIGINT-backed cell result.
+        UBIGINT-backed cell result.
       - (Set*, Temporal*) -> int and its (Temporal*, Set*) mirror: eEqual of a cell set and a
         temporal cell, the trip-in-cells prefilter, an `int` tri-state (ret < 0 -> SQL NULL) that
         shape_set does not match (it keys on (Set, scalar) and (Set, Set)).
@@ -6770,9 +6767,9 @@ def shape_cell_prefilter(f):
     if not f.get("sqlfn"):
         return None
     # geoToH3IndexSet is rejected by supported() ONLY on its GSERIALIZED arg (marshalled here);
-    # geoToH3Cell ONLY on its scalar uint64_t return (marshalled here, bit-preserving into
-    # h3index/BIGINT); the cell-vs-temporal comparisons ONLY on their uint64_t scalar arg
-    # (marshalled here, same bit-preserving convention); eEq(h3indexset,th3index) passes
+    # geoToH3Cell ONLY on its scalar uint64_t return (marshalled here into
+    # h3index/UBIGINT); the cell-vs-temporal comparisons ONLY on their uint64_t scalar arg
+    # (marshalled here, same convention); eEq(h3indexset,th3index) passes
     # supported() outright. Any OTHER unsupported reason -> skip.
     sup = supported(f)
     if sup is not None and "GSERIALIZED" not in sup and sup not in ("ret:uint64_t", "arg:uint64_t"):
@@ -6823,16 +6820,16 @@ def emit_cell_prefilter(f, kind, geog):
                 f"            free(gs);\n"
                 f"            return SetToBlob(result, r);\n"
                 f"        }});\n}}\n")
-    if kind == "geo2scalar":   # (geometry or geography, int) -> cell (BIGINT, bit-preserving)
+    if kind == "geo2scalar":   # (geometry or geography, int) -> cell (UBIGINT)
         return (f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
                 f"    EnsureMeosThreadInitialized();\n"
                 f"{crs}"
-                f"    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),\n"
+                f"    BinaryExecutor::Execute<string_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),\n"
                 f"        [&](string_t in_g, int32_t res) {{\n"
                 f"            GSERIALIZED *gs = {gs};\n"
                 f"            uint64_t r = {name}(gs, res);\n"
                 f"            free(gs);\n"
-                f"            return (int64_t) r;\n"
+                f"            return r;\n"
                 f"        }});\n}}\n")
     # (cell set, temporal cell) or its mirror -> int tri-state -> nullable BOOLEAN
     first, second = ("in_s", "in_t") if kind == "settemp_ebool" else ("in_t", "in_s")
@@ -6893,8 +6890,8 @@ def emit_baseval_scalar(f, bb, rb):
 # declares -- `cellToParent(quadbin, integer)` -- so this shape reads every argument and the result
 # from the signature and the C parameter list together, and registers one overload per signature.
 # The value conversions are the hand executor's (src/quadbin/tquadbin.cpp Quadbin_tile_to_cell):
-# a cell type is a BIGINT alias, so its vector is int64_t, read into the MEOS call as uint64_t and
-# written back as int64_t, the id keeping its bits both ways.
+# a cell type is a UBIGINT alias, so its vector is uint64_t, the C type of the cell id, read into
+# the MEOS call and written back as it is.
 CELL_SQL = {_acc_sqlname(v): v for v in CELL_BASEVAL.values()}         # h3index / quadbin / s2cell
 
 def srid_types(cat):
@@ -6951,7 +6948,7 @@ def static_cell_arg(p, sqlt, i, wide=False):
                 % (b, loc, marsh.replace("a2", v).replace("CRS", "crs%d" % i)), "free(%s); " % loc)
     if b in CELL_UINT and "*" not in n:
         if sqlt in CELL_SQL:
-            return (CELL_SQL[sqlt], "int64_t", "static_cast<uint64_t>(%s)" % v, "", "")
+            return (CELL_SQL[sqlt], "uint64_t", v, "", "")
         if b in SCALAR_ARG:                  # the *_hash_extended seed, a native UBIGINT
             dt, cpp, _ = SCALAR_ARG[b]
             return (dt, cpp, v, "", "")
@@ -6979,7 +6976,7 @@ def static_cell_ret(f, sqlr):
     rc = f["returnType"]["canonical"]; b, n = base(rc), norm(rc)
     if b in CELL_UINT and "*" not in n:
         if sqlr in CELL_SQL:
-            return (CELL_SQL[sqlr], "int64_t", "uint64_t", "return static_cast<int64_t>(r);", False)
+            return (CELL_SQL[sqlr], "uint64_t", "uint64_t", "return r;", False)
         # A bare uint64 that is not a cell is the *_hash_extended value (native unsigned).
         return ("LogicalType::UBIGINT", "uint64_t", "uint64_t", "return r;", False)
     if b == "Set" and n.endswith("*"):
@@ -7275,8 +7272,8 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
     if "*" in n:
         return None
     if b in CELL_UINT and t in CELL_SQL:
-        return dict(kind="byval", dt=CELL_SQL[t], cpp="int64_t", pre=[], post=[],
-                    cexpr={p["name"]: "static_cast<uint64_t>(%s)" % v})
+        return dict(kind="byval", dt=CELL_SQL[t], cpp="uint64_t", pre=[], post=[],
+                    cexpr={p["name"]: v})
     if b in ENUM_READER and t == "text":
         return dict(kind="byval", dt="LogicalType::VARCHAR", cpp="string_t", pre=[], post=[],
                     cexpr={p["name"]: "%s(%s.GetString().c_str())" % (ENUM_READER[b], v)})
@@ -7694,8 +7691,7 @@ def sig_call_ret(f, s, outs, cexpr=None):
     if "*" in rn:
         return None
     if rb in CELL_UINT and sqlr in CELL_SQL:
-        return (CELL_SQL[sqlr], "int64_t", ["uint64_t r = CALL;"],
-                ["out[i] = static_cast<int64_t>(r);"], {})
+        return (CELL_SQL[sqlr], "uint64_t", ["uint64_t r = CALL;"], ["out[i] = r;"], {})
     # a fallible predicate, -1 on error, 1 or 0 otherwise (eRasterValue)
     if rb in ("int", "int32_t") and sqlr == "boolean":
         return ("LogicalType::BOOLEAN", "bool", ["int r = CALL;"],
@@ -10234,7 +10230,7 @@ AGG_SQL_TYPE = {**SIG_TEMPORAL_ACC, **SET_SIG_ACC, **SQL_CONTAINER_ACC, **SQL_BA
 # The C++ type a column of each SQL scalar type holds; every other type is a blob (string_t).
 AGG_SQL_PHYSICAL = {"integer": "int32_t", "bigint": "int64_t", "float": "double", "boolean": "bool",
                     "date": "date_t", "timestamptz": "timestamp_tz_t", "interval": "interval_t",
-                    **{c: "int64_t" for c in CELL_SQL}}
+                    **{c: "uint64_t" for c in CELL_SQL}}
 # The C value of a by-value parameter from the column value `v`: (field type, expression).
 AGG_BYVALUE = {"int": ("int32_t", "v"), "int32_t": ("int32_t", "v"), "int64_t": ("int64_t", "v"),
                "double": ("double", "v"), "bool": ("bool", "v"),

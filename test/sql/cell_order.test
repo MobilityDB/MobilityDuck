@@ -1,0 +1,145 @@
+# name: test/sql/cell_order.test
+# description: a cell type orders as MEOS orders it, unsigned on the 64-bit cell id
+#   (h3index_cmp, quadbin_cmp, s2cell_cmp), in every place DuckDB orders natively: ORDER BY,
+#   min/max, and the comparison operators. An S2 cell of face 4 or 5 sets the top bit of its id
+#   and so follows every cell of faces 0 to 3. The cells are MobilityDB's own fixtures:
+#   s2cell/data/load_s2cell.sql.xz tbl_s2cell k = 1 (4fb119, face 2), 4 (bfbcd4, face 5) and
+#   15 (9dd1a7, face 4), with 47c3c444c of s2cell/expected/600_s2cell.test.out; tbl_h3index and
+#   tbl_quadbin k = 1..4 of h3/data/load_h3.sql.xz and quadbin/data/load_quadbin.sql.xz.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+CREATE TABLE s2(k INTEGER, c s2cell);
+
+statement ok
+INSERT INTO s2 VALUES (1, '4fb119'::s2cell), (4, 'bfbcd4'::s2cell), (15, '9dd1a7'::s2cell),
+  (99, '47c3c444c'::s2cell);
+
+# MEOS's own order, read from cmp: the rank of each cell is the number of cells cmp puts before it
+query I
+SELECT string_agg(a.k::VARCHAR, ',' ORDER BY (SELECT count(*) FROM s2 b WHERE cmp(b.c, a.c) < 0))
+FROM s2 a;
+----
+99,1,15,4
+
+query I
+SELECT string_agg(k::VARCHAR, ',' ORDER BY c) FROM s2;
+----
+99,1,15,4
+
+query I
+SELECT string_agg(k::VARCHAR, ',' ORDER BY c DESC) FROM s2;
+----
+4,15,1,99
+
+query II
+SELECT min(c)::VARCHAR, max(c)::VARCHAR FROM s2;
+----
+47c3c444c	bfbcd4
+
+query IIII
+SELECT '4fb119'::s2cell < 'bfbcd4'::s2cell, '4fb119'::s2cell > 'bfbcd4'::s2cell,
+       '9dd1a7'::s2cell < 'bfbcd4'::s2cell, cmp('4fb119'::s2cell, 'bfbcd4'::s2cell);
+----
+true	false	true	-1
+
+query I
+SELECT string_agg(k::VARCHAR, ',' ORDER BY k) FROM s2 WHERE c > '4fb119'::s2cell;
+----
+4,15
+
+# A sort-merge join over the cell orders by the same comparison
+query I
+SELECT count(*) FROM s2 a JOIN s2 b ON a.c < b.c;
+----
+6
+
+query I
+SELECT count(*) FROM s2 a JOIN s2 b ON a.c < b.c WHERE cmp(a.c, b.c) >= 0;
+----
+0
+
+# A cell id with its top bit set reads and writes back unchanged
+query I
+SELECT 'bfbcd4'::s2cell::VARCHAR;
+----
+bfbcd4
+
+# s2cell AS bigint reads the same 64 bits signed and bigint AS s2cell gives them back
+# (s2cell/expected/600_s2cell_tbl.test.out:24-27)
+query II
+SELECT count(*), count(*) FILTER (WHERE c::BIGINT < 0) FROM s2 WHERE (c::BIGINT)::s2cell = c;
+----
+4	2
+
+statement ok
+CREATE TABLE h3(k INTEGER, c h3index);
+
+statement ok
+INSERT INTO h3 VALUES (1, '8110fffffffffff'), (2, '85d11163fffffff'), (3, '89b555132afffff'),
+  (4, '8adb5292c277fff');
+
+query I
+SELECT string_agg(a.k::VARCHAR, ',' ORDER BY (SELECT count(*) FROM h3 b WHERE cmp(b.c, a.c) < 0))
+FROM h3 a;
+----
+1,2,3,4
+
+query I
+SELECT string_agg(k::VARCHAR, ',' ORDER BY c) FROM h3;
+----
+1,2,3,4
+
+query II
+SELECT min(c)::VARCHAR, max(c)::VARCHAR FROM h3;
+----
+8110fffffffffff	8adb5292c277fff
+
+statement ok
+CREATE TABLE qb(k INTEGER, c quadbin);
+
+statement ok
+INSERT INTO qb VALUES (1, '4887ecefffffffff'), (2, '483c7fffffffffff'), (3, '484b5fffffffffff'),
+  (4, '48363fffffffffff');
+
+query I
+SELECT string_agg(a.k::VARCHAR, ',' ORDER BY (SELECT count(*) FROM qb b WHERE cmp(b.c, a.c) < 0))
+FROM qb a;
+----
+4,2,3,1
+
+query I
+SELECT string_agg(k::VARCHAR, ',' ORDER BY c) FROM qb;
+----
+4,2,3,1
+
+query II
+SELECT min(c)::VARCHAR, max(c)::VARCHAR FROM qb;
+----
+48363fffffffffff	4887ecefffffffff
+
+# quadbin AS bigint and bigint AS quadbin (quadbin/expected/350_quadbin.test.out:19-22, 165-192)
+query III
+SELECT (5192650370358181887::BIGINT::quadbin)::BIGINT = 5192650370358181887,
+       ('480fffffffffffff'::quadbin)::BIGINT,
+       5785823699403800575::BIGINT::quadbin = '504b5fffffffffff'::quadbin;
+----
+true	5192650370358181887	true
+
+statement error
+SELECT 42::BIGINT::quadbin;
+----
+The value 42 does not encode a valid quadbin index
+
+query I
+SELECT TRY_CAST(42::BIGINT AS quadbin) IS NULL;
+----
+true
+
+# A comparison on the cell read as a bigint, which the optimizer folds onto the constant
+query I
+SELECT string_agg(k::VARCHAR, ',' ORDER BY k) FROM s2 WHERE c::BIGINT < 0;
+----
+4,15
