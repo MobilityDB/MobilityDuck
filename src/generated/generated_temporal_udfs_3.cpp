@@ -1663,10 +1663,10 @@ static void Gen_stbox_volume(DataChunk &args, ExpressionState &, Vector &result)
 // ===== @ingroup meos_h3_comp_ever =====
 static void Gen_ever_eq_h3index_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_eq_h3index_th3index((uint64_t) a1, t);
+            int32_t r = ever_eq_h3index_th3index(a1, t);
             free(t);
             return (r != 0);
         });
@@ -1674,10 +1674,10 @@ static void Gen_ever_eq_h3index_th3index(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ever_eq_th3index_h3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_eq_th3index_h3index(t, (uint64_t) a2);
+            int32_t r = ever_eq_th3index_h3index(t, a2);
             free(t);
             return (r != 0);
         });
@@ -1685,10 +1685,10 @@ static void Gen_ever_eq_th3index_h3index(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ever_ne_h3index_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_ne_h3index_th3index((uint64_t) a1, t);
+            int32_t r = ever_ne_h3index_th3index(a1, t);
             free(t);
             return (r != 0);
         });
@@ -1696,10 +1696,10 @@ static void Gen_ever_ne_h3index_th3index(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ever_ne_th3index_h3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_ne_th3index_h3index(t, (uint64_t) a2);
+            int32_t r = ever_ne_th3index_h3index(t, a2);
             free(t);
             return (r != 0);
         });
@@ -1707,10 +1707,10 @@ static void Gen_ever_ne_th3index_h3index(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_always_eq_h3index_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_eq_h3index_th3index((uint64_t) a1, t);
+            int32_t r = always_eq_h3index_th3index(a1, t);
             free(t);
             return (r != 0);
         });
@@ -1718,10 +1718,10 @@ static void Gen_always_eq_h3index_th3index(DataChunk &args, ExpressionState &, V
 
 static void Gen_always_eq_th3index_h3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_eq_th3index_h3index(t, (uint64_t) a2);
+            int32_t r = always_eq_th3index_h3index(t, a2);
             free(t);
             return (r != 0);
         });
@@ -1729,10 +1729,10 @@ static void Gen_always_eq_th3index_h3index(DataChunk &args, ExpressionState &, V
 
 static void Gen_always_ne_h3index_th3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_ne_h3index_th3index((uint64_t) a1, t);
+            int32_t r = always_ne_h3index_th3index(a1, t);
             free(t);
             return (r != 0);
         });
@@ -1740,10 +1740,10 @@ static void Gen_always_ne_h3index_th3index(DataChunk &args, ExpressionState &, V
 
 static void Gen_always_ne_th3index_h3index(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_ne_th3index_h3index(t, (uint64_t) a2);
+            int32_t r = always_ne_th3index_h3index(t, a2);
             free(t);
             return (r != 0);
         });
@@ -1801,9 +1801,9 @@ static void Gen_always_ne_th3index_th3index(DataChunk &args, ExpressionState &, 
 // ===== @ingroup meos_h3_edges =====
 static void Gen_h3_origin_to_directed_edges(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3_origin_to_directed_edges(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3_origin_to_directed_edges(a0);
             return SetToBlobN(result, r, mask, idx);
         });
 }
@@ -2137,10 +2137,10 @@ static void Gen_nad_tposechain_stbox(DataChunk &args, ExpressionState &, Vector 
 // ===== @ingroup meos_quadbin_comp_ever =====
 static void Gen_ever_eq_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_eq_quadbin_tquadbin((uint64_t) a1, t);
+            int32_t r = ever_eq_quadbin_tquadbin(a1, t);
             free(t);
             return (r != 0);
         });
@@ -2148,10 +2148,10 @@ static void Gen_ever_eq_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ever_eq_tquadbin_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_eq_tquadbin_quadbin(t, (uint64_t) a2);
+            int32_t r = ever_eq_tquadbin_quadbin(t, a2);
             free(t);
             return (r != 0);
         });
@@ -2159,10 +2159,10 @@ static void Gen_ever_eq_tquadbin_quadbin(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ever_ne_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_ne_quadbin_tquadbin((uint64_t) a1, t);
+            int32_t r = ever_ne_quadbin_tquadbin(a1, t);
             free(t);
             return (r != 0);
         });
@@ -2170,10 +2170,10 @@ static void Gen_ever_ne_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_ever_ne_tquadbin_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_ne_tquadbin_quadbin(t, (uint64_t) a2);
+            int32_t r = ever_ne_tquadbin_quadbin(t, a2);
             free(t);
             return (r != 0);
         });
@@ -2181,10 +2181,10 @@ static void Gen_ever_ne_tquadbin_quadbin(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_always_eq_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_eq_quadbin_tquadbin((uint64_t) a1, t);
+            int32_t r = always_eq_quadbin_tquadbin(a1, t);
             free(t);
             return (r != 0);
         });
@@ -2192,10 +2192,10 @@ static void Gen_always_eq_quadbin_tquadbin(DataChunk &args, ExpressionState &, V
 
 static void Gen_always_eq_tquadbin_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_eq_tquadbin_quadbin(t, (uint64_t) a2);
+            int32_t r = always_eq_tquadbin_quadbin(t, a2);
             free(t);
             return (r != 0);
         });
@@ -2203,10 +2203,10 @@ static void Gen_always_eq_tquadbin_quadbin(DataChunk &args, ExpressionState &, V
 
 static void Gen_always_ne_quadbin_tquadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_ne_quadbin_tquadbin((uint64_t) a1, t);
+            int32_t r = always_ne_quadbin_tquadbin(a1, t);
             free(t);
             return (r != 0);
         });
@@ -2214,10 +2214,10 @@ static void Gen_always_ne_quadbin_tquadbin(DataChunk &args, ExpressionState &, V
 
 static void Gen_always_ne_tquadbin_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_ne_tquadbin_quadbin(t, (uint64_t) a2);
+            int32_t r = always_ne_tquadbin_quadbin(t, a2);
             free(t);
             return (r != 0);
         });

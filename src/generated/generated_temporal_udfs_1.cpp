@@ -3399,10 +3399,10 @@ static void Gen_tdisjoint_tgeoarr_tgeoarr(DataChunk &args, ExpressionState &, Ve
 // ===== @ingroup meos_h3_base_hierarchy =====
 static void Gen_h3index_cell_to_parent(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1) -> int64_t {
-            uint64_t r = h3index_cell_to_parent(static_cast<uint64_t>(a0), static_cast<uint32_t>(a1));
-            return static_cast<int64_t>(r);
+    BinaryExecutor::Execute<uint64_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1) -> uint64_t {
+            uint64_t r = h3index_cell_to_parent(a0, static_cast<uint32_t>(a1));
+            return r;
         });
 }
 
@@ -3410,9 +3410,9 @@ static void Gen_h3index_cell_to_parent(DataChunk &args, ExpressionState &, Vecto
 // ===== @ingroup meos_h3_inspection =====
 static void Gen_h3_get_icosahedron_faces(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3_get_icosahedron_faces(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3_get_icosahedron_faces(a0);
             return SetToBlobN(result, r, mask, idx);
         });
 }

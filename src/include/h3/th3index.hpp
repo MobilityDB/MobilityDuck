@@ -54,7 +54,7 @@ struct H3indexTypes {
 };
 
 struct H3indexFunctions {
-    /* In/out — static h3index cell (BIGINT), H3 hex-string form */
+    /* In/out — static h3index cell (UBIGINT), H3 hex-string form */
     static bool H3index_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool H3index_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 

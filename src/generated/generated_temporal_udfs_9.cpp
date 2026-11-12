@@ -1996,9 +1996,9 @@ static void Gen_tspatial_to_stbox(DataChunk &args, ExpressionState &, Vector &re
 // ===== @ingroup meos_h3_base_metrics =====
 static void Gen_h3index_cell_area(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, double>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> double {
-            double r = h3index_cell_area(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, double>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> double {
+            double r = h3index_cell_area(a0);
             return (double) r;
         });
 }
@@ -2035,23 +2035,23 @@ static void Gen_ever_eq_th3index_h3indexset(DataChunk &args, ExpressionState &, 
 // ===== @ingroup meos_h3_set_accessor =====
 static void Gen_h3indexset_end_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t a0) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> uint64_t {
             Set *p0 = BlobToSet(a0);
             uint64_t r = h3indexset_end_value(p0);
             free(p0); 
-            return static_cast<int64_t>(r);
+            return r;
         });
 }
 
 static void Gen_h3indexset_start_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t a0) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> uint64_t {
             Set *p0 = BlobToSet(a0);
             uint64_t r = h3indexset_start_value(p0);
             free(p0); 
-            return static_cast<int64_t>(r);
+            return r;
         });
 }
 
@@ -2061,7 +2061,7 @@ static void Gen_h3indexset_value_n(DataChunk &args, ExpressionState &, Vector &r
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
-    auto out = FlatVector::GetData<int64_t>(result);
+    auto out = FlatVector::GetData<uint64_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
         bool valid = true;
@@ -2073,7 +2073,7 @@ static void Gen_h3indexset_value_n(DataChunk &args, ExpressionState &, Vector &r
         bool ok = h3indexset_value_n(x0, in1[i], &o);
         free(x0);
         if (!ok) { outv.SetInvalid(i); continue; }
-        out[i] = (int64_t) o;
+        out[i] = (uint64_t) o;
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
@@ -2131,7 +2131,7 @@ static OperatorResultType SetUnnest_h3indexset_valuesInOutFn(ExecutionContext &,
             continue;
         }
         uint64_t x = st.values[st.idx];
-        FlatVector::GetData<int64_t>(v0)[i] = (int64_t) x;
+        FlatVector::GetData<uint64_t>(v0)[i] = x;
         st.idx++; i++;
     }
     output.SetCardinality(i);
@@ -2165,8 +2165,8 @@ static void Gen_h3indexset_values(DataChunk &args, ExpressionState &, Vector &re
         if (n > 0) {
             auto &child_vector = ListVector::GetEntry(result);
             child_vector.SetVectorType(VectorType::FLAT_VECTOR);
-            auto *cd = FlatVector::GetData<int64_t>(child_vector);
-            for (int j = 0; j < n; ++j) { cd[off + j] = (int64_t) arr[j]; }
+            auto *cd = FlatVector::GetData<uint64_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = arr[j]; }
             off += n;
         }
         if (arr) free(arr);
@@ -2582,7 +2582,7 @@ static void Gen_quadbinset_make(DataChunk &args, ExpressionState &, Vector &resu
     EnsureMeosThreadInitialized();
     auto &lv = args.data[0];
     auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
-    auto cd = FlatVector::GetData<int64_t>(child);
+    auto cd = FlatVector::GetData<uint64_t>(child);
     auto &cv = FlatVector::Validity(child);
     UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
         [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
@@ -2594,7 +2594,7 @@ static void Gen_quadbinset_make(DataChunk &args, ExpressionState &, Vector &resu
                     throw InvalidInputException("null array element not allowed in this context");
                 }
                 auto a2 = cd[le.offset + j];
-                arr[j] = (uint64_t) a2;
+                arr[j] = a2;
             }
             Set *r = quadbinset_make(arr, n);
             free(arr);
@@ -2612,7 +2612,7 @@ static void Gen_raquet_make(DataChunk &args, ExpressionState &, Vector &result) 
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
     auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
-    auto in3 = FlatVector::GetData<int64_t>(args.data[3]);
+    auto in3 = FlatVector::GetData<uint64_t>(args.data[3]);
     auto in4 = FlatVector::GetData<string_t>(args.data[4]);
     auto in5 = FlatVector::GetData<double>(args.data[5]);
     auto out = FlatVector::GetData<string_t>(result);
@@ -2624,7 +2624,7 @@ static void Gen_raquet_make(DataChunk &args, ExpressionState &, Vector &result) 
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         const bool n5 = !FlatVector::Validity(args.data[5]).RowIsValid(i);
-        Raquet *r = raquet_make(static_cast<uint64_t>(in3[i]), in1[i], in2[i], meospixtype_from_string(in4[i].GetString().c_str()), (n5 ? 0.0 : in5[i]), (n5 ? false : true), (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        Raquet *r = raquet_make(in3[i], in1[i], in2[i], meospixtype_from_string(in4[i].GetString().c_str()), (n5 ? 0.0 : in5[i]), (n5 ? false : true), (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = RaquetToBlob(result, r);
     }
@@ -2638,7 +2638,7 @@ static void Gen_raquet_make_v1(DataChunk &args, ExpressionState &, Vector &resul
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
     auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
     auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
-    auto in3 = FlatVector::GetData<int64_t>(args.data[3]);
+    auto in3 = FlatVector::GetData<uint64_t>(args.data[3]);
     auto in4 = FlatVector::GetData<string_t>(args.data[4]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
@@ -2648,7 +2648,7 @@ static void Gen_raquet_make_v1(DataChunk &args, ExpressionState &, Vector &resul
         if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Raquet *r = raquet_make(static_cast<uint64_t>(in3[i]), in1[i], in2[i], meospixtype_from_string(in4[i].GetString().c_str()), 0.0, false, (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
+        Raquet *r = raquet_make(in3[i], in1[i], in2[i], meospixtype_from_string(in4[i].GetString().c_str()), 0.0, false, (const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize());
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = RaquetToBlob(result, r);
     }
@@ -2660,14 +2660,14 @@ static void Gen_raquet_read(DataChunk &args, ExpressionState &, Vector &result) 
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto in1 = FlatVector::GetData<uint64_t>(args.data[1]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
         std::string s0 = in0[i].GetString();
-        Raquet *r = raquet_read(s0.c_str(), (n1 ? static_cast<uint64_t>(0) : static_cast<uint64_t>(in1[i])));
+        Raquet *r = raquet_read(s0.c_str(), (n1 ? static_cast<uint64_t>(0) : in1[i]));
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = RaquetToBlob(result, r);
     }
@@ -2696,13 +2696,13 @@ static void Gen_raquet_read_bytes(DataChunk &args, ExpressionState &, Vector &re
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
     auto in0 = FlatVector::GetData<string_t>(args.data[0]);
-    auto in1 = FlatVector::GetData<int64_t>(args.data[1]);
+    auto in1 = FlatVector::GetData<uint64_t>(args.data[1]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
-        Raquet *r = raquet_read_bytes((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize(), (n1 ? static_cast<uint64_t>(0) : static_cast<uint64_t>(in1[i])));
+        Raquet *r = raquet_read_bytes((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize(), (n1 ? static_cast<uint64_t>(0) : in1[i]));
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = RaquetToBlob(result, r);
     }
@@ -3284,10 +3284,10 @@ static void Gen_trgeometry_minus_tstzspanset(DataChunk &args, ExpressionState &,
 // ===== @ingroup meos_s2cell_comp_ever =====
 static void Gen_ever_eq_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_eq_s2cell_ts2cell((uint64_t) a1, t);
+            int32_t r = ever_eq_s2cell_ts2cell(a1, t);
             free(t);
             return (r != 0);
         });
@@ -3295,10 +3295,10 @@ static void Gen_ever_eq_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_ever_eq_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_eq_ts2cell_s2cell(t, (uint64_t) a2);
+            int32_t r = ever_eq_ts2cell_s2cell(t, a2);
             free(t);
             return (r != 0);
         });
@@ -3306,10 +3306,10 @@ static void Gen_ever_eq_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_ever_ne_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_ne_s2cell_ts2cell((uint64_t) a1, t);
+            int32_t r = ever_ne_s2cell_ts2cell(a1, t);
             free(t);
             return (r != 0);
         });
@@ -3317,10 +3317,10 @@ static void Gen_ever_ne_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_ever_ne_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = ever_ne_ts2cell_s2cell(t, (uint64_t) a2);
+            int32_t r = ever_ne_ts2cell_s2cell(t, a2);
             free(t);
             return (r != 0);
         });
@@ -3328,10 +3328,10 @@ static void Gen_ever_ne_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vecto
 
 static void Gen_always_eq_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_eq_s2cell_ts2cell((uint64_t) a1, t);
+            int32_t r = always_eq_s2cell_ts2cell(a1, t);
             free(t);
             return (r != 0);
         });
@@ -3339,10 +3339,10 @@ static void Gen_always_eq_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_always_eq_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_eq_ts2cell_s2cell(t, (uint64_t) a2);
+            int32_t r = always_eq_ts2cell_s2cell(t, a2);
             free(t);
             return (r != 0);
         });
@@ -3350,10 +3350,10 @@ static void Gen_always_eq_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_always_ne_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a1, string_t in) {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a1, string_t in) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_ne_s2cell_ts2cell((uint64_t) a1, t);
+            int32_t r = always_ne_s2cell_ts2cell(a1, t);
             free(t);
             return (r != 0);
         });
@@ -3361,10 +3361,10 @@ static void Gen_always_ne_s2cell_ts2cell(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_always_ne_ts2cell_s2cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2) {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2) {
             Temporal *t = BlobToTemporal(in);
-            int32_t r = always_ne_ts2cell_s2cell(t, (uint64_t) a2);
+            int32_t r = always_ne_ts2cell_s2cell(t, a2);
             free(t);
             return (r != 0);
         });

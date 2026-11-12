@@ -34,6 +34,9 @@
 #include <utility>
 
 #include "duckdb_version_compat.hpp"
+#include "duckdb/common/error_data.hpp"
+#include "duckdb/common/operator/cast_operators.hpp"
+#include "duckdb/common/vector_operations/unary_executor.hpp"
 #include "duckdb/function/cast/default_casts.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -171,6 +174,36 @@ inline void RegisterMeosCastFunction(ExtensionLoader &loader, const LogicalType 
 	loader.RegisterCastFunction(
 	    source, target, BoundCastInfo(MeosCastTrampoline, make_uniq<MeosCastData>(function), MeosCastInitLocal),
 	    implicit_cast_cost);
+}
+
+/**
+ * The BIGINT -> cell cast, `bigint AS <cell> WITH FUNCTION <cell>(bigint)` of MobilityDB, over
+ * the MEOS conversion that raises when the integer encodes no cell of the grid
+ * (bigint_to_quadbin, bigint_to_s2cell), registered through #RegisterMeosCastFunction. A TRY
+ * cast, and the optimizer folding a constant into the cell type (`CAST(cell AS BIGINT) < 0`),
+ * pass an error slot: there a value encoding no cell is a failed row carrying MEOS's own
+ * message, as DuckDB's own casts report one (HandleCastError::AssignError), and anywhere else
+ * the MEOS error stands.
+ */
+template <class CONVERT>
+inline bool BigintToCellCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters,
+                             CONVERT convert) {
+	bool all_converted = true;
+	UnaryExecutor::ExecuteWithNulls<int64_t, uint64_t>(
+	    source, result, count, [&](int64_t v, ValidityMask &mask, idx_t idx) -> uint64_t {
+		    if (!parameters.error_message) {
+			    return convert(v);
+		    }
+		    try {
+			    return convert(v);
+		    } catch (std::exception &ex) {
+			    HandleCastError::AssignError(ErrorData(ex).RawMessage(), parameters);
+			    mask.SetInvalid(idx);
+			    all_converted = false;
+			    return 0;
+		    }
+	    });
+	return all_converted;
 }
 
 } // namespace duckdb

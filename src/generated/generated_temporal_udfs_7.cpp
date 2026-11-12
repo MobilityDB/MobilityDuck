@@ -2938,14 +2938,14 @@ static void Gen_tquadbininst_make(DataChunk &args, ExpressionState &, Vector &re
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
-        Temporal *r = (Temporal *) tquadbininst_make(static_cast<uint64_t>(in0[i]), DuckDBToMeosTimestamp(in1[i]).value);
+        Temporal *r = (Temporal *) tquadbininst_make(in0[i], DuckDBToMeosTimestamp(in1[i]).value);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
     }
@@ -2956,7 +2956,7 @@ static void Gen_tquadbinseq_from_base_tstzset(DataChunk &args, ExpressionState &
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
@@ -2964,7 +2964,7 @@ static void Gen_tquadbinseq_from_base_tstzset(DataChunk &args, ExpressionState &
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Set *p1 = BlobToSet(in1[i]);
-        Temporal *r = (Temporal *) tquadbinseq_from_base_tstzset(static_cast<uint64_t>(in0[i]), p1);
+        Temporal *r = (Temporal *) tquadbinseq_from_base_tstzset(in0[i], p1);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2976,7 +2976,7 @@ static void Gen_tquadbinseq_from_base_tstzspan(DataChunk &args, ExpressionState 
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
@@ -2984,7 +2984,7 @@ static void Gen_tquadbinseq_from_base_tstzspan(DataChunk &args, ExpressionState 
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         Span *p1 = BlobToSpan(in1[i]);
-        Temporal *r = (Temporal *) tquadbinseq_from_base_tstzspan(static_cast<uint64_t>(in0[i]), p1);
+        Temporal *r = (Temporal *) tquadbinseq_from_base_tstzspan(in0[i], p1);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -2996,7 +2996,7 @@ static void Gen_tquadbinseqset_from_base_tstzspanset(DataChunk &args, Expression
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto in1 = FlatVector::GetData<string_t>(args.data[1]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
@@ -3004,7 +3004,7 @@ static void Gen_tquadbinseqset_from_base_tstzspanset(DataChunk &args, Expression
         if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
         SpanSet *p1 = BlobToSpanSet(in1[i]);
-        Temporal *r = (Temporal *) tquadbinseqset_from_base_tstzspanset(static_cast<uint64_t>(in0[i]), p1);
+        Temporal *r = (Temporal *) tquadbinseqset_from_base_tstzspanset(in0[i], p1);
         free(p1);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TemporalToBlob(result, r);
@@ -3016,10 +3016,10 @@ static void Gen_tquadbinseqset_from_base_tstzspanset(DataChunk &args, Expression
 // ===== @ingroup meos_quadbin_restrict =====
 static void Gen_tquadbin_at_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, uint64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tquadbin_at_value(t, (uint64_t) a2);
+            Temporal *r = tquadbin_at_value(t, a2);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });
@@ -3027,10 +3027,10 @@ static void Gen_tquadbin_at_value(DataChunk &args, ExpressionState &, Vector &re
 
 static void Gen_tquadbin_minus_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, uint64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, uint64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Temporal *t = BlobToTemporal(in);
-            Temporal *r = tquadbin_minus_value(t, (uint64_t) a2);
+            Temporal *r = tquadbin_minus_value(t, a2);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
         });

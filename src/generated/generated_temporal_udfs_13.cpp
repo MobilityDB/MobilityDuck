@@ -1593,10 +1593,10 @@ static void Gen_tspatial_as_text_d(DataChunk &args, ExpressionState &, Vector &r
 // ===== @ingroup meos_h3_accessor =====
 static void Gen_th3index_start_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t in) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
-            int64_t r = (int64_t) th3index_start_value(t);
+            uint64_t r = th3index_start_value(t);
             free(t);
             return r;
         });
@@ -1604,10 +1604,10 @@ static void Gen_th3index_start_value(DataChunk &args, ExpressionState &, Vector 
 
 static void Gen_th3index_end_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t in) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
-            int64_t r = (int64_t) th3index_end_value(t);
+            uint64_t r = th3index_end_value(t);
             free(t);
             return r;
         });
@@ -1615,10 +1615,10 @@ static void Gen_th3index_end_value(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_th3index_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t in) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
-            int64_t r = (int64_t) th3index_value(t);
+            uint64_t r = th3index_value(t);
             free(t);
             return r;
         });
@@ -1626,14 +1626,14 @@ static void Gen_th3index_value(DataChunk &args, ExpressionState &, Vector &resul
 
 static void Gen_th3index_value_n(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> int64_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
             uint64_t v;
             bool ok = th3index_value_n(t, a2, &v);
             free(t);
-            if (!ok) { mask.SetInvalid(idx); return int64_t(); }
-            return (int64_t) v;
+            if (!ok) { mask.SetInvalid(idx); return uint64_t(); }
+            return (uint64_t) v;
         });
 }
 
@@ -1643,7 +1643,7 @@ static void Gen_th3index_value_at_timestamptz(DataChunk &args, ExpressionState &
     UnifiedVectorFormat u[2];
     for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
     result.SetVectorType(VectorType::FLAT_VECTOR);
-    auto out = FlatVector::GetData<int64_t>(result);
+    auto out = FlatVector::GetData<uint64_t>(result);
     auto &mask = FlatVector::Validity(result);
     for (idx_t idx = 0; idx < rows; idx++) {
         idx_t ri[2];
@@ -1653,14 +1653,14 @@ static void Gen_th3index_value_at_timestamptz(DataChunk &args, ExpressionState &
             valid = valid && u[c].validity.RowIsValid(ri[c]);
         }
         if (!valid) { mask.SetInvalid(idx); continue; }
-        out[idx] = [&]() -> int64_t {
+        out[idx] = [&]() -> uint64_t {
             Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             uint64_t o = (uint64_t) 0;
             bool ok = th3index_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
-            if (! ok) { mask.SetInvalid(idx); return int64_t(); }
-            return (int64_t) o;
+            if (! ok) { mask.SetInvalid(idx); return uint64_t(); }
+            return (uint64_t) o;
         }();
     }
 }
@@ -1671,7 +1671,7 @@ static void Gen_h3index_to_set(DataChunk &args, ExpressionState &, Vector &resul
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -1679,7 +1679,7 @@ static void Gen_h3index_to_set(DataChunk &args, ExpressionState &, Vector &resul
         for (idx_t c = 0; c < 1; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        Set *r = h3index_to_set((uint64_t) in0[i]);
+        Set *r = h3index_to_set(in0[i]);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
     }
@@ -2282,7 +2282,7 @@ static void Gen_s2cell_to_set(DataChunk &args, ExpressionState &, Vector &result
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -2290,7 +2290,7 @@ static void Gen_s2cell_to_set(DataChunk &args, ExpressionState &, Vector &result
         for (idx_t c = 0; c < 1; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        Set *r = s2cell_to_set((uint64_t) in0[i]);
+        Set *r = s2cell_to_set(in0[i]);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
     }
@@ -2354,7 +2354,7 @@ static OperatorResultType Unnest_ts2cell_unnestInOutFn(ExecutionContext &, Table
             continue;
         }
         uint64_t x = st.values[st.idx];
-        FlatVector::GetData<int64_t>(v0)[i] = (int64_t) x;
+        FlatVector::GetData<uint64_t>(v0)[i] = (uint64_t) x;
         SpanSet *ss = st.times[st.idx];
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));
         free(ss);

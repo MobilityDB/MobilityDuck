@@ -1955,9 +1955,9 @@ static void Gen_spatialset_as_ewkt_d(DataChunk &args, ExpressionState &, Vector 
 // ===== @ingroup meos_h3_base_latlng =====
 static void Gen_h3index_cell_to_point(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            GSERIALIZED * r = h3index_cell_to_point(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            GSERIALIZED * r = h3index_cell_to_point(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             string_t out = GSerializedToGeometry(r, state, result);
             free(r);
@@ -1967,9 +1967,9 @@ static void Gen_h3index_cell_to_point(DataChunk &args, ExpressionState &state, V
 
 static void Gen_h3index_cell_to_boundary(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            GSERIALIZED * r = h3index_cell_to_boundary(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            GSERIALIZED * r = h3index_cell_to_boundary(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             string_t out = GSerializedToGeometry(r, state, result);
             free(r);
@@ -2003,18 +2003,18 @@ static void Gen_th3index_to_tbigint(DataChunk &args, ExpressionState &, Vector &
 
 static void Gen_h3index_cell_to_cover(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3index_cell_to_cover(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3index_cell_to_cover(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_h3index_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            STBox * r = h3index_to_stbox(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox * r = h3index_to_stbox(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
         });
@@ -2022,9 +2022,9 @@ static void Gen_h3index_to_stbox(DataChunk &args, ExpressionState &, Vector &res
 
 static void Gen_h3index_timestamptz_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, timestamp_tz_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            STBox * r = h3index_timestamptz_to_stbox(static_cast<uint64_t>(a0), DuckDBToMeosTimestamp(a1).value);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, timestamp_tz_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox * r = h3index_timestamptz_to_stbox(a0, DuckDBToMeosTimestamp(a1).value);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
         });
@@ -2032,10 +2032,10 @@ static void Gen_h3index_timestamptz_to_stbox(DataChunk &args, ExpressionState &,
 
 static void Gen_h3index_tstzspan_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<uint64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Span *p1 = BlobToSpan(a1);
-            STBox * r = h3index_tstzspan_to_stbox(static_cast<uint64_t>(a0), p1);
+            STBox * r = h3index_tstzspan_to_stbox(a0, p1);
             free(p1); 
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
@@ -2056,12 +2056,12 @@ static void Gen_h3indexset_cover_cells(DataChunk &args, ExpressionState &, Vecto
 static void Gen_geo_to_h3index_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
-    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
+    BinaryExecutor::Execute<string_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, int32_t res) {
             GSERIALIZED *gs = GeometryToGSerialized(in_g, crs_g ? crs_g : 4326);
             uint64_t r = geo_to_h3index_cell(gs, res);
             free(gs);
-            return (int64_t) r;
+            return r;
         });
 }
 
@@ -3007,7 +3007,7 @@ static void Gen_s2cellset_make(DataChunk &args, ExpressionState &, Vector &resul
     EnsureMeosThreadInitialized();
     auto &lv = args.data[0];
     auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
-    auto cd = FlatVector::GetData<int64_t>(child);
+    auto cd = FlatVector::GetData<uint64_t>(child);
     auto &cv = FlatVector::Validity(child);
     UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
         [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
@@ -3019,7 +3019,7 @@ static void Gen_s2cellset_make(DataChunk &args, ExpressionState &, Vector &resul
                     throw InvalidInputException("null array element not allowed in this context");
                 }
                 auto a2 = cd[le.offset + j];
-                arr[j] = (uint64_t) a2;
+                arr[j] = a2;
             }
             Set *r = s2cellset_make(arr, n);
             free(arr);

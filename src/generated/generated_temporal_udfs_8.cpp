@@ -1969,45 +1969,45 @@ static void Gen_geoset_make(DataChunk &args, ExpressionState &, Vector &result) 
 // ===== @ingroup meos_h3_base_accessor =====
 static void Gen_h3_is_valid_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = h3_is_valid_cell(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, bool>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> bool {
+            bool r = h3_is_valid_cell(a0);
             return (bool) r;
         });
 }
 
 static void Gen_h3_is_valid_directed_edge(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = h3_is_valid_directed_edge(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, bool>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> bool {
+            bool r = h3_is_valid_directed_edge(a0);
             return (bool) r;
         });
 }
 
 static void Gen_h3_is_valid_vertex(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = h3_is_valid_vertex(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, bool>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> bool {
+            bool r = h3_is_valid_vertex(a0);
             return (bool) r;
         });
 }
 
 static void Gen_h3index_hash(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, uint32_t>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> uint32_t {
-            uint32_t r = h3index_hash(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, uint32_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> uint32_t {
+            uint32_t r = h3index_hash(a0);
             return r;
         });
 }
 
 static void Gen_h3index_hash_extended(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, uint64_t a1) -> uint64_t {
-            uint64_t r = h3index_hash_extended(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::Execute<uint64_t, uint64_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, uint64_t a1) -> uint64_t {
+            uint64_t r = h3index_hash_extended(a0, a1);
             return r;
         });
 }
@@ -2976,27 +2976,27 @@ static void Gen_tposechain_value_n(DataChunk &args, ExpressionState &, Vector &r
 // ===== @ingroup meos_quadbin_base_inout =====
 static void Gen_quadbin_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t a0) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> uint64_t {
             uint64_t r = quadbin_from_hexwkb(a0.GetString().c_str());
-            return static_cast<int64_t>(r);
+            return r;
         });
 }
 
 static void Gen_quadbin_in(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t a0) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> uint64_t {
             uint64_t r = quadbin_in(a0.GetString().c_str());
-            return static_cast<int64_t>(r);
+            return r;
         });
 }
 
 static void Gen_quadbin_out(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            SizedString r = SizedCall(::quadbin_out, static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            SizedString r = SizedCall(::quadbin_out, a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TakeCString(result, r);
         });
@@ -4804,18 +4804,18 @@ static void Gen_trgeometry_space_time_boxes_s2_a4(DataChunk &args, ExpressionSta
 // ===== @ingroup meos_s2cell =====
 static void Gen_s2cell_is_valid_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, bool>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> bool {
-            bool r = s2cell_is_valid_cell(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, bool>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> bool {
+            bool r = s2cell_is_valid_cell(a0);
             return (bool) r;
         });
 }
 
 static void Gen_s2cell_cell_to_token(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            SizedString r = s2cell_cell_to_token(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            SizedString r = s2cell_cell_to_token(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TakeCString(result, r);
         });
@@ -4823,108 +4823,108 @@ static void Gen_s2cell_cell_to_token(DataChunk &args, ExpressionState &, Vector 
 
 static void Gen_s2cell_token_to_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t a0) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t a0) -> uint64_t {
             uint64_t r = s2cell_token_to_cell(a0.GetString().c_str());
-            return static_cast<int64_t>(r);
+            return r;
         });
 }
 
 static void Gen_s2cell_get_resolution(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, uint32_t>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> uint32_t {
-            uint32_t r = s2cell_get_resolution(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, uint32_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> uint32_t {
+            uint32_t r = s2cell_get_resolution(a0);
             return r;
         });
 }
 
 static void Gen_s2cell_get_face(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, uint32_t>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> uint32_t {
-            uint32_t r = s2cell_get_face(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, uint32_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> uint32_t {
+            uint32_t r = s2cell_get_face(a0);
             return r;
         });
 }
 
 static void Gen_s2cell_cell_to_parent(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1) -> int64_t {
-            uint64_t r = s2cell_cell_to_parent(static_cast<uint64_t>(a0), static_cast<uint32_t>(a1));
-            return static_cast<int64_t>(r);
+    BinaryExecutor::Execute<uint64_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1) -> uint64_t {
+            uint64_t r = s2cell_cell_to_parent(a0, static_cast<uint32_t>(a1));
+            return r;
         });
 }
 
 static void Gen_s2cell_cell_to_child(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    TernaryExecutor::Execute<int64_t, int32_t, int32_t, int64_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
-        [&](int64_t a0, int32_t a1, int32_t a2) -> int64_t {
-            uint64_t r = s2cell_cell_to_child(static_cast<uint64_t>(a0), static_cast<uint32_t>(a1), static_cast<uint32_t>(a2));
-            return static_cast<int64_t>(r);
+    TernaryExecutor::Execute<uint64_t, int32_t, int32_t, uint64_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](uint64_t a0, int32_t a1, int32_t a2) -> uint64_t {
+            uint64_t r = s2cell_cell_to_child(a0, static_cast<uint32_t>(a1), static_cast<uint32_t>(a2));
+            return r;
         });
 }
 
 static void Gen_s2cell_cell_contains(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> bool {
-            bool r = s2cell_cell_contains(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+    BinaryExecutor::Execute<uint64_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, uint64_t a1) -> bool {
+            bool r = s2cell_cell_contains(a0, a1);
             return (bool) r;
         });
 }
 
 static void Gen_s2cell_common_ancestor_level(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int64_t, int32_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1) -> int32_t {
-            int32_t r = s2cell_common_ancestor_level(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+    BinaryExecutor::Execute<uint64_t, uint64_t, int32_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, uint64_t a1) -> int32_t {
+            int32_t r = s2cell_common_ancestor_level(a0, a1);
             return (int32_t) r;
         });
 }
 
 static void Gen_s2cell_range_min(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, int64_t>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> int64_t {
-            uint64_t r = s2cell_range_min(static_cast<uint64_t>(a0));
-            return static_cast<int64_t>(r);
+    UnaryExecutor::Execute<uint64_t, uint64_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> uint64_t {
+            uint64_t r = s2cell_range_min(a0);
+            return r;
         });
 }
 
 static void Gen_s2cell_range_max(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, int64_t>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> int64_t {
-            uint64_t r = s2cell_range_max(static_cast<uint64_t>(a0));
-            return static_cast<int64_t>(r);
+    UnaryExecutor::Execute<uint64_t, uint64_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> uint64_t {
+            uint64_t r = s2cell_range_max(a0);
+            return r;
         });
 }
 
 static void Gen_s2cell_cell_area(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<int64_t, double>(args.data[0], result, args.size(),
-        [&](int64_t a0) -> double {
-            double r = s2cell_cell_area(static_cast<uint64_t>(a0));
+    UnaryExecutor::Execute<uint64_t, double>(args.data[0], result, args.size(),
+        [&](uint64_t a0) -> double {
+            double r = s2cell_cell_area(a0);
             return (double) r;
         });
 }
 
 static void Gen_s2cell_edge_length(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, int32_t, double>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1) -> double {
-            double r = s2cell_edge_length(static_cast<uint64_t>(a0), static_cast<uint32_t>(a1));
+    BinaryExecutor::Execute<uint64_t, int32_t, double>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1) -> double {
+            double r = s2cell_edge_length(a0, static_cast<uint32_t>(a1));
             return (double) r;
         });
 }
 
 static void Gen_s2cell_cell_to_geogpoint(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            GSERIALIZED * r = s2cell_cell_to_geogpoint(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            GSERIALIZED * r = s2cell_cell_to_geogpoint(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             string_t out = GSerializedToGeometry(r, state, result);
             free(r);
@@ -4934,9 +4934,9 @@ static void Gen_s2cell_cell_to_geogpoint(DataChunk &args, ExpressionState &state
 
 static void Gen_s2cell_cell_to_geog(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            GSERIALIZED * r = s2cell_cell_to_geog(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            GSERIALIZED * r = s2cell_cell_to_geog(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             string_t out = GSerializedToGeometry(r, state, result);
             free(r);
@@ -4946,9 +4946,9 @@ static void Gen_s2cell_cell_to_geog(DataChunk &args, ExpressionState &state, Vec
 
 static void Gen_s2cell_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::ExecuteWithNulls<int64_t, string_t>(args.data[0], result, args.size(),
-        [&](int64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
-            STBox * r = s2cell_to_stbox(static_cast<uint64_t>(a0));
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t a0, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox * r = s2cell_to_stbox(a0);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
         });
@@ -4956,9 +4956,9 @@ static void Gen_s2cell_to_stbox(DataChunk &args, ExpressionState &, Vector &resu
 
 static void Gen_s2cell_timestamptz_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, timestamp_tz_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            STBox * r = s2cell_timestamptz_to_stbox(static_cast<uint64_t>(a0), DuckDBToMeosTimestamp(a1).value);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, timestamp_tz_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            STBox * r = s2cell_timestamptz_to_stbox(a0, DuckDBToMeosTimestamp(a1).value);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
         });
@@ -4966,10 +4966,10 @@ static void Gen_s2cell_timestamptz_to_stbox(DataChunk &args, ExpressionState &, 
 
 static void Gen_s2cell_tstzspan_to_stbox(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<uint64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Span *p1 = BlobToSpan(a1);
-            STBox * r = s2cell_tstzspan_to_stbox(static_cast<uint64_t>(a0), p1);
+            STBox * r = s2cell_tstzspan_to_stbox(a0, p1);
             free(p1); 
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return StboxToBlob(result, r);
@@ -5001,12 +5001,12 @@ static void Gen_ts2cell_grid_distance(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_geo_to_s2cell_cell(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
+    BinaryExecutor::Execute<string_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in_g, int32_t res) {
             GSERIALIZED *gs = GeogFromGeometry(in_g);
             uint64_t r = geo_to_s2cell_cell(gs, res);
             free(gs);
-            return (int64_t) r;
+            return r;
         });
 }
 

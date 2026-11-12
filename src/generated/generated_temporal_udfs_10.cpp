@@ -1533,9 +1533,9 @@ static TableFunction SetUnnest_geoset_valuesTable(const LogicalType &type) {
 // ===== @ingroup meos_h3_hierarchy =====
 static void Gen_h3_cell_to_children(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3_cell_to_children(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3_cell_to_children(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
@@ -1613,7 +1613,7 @@ static void Gen_h3indexset_make(DataChunk &args, ExpressionState &, Vector &resu
     EnsureMeosThreadInitialized();
     auto &lv = args.data[0];
     auto &child = ListVector::GetEntry(lv); child.Flatten(ListVector::GetListSize(lv));
-    auto cd = FlatVector::GetData<int64_t>(child);
+    auto cd = FlatVector::GetData<uint64_t>(child);
     auto &cv = FlatVector::Validity(child);
     UnaryExecutor::ExecuteWithNulls<list_entry_t, string_t>(lv, result, args.size(),
         [&](list_entry_t le, ValidityMask &mask, idx_t idx) -> string_t {
@@ -1625,7 +1625,7 @@ static void Gen_h3indexset_make(DataChunk &args, ExpressionState &, Vector &resu
                     throw InvalidInputException("null array element not allowed in this context");
                 }
                 auto a2 = cd[le.offset + j];
-                arr[j] = (uint64_t) a2;
+                arr[j] = a2;
             }
             Set *r = h3indexset_make(arr, n);
             free(arr);

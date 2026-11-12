@@ -3482,7 +3482,7 @@ static OperatorResultType Unnest_th3index_unnestInOutFn(ExecutionContext &, Tabl
             continue;
         }
         uint64_t x = st.values[st.idx];
-        FlatVector::GetData<int64_t>(v0)[i] = (int64_t) x;
+        FlatVector::GetData<uint64_t>(v0)[i] = (uint64_t) x;
         SpanSet *ss = st.times[st.idx];
         FlatVector::GetData<string_t>(v1)[i] = StringVector::AddStringOrBlob(v1, (const char *) ss, spanset_mem_size(ss));
         free(ss);
@@ -4305,37 +4305,37 @@ static void Gen_posechain_ge(DataChunk &args, ExpressionState &, Vector &result)
 // ===== @ingroup meos_quadbin_accessor =====
 static void Gen_quadbin_grid_disk(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = quadbin_grid_disk(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = quadbin_grid_disk(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_quadbin_cell_to_children_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = quadbin_cell_to_children_set(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = quadbin_cell_to_children_set(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_quadbin_cell_to_cover(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = quadbin_cell_to_cover(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = quadbin_cell_to_cover(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_tquadbin_start_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t in) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
-            int64_t r = (int64_t) tquadbin_start_value(t);
+            uint64_t r = tquadbin_start_value(t);
             free(t);
             return r;
         });
@@ -4343,10 +4343,10 @@ static void Gen_tquadbin_start_value(DataChunk &args, ExpressionState &, Vector 
 
 static void Gen_tquadbin_end_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t in) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
-            int64_t r = (int64_t) tquadbin_end_value(t);
+            uint64_t r = tquadbin_end_value(t);
             free(t);
             return r;
         });
@@ -4354,10 +4354,10 @@ static void Gen_tquadbin_end_value(DataChunk &args, ExpressionState &, Vector &r
 
 static void Gen_tquadbin_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    UnaryExecutor::Execute<string_t, int64_t>(args.data[0], result, args.size(),
-        [&](string_t in) -> int64_t {
+    UnaryExecutor::Execute<string_t, uint64_t>(args.data[0], result, args.size(),
+        [&](string_t in) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
-            int64_t r = (int64_t) tquadbin_value(t);
+            uint64_t r = tquadbin_value(t);
             free(t);
             return r;
         });
@@ -4365,14 +4365,14 @@ static void Gen_tquadbin_value(DataChunk &args, ExpressionState &, Vector &resul
 
 static void Gen_tquadbin_value_n(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, int64_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> int64_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, int32_t, uint64_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> uint64_t {
             Temporal *t = BlobToTemporal(in);
             uint64_t v;
             bool ok = tquadbin_value_n(t, a2, &v);
             free(t);
-            if (!ok) { mask.SetInvalid(idx); return int64_t(); }
-            return (int64_t) v;
+            if (!ok) { mask.SetInvalid(idx); return uint64_t(); }
+            return (uint64_t) v;
         });
 }
 
@@ -4382,7 +4382,7 @@ static void Gen_tquadbin_value_at_timestamptz(DataChunk &args, ExpressionState &
     UnifiedVectorFormat u[2];
     for (idx_t c = 0; c < 2; c++) args.data[c].ToUnifiedFormat(rows, u[c]);
     result.SetVectorType(VectorType::FLAT_VECTOR);
-    auto out = FlatVector::GetData<int64_t>(result);
+    auto out = FlatVector::GetData<uint64_t>(result);
     auto &mask = FlatVector::Validity(result);
     for (idx_t idx = 0; idx < rows; idx++) {
         idx_t ri[2];
@@ -4392,14 +4392,14 @@ static void Gen_tquadbin_value_at_timestamptz(DataChunk &args, ExpressionState &
             valid = valid && u[c].validity.RowIsValid(ri[c]);
         }
         if (!valid) { mask.SetInvalid(idx); continue; }
-        out[idx] = [&]() -> int64_t {
+        out[idx] = [&]() -> uint64_t {
             Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[ri[0]]);
             timestamp_tz_t a2 = UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[ri[1]];
             uint64_t o = (uint64_t) 0;
             bool ok = tquadbin_value_at_timestamptz(t, DuckDBToMeosTimestamp(a2).value, true, &o);
             free(t);
-            if (! ok) { mask.SetInvalid(idx); return int64_t(); }
-            return (int64_t) o;
+            if (! ok) { mask.SetInvalid(idx); return uint64_t(); }
+            return (uint64_t) o;
         }();
     }
 }
@@ -4454,7 +4454,7 @@ static void Gen_quadbin_to_set(DataChunk &args, ExpressionState &, Vector &resul
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
-    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in0 = FlatVector::GetData<uint64_t>(args.data[0]);
     auto out = FlatVector::GetData<string_t>(result);
     auto &outv = FlatVector::Validity(result);
     for (idx_t i = 0; i < rows; i++) {
@@ -4462,7 +4462,7 @@ static void Gen_quadbin_to_set(DataChunk &args, ExpressionState &, Vector &resul
         for (idx_t c = 0; c < 1; c++)
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
-        Set *r = quadbin_to_set((uint64_t) in0[i]);
+        Set *r = quadbin_to_set(in0[i]);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
     }
@@ -4472,10 +4472,10 @@ static void Gen_quadbin_to_set(DataChunk &args, ExpressionState &, Vector &resul
 // ===== @ingroup meos_quadbin_set_setops =====
 static void Gen_contained_quadbin_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<int64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, string_t a1) -> bool {
+    BinaryExecutor::Execute<uint64_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, string_t a1) -> bool {
             Set *p1 = BlobToSet(a1);
-            bool r = contained_quadbin_set(static_cast<uint64_t>(a0), p1);
+            bool r = contained_quadbin_set(a0, p1);
             free(p1); 
             return (bool) r;
         });
@@ -4483,10 +4483,10 @@ static void Gen_contained_quadbin_set(DataChunk &args, ExpressionState &, Vector
 
 static void Gen_contains_set_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::Execute<string_t, int64_t, bool>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a0, int64_t a1) -> bool {
+    BinaryExecutor::Execute<string_t, uint64_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a0, uint64_t a1) -> bool {
             Set *p0 = BlobToSet(a0);
-            bool r = contains_set_quadbin(p0, static_cast<uint64_t>(a1));
+            bool r = contains_set_quadbin(p0, a1);
             free(p0); 
             return (bool) r;
         });
@@ -4494,10 +4494,10 @@ static void Gen_contains_set_quadbin(DataChunk &args, ExpressionState &, Vector 
 
 static void Gen_intersection_quadbin_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<uint64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Set *p1 = BlobToSet(a1);
-            Set * r = intersection_quadbin_set(static_cast<uint64_t>(a0), p1);
+            Set * r = intersection_quadbin_set(a0, p1);
             free(p1); 
             return SetToBlobN(result, r, mask, idx);
         });
@@ -4505,10 +4505,10 @@ static void Gen_intersection_quadbin_set(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_intersection_set_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a0, int64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, uint64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a0, uint64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Set *p0 = BlobToSet(a0);
-            Set * r = intersection_set_quadbin(p0, static_cast<uint64_t>(a1));
+            Set * r = intersection_set_quadbin(p0, a1);
             free(p0); 
             return SetToBlobN(result, r, mask, idx);
         });
@@ -4516,10 +4516,10 @@ static void Gen_intersection_set_quadbin(DataChunk &args, ExpressionState &, Vec
 
 static void Gen_minus_quadbin_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<uint64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Set *p1 = BlobToSet(a1);
-            Set * r = minus_quadbin_set(static_cast<uint64_t>(a0), p1);
+            Set * r = minus_quadbin_set(a0, p1);
             free(p1); 
             return SetToBlobN(result, r, mask, idx);
         });
@@ -4527,10 +4527,10 @@ static void Gen_minus_quadbin_set(DataChunk &args, ExpressionState &, Vector &re
 
 static void Gen_minus_set_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a0, int64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, uint64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a0, uint64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Set *p0 = BlobToSet(a0);
-            Set * r = minus_set_quadbin(p0, static_cast<uint64_t>(a1));
+            Set * r = minus_set_quadbin(p0, a1);
             free(p0); 
             return SetToBlobN(result, r, mask, idx);
         });
@@ -4538,10 +4538,10 @@ static void Gen_minus_set_quadbin(DataChunk &args, ExpressionState &, Vector &re
 
 static void Gen_union_quadbin_set(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<uint64_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, string_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Set *p1 = BlobToSet(a1);
-            Set * r = union_quadbin_set(static_cast<uint64_t>(a0), p1);
+            Set * r = union_quadbin_set(a0, p1);
             free(p1); 
             return SetToBlobN(result, r, mask, idx);
         });
@@ -4549,10 +4549,10 @@ static void Gen_union_quadbin_set(DataChunk &args, ExpressionState &, Vector &re
 
 static void Gen_union_set_quadbin(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](string_t a0, int64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+    BinaryExecutor::ExecuteWithNulls<string_t, uint64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a0, uint64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
             Set *p0 = BlobToSet(a0);
-            Set * r = union_set_quadbin(p0, static_cast<uint64_t>(a1));
+            Set * r = union_set_quadbin(p0, a1);
             free(p0); 
             return SetToBlobN(result, r, mask, idx);
         });

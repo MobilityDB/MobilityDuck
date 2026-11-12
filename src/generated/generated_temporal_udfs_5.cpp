@@ -4974,27 +4974,27 @@ static TableFunction Split_tgeo_space_time_split_18Table(TableFunction fn, const
 // ===== @ingroup meos_h3_traversal =====
 static void Gen_h3_grid_disk(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3_grid_disk(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3_grid_disk(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_h3_grid_ring(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3_grid_ring(static_cast<uint64_t>(a0), a1);
+    BinaryExecutor::ExecuteWithNulls<uint64_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, int32_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3_grid_ring(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
 static void Gen_h3_grid_path_cells(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
-    BinaryExecutor::ExecuteWithNulls<int64_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
-        [&](int64_t a0, int64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
-            Set * r = h3_grid_path_cells(static_cast<uint64_t>(a0), static_cast<uint64_t>(a1));
+    BinaryExecutor::ExecuteWithNulls<uint64_t, uint64_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](uint64_t a0, uint64_t a1, ValidityMask &mask, idx_t idx) -> string_t {
+            Set * r = h3_grid_path_cells(a0, a1);
             return SetToBlobN(result, r, mask, idx);
         });
 }
