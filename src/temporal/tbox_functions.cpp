@@ -53,7 +53,7 @@ inline string_t MallocBlobToResult(Vector &result, void *buf, size_t sz) {
 
 } // namespace
 
-bool TboxFunctions::Tbox_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool TboxFunctions::Tbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     try {
         UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
@@ -65,7 +65,7 @@ bool TboxFunctions::Tbox_in(Vector &source, Vector &result, idx_t count, CastPar
                 std::string input_str(input.GetDataUnsafe(), input.GetSize());
                 TBox *tbox = tbox_in(input_str.c_str());
                 if (!tbox) {
-                    throw InternalException("Failure in Tbox_in: unable to cast string to tbox");
+                    throw InternalException("Failure in Tbox_in_cast: unable to cast string to tbox");
                     success = false;
                     return string_t();
                 }
@@ -83,7 +83,7 @@ bool TboxFunctions::Tbox_in(Vector &source, Vector &result, idx_t count, CastPar
     return success;
 }
 
-bool TboxFunctions::Tbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool TboxFunctions::Tbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -94,14 +94,14 @@ bool TboxFunctions::Tbox_out(Vector &source, Vector &result, idx_t count, CastPa
                 memcpy(tbox, input.GetDataUnsafe(), input.GetSize());
             }
             if (!tbox) {
-                throw InternalException("Failure in Tbox_out: unable to cast binary to tbox");
+                throw InternalException("Failure in Tbox_out_cast: unable to cast binary to tbox");
                 success = false;
                 return string_t();
             }
             char *str = tbox_out(tbox, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             if (!str) {
                 free(tbox);
-                throw InternalException("Failure in Tbox_out: tbox_out returned null");
+                throw InternalException("Failure in Tbox_out_cast: tbox_out returned null");
             }
             std::string out(str);
             free(str);

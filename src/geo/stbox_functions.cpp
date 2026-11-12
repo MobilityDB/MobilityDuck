@@ -101,7 +101,7 @@ bool StboxFunctions::Stbox_in_cast(Vector &source, Vector &result, idx_t count, 
     return true;
 }
 
-bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+bool StboxFunctions::Stbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -116,12 +116,12 @@ bool StboxFunctions::Stbox_out(Vector &source, Vector &result, idx_t count, Cast
             STBox *stbox = reinterpret_cast<STBox*>(data_copy);
             if (!stbox) {
                 free(data_copy);
-                throw InternalException("Failure in Stbox_out: unable to cast binary to stbox");
+                throw InternalException("Failure in Stbox_out_cast: unable to cast binary to stbox");
             }
             char *ret = stbox_out(stbox, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
             if (!ret) {
                 free(data_copy);
-                throw InternalException("Failure in Stbox_out: unable to cast binary to stbox");
+                throw InternalException("Failure in Stbox_out_cast: unable to cast binary to stbox");
             }
             std::string ret_str(ret);
             free(ret);

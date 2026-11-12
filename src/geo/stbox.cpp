@@ -65,7 +65,7 @@ void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, 
         stbox(),
         LogicalType::VARCHAR,
-        StboxFunctions::Stbox_out
+        StboxFunctions::Stbox_out_cast
     );
 
     RegisterMeosCastFunction(loader, 
