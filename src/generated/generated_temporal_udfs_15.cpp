@@ -1278,6 +1278,9 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 inline Raster * raster_map_algebra_distancex_distancey(const Raster * p0, int p1, const char * p2, const char * p3, const char * p4, const Raster * p5) {
     return ::raster_map_algebra(p0, p1, p2, p3, p4, p5, 0, 0);
 }
+inline char * trgeometry_out_maxdd(const Temporal * p0) {
+    return SizedCall(::trgeometry_out, p0, 15);
+}
 inline bool trgeometry_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
     return ::trgeometry_value_at_timestamptz(p0, p1, true, p2);
 }
@@ -1286,12 +1289,6 @@ inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, c
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
-    return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
-}
-inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
-    return ::trgeometry_append_tsequence(p0, (const TSequence *) p1, false);
 }
 
 
@@ -3365,6 +3362,32 @@ static void Gen_always_ne_tpcpoint_tpcpoint(DataChunk &args, ExpressionState &, 
         });
 }
 
+static void Gen_ever_overlaps_tpcpoint_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            TPCBox *a2p = BlobToTpcbox(a2);
+            int32_t r = ever_overlaps_tpcpoint_tpcbox(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_always_overlaps_tpcpoint_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            TPCBox *a2p = BlobToTpcbox(a2);
+            int32_t r = always_overlaps_tpcpoint_tpcbox(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
 static void Gen_ever_eq_tpcpatch_pcpatch(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -3464,6 +3487,32 @@ static void Gen_always_ne_tpcpatch_tpcpatch(DataChunk &args, ExpressionState &, 
             Temporal *t2 = BlobToTemporal(in2);
             int32_t r = always_ne_tpcpatch_tpcpatch(t1, t2);
             free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_ever_overlaps_tpcpatch_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            TPCBox *a2p = BlobToTpcbox(a2);
+            int32_t r = ever_overlaps_tpcpatch_tpcbox(t, a2p);
+            free(a2p); free(t);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_always_overlaps_tpcpatch_tpcbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t = BlobToTemporal(in);
+            TPCBox *a2p = BlobToTpcbox(a2);
+            int32_t r = always_overlaps_tpcpatch_tpcbox(t, a2p);
+            free(a2p); free(t);
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
         });
@@ -6744,6 +6793,10 @@ void RegisterGenerated_meos_pointcloud_comp_ever(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("%<>", {TPcpointTypes::tpcpoint(), TPcpointTypes::pcpoint()}, LogicalType::BOOLEAN, Gen_always_ne_tpcpoint_pcpoint));
     RegisterMeosFunction(loader, ScalarFunction("aNotEqual", {TPcpointTypes::tpcpoint(), TPcpointTypes::tpcpoint()}, LogicalType::BOOLEAN, Gen_always_ne_tpcpoint_tpcpoint));
     RegisterMeosFunction(loader, ScalarFunction("%<>", {TPcpointTypes::tpcpoint(), TPcpointTypes::tpcpoint()}, LogicalType::BOOLEAN, Gen_always_ne_tpcpoint_tpcpoint));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TPcpointTypes::tpcpoint(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tpcpoint_tpcbox));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TPcpointTypes::tpcpoint(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tpcpoint_tpcbox));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TPcpointTypes::tpcpoint(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tpcpoint_tpcbox));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TPcpointTypes::tpcpoint(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tpcpoint_tpcbox));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::pcpatch()}, LogicalType::BOOLEAN, Gen_ever_eq_tpcpatch_pcpatch));
     RegisterMeosFunction(loader, ScalarFunction("?=", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::pcpatch()}, LogicalType::BOOLEAN, Gen_ever_eq_tpcpatch_pcpatch));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch()}, LogicalType::BOOLEAN, Gen_ever_eq_tpcpatch_tpcpatch));
@@ -6760,6 +6813,10 @@ void RegisterGenerated_meos_pointcloud_comp_ever(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("%<>", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::pcpatch()}, LogicalType::BOOLEAN, Gen_always_ne_tpcpatch_pcpatch));
     RegisterMeosFunction(loader, ScalarFunction("aNotEqual", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch()}, LogicalType::BOOLEAN, Gen_always_ne_tpcpatch_tpcpatch));
     RegisterMeosFunction(loader, ScalarFunction("%<>", {TPcpatchTypes::tpcpatch(), TPcpatchTypes::tpcpatch()}, LogicalType::BOOLEAN, Gen_always_ne_tpcpatch_tpcpatch));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TPcpatchTypes::tpcpatch(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tpcpatch_tpcbox));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TPcpatchTypes::tpcpatch(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tpcpatch_tpcbox));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TPcpatchTypes::tpcpatch(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tpcpatch_tpcbox));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TPcpatchTypes::tpcpatch(), TpcboxType::tpcbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tpcpatch_tpcbox));
 }
 
 void RegisterGenerated_meos_pose_comp_temp(ExtensionLoader &loader) {
@@ -7068,6 +7125,7 @@ void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("round", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, CbufferTypes::tcbuffer(), Gen_temporal_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {NpointTypes::tnpoint(), LogicalType::INTEGER}, NpointTypes::tnpoint(), Gen_temporal_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {PoseTypes::tpose(), LogicalType::INTEGER}, PoseTypes::tpose(), Gen_temporal_round));
+    RegisterMeosFunction(loader, ScalarFunction("round", {TrgeometryTypes::trgeometry(), LogicalType::INTEGER}, TrgeometryTypes::trgeometry(), Gen_temporal_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {PosechainTypes::tposechain(), LogicalType::INTEGER}, PosechainTypes::tposechain(), Gen_temporal_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {TemporalTypes::tfloat()}, TemporalTypes::tfloat(), Gen_temporal_round_d));
     RegisterMeosFunction(loader, ScalarFunction("round", {TgeompointType::tgeompoint()}, TgeompointType::tgeompoint(), Gen_temporal_round_d));
@@ -7077,6 +7135,7 @@ void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("round", {CbufferTypes::tcbuffer()}, CbufferTypes::tcbuffer(), Gen_temporal_round_d));
     RegisterMeosFunction(loader, ScalarFunction("round", {NpointTypes::tnpoint()}, NpointTypes::tnpoint(), Gen_temporal_round_d));
     RegisterMeosFunction(loader, ScalarFunction("round", {PoseTypes::tpose()}, PoseTypes::tpose(), Gen_temporal_round_d));
+    RegisterMeosFunction(loader, ScalarFunction("round", {TrgeometryTypes::trgeometry()}, TrgeometryTypes::trgeometry(), Gen_temporal_round_d));
     RegisterMeosFunction(loader, ScalarFunction("round", {PosechainTypes::tposechain()}, PosechainTypes::tposechain(), Gen_temporal_round_d));
     RegisterMeosFunction(loader, ScalarFunction("scaleTime", {TemporalTypes::tint(), LogicalType::INTERVAL}, TemporalTypes::tint(), Gen_temporal_scale_time));
     RegisterMeosFunction(loader, ScalarFunction("scaleTime", {TemporalTypes::tbigint(), LogicalType::INTERVAL}, TemporalTypes::tbigint(), Gen_temporal_scale_time));
@@ -7116,6 +7175,7 @@ void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("setInterp", {TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR}, TPcpatchTypes::tpcpatch(), Gen_temporal_set_interp));
     RegisterMeosFunction(loader, ScalarFunction("setInterp", {NpointTypes::tnpoint(), LogicalType::VARCHAR}, NpointTypes::tnpoint(), Gen_temporal_set_interp));
     RegisterMeosFunction(loader, ScalarFunction("setInterp", {PoseTypes::tpose(), LogicalType::VARCHAR}, PoseTypes::tpose(), Gen_temporal_set_interp));
+    RegisterMeosFunction(loader, ScalarFunction("setInterp", {TrgeometryTypes::trgeometry(), LogicalType::VARCHAR}, TrgeometryTypes::trgeometry(), Gen_temporal_set_interp));
     RegisterMeosFunction(loader, ScalarFunction("setInterp", {PosechainTypes::tposechain(), LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_temporal_set_interp));
     RegisterMeosFunction(loader, ScalarFunction("shiftScaleTime", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::INTERVAL}, TemporalTypes::tint(), Gen_temporal_shift_scale_time));
     RegisterMeosFunction(loader, ScalarFunction("shiftScaleTime", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::INTERVAL}, TemporalTypes::tbigint(), Gen_temporal_shift_scale_time));
