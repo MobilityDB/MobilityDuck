@@ -640,13 +640,13 @@ POLYGON((0 0,1 0,1 1,0 1,0 0));[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(
 query I
 SELECT asText(appendInstantAgg(v, 'step'), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
 ----
-POLYGON((0 0,1 0,1 1,0 1,0 0));Interp=Step;[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
+Interp=Step;POLYGON((0 0,1 0,1 1,0 1,0 0));[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
 
 # appendInstantAgg(trgeometry, VARCHAR, DOUBLE, INTERVAL)
 query I
 SELECT asText(appendInstantAgg(v, 'step', 10.0, interval '2 days'), 6) FROM (VALUES ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(5 5),0)@2020-01-01'::trgeometry), ('Polygon((0 0,1 0,1 1,0 1,0 0));Pose(Point(6 6),0)@2020-01-02'::trgeometry)) t(v);
 ----
-POLYGON((0 0,1 0,1 1,0 1,0 0));Interp=Step;[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
+Interp=Step;POLYGON((0 0,1 0,1 1,0 1,0 0));[Pose(POINT(5 5),0)@2020-01-01 00:00:00+00, Pose(POINT(6 6),0)@2020-01-02 00:00:00+00]
 
 # appendInstantAgg(ts2cell)
 query I

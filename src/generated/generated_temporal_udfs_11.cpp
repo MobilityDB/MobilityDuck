@@ -1278,6 +1278,9 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 inline Raster * raster_map_algebra_distancex_distancey(const Raster * p0, int p1, const char * p2, const char * p3, const char * p4, const Raster * p5) {
     return ::raster_map_algebra(p0, p1, p2, p3, p4, p5, 0, 0);
 }
+inline char * trgeometry_out_maxdd(const Temporal * p0) {
+    return SizedCall(::trgeometry_out, p0, 15);
+}
 inline bool trgeometry_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
     return ::trgeometry_value_at_timestamptz(p0, p1, true, p2);
 }
@@ -1286,12 +1289,6 @@ inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, c
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
-    return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
-}
-inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
-    return ::trgeometry_append_tsequence(p0, (const TSequence *) p1, false);
 }
 
 
@@ -1983,6 +1980,19 @@ static void Gen_always_ne_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &
         });
 }
 
+static void Gen_always_overlaps_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = always_overlaps_tgeo_tgeo(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
 static void Gen_ever_eq_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const int32_t crs_g = GeometryCrsSrid(args.data[0].GetType());
@@ -2079,6 +2089,371 @@ static void Gen_ever_ne_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &re
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
         });
+}
+
+static void Gen_ever_overlaps_tgeo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = ever_overlaps_tgeo_tgeo(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_always_overlaps_stbox_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_stbox_tgeo_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_stbox_tgeo_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_stbox_tgeo_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = always_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_tgeo_stbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = always_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_tgeo_stbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = always_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_tgeo_stbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = always_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_always_overlaps_tgeo_stbox_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = always_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_stbox_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_stbox_tgeo_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_stbox_tgeo_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_stbox_tgeo_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        STBox *p0 = BlobToStbox(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        int r = ever_overlaps_stbox_tgeo(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_tgeo_stbox(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = ever_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_tgeo_stbox_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = ever_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_tgeo_stbox_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = ever_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_ever_overlaps_tgeo_stbox_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<bool>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        STBox *p1 = BlobToStbox(in1[i]);
+        int r = ever_overlaps_tgeo_stbox(p0, p1);
+        free(p0);
+        free(p1);
+        if (r < 0) { outv.SetInvalid(i); continue; }
+        out[i] = (r != 0);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -3617,6 +3992,14 @@ void RegisterGenerated_meos_geo_comp_ever(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("%<>", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_always_ne_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("aNotEqual", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_always_ne_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("%<>", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_always_ne_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_ever_eq_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("?=", {MobilityDuckGeometryType(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_ever_eq_geo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {MobilityDuckGeometryType(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_ever_eq_geo_tgeo));
@@ -3665,6 +4048,46 @@ void RegisterGenerated_meos_geo_comp_ever(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("?<>", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_ever_ne_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("eNotEqual", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ever_ne_tgeo_tgeo));
     RegisterMeosFunction(loader, ScalarFunction("?<>", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ever_ne_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TgeompointType::tgeompoint(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TgeogpointType::tgeogpoint(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TGeometryTypes::tgeometry(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TGeographyTypes::tgeography(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo_v1));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo_v1));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo_v2));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo_v2));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo_v3));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_stbox_tgeo_v3));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox_v3));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_always_overlaps_tgeo_stbox_v3));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {StboxType::stbox(), TGeometryTypes::tgeometry()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo_v1));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {StboxType::stbox(), TGeographyTypes::tgeography()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo_v1));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo_v2));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {StboxType::stbox(), TgeompointType::tgeompoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo_v2));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo_v3));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {StboxType::stbox(), TgeogpointType::tgeogpoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_stbox_tgeo_v3));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TGeometryTypes::tgeometry(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TGeographyTypes::tgeography(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox_v1));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TgeompointType::tgeompoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox_v2));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox_v3));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {TgeogpointType::tgeogpoint(), StboxType::stbox()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tgeo_stbox_v3));
 }
 
 void RegisterGenerated_meos_h3_latlng(ExtensionLoader &loader) {
@@ -3812,6 +4235,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_after_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_after_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_temporal_after_timestamptz));
+    RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_temporal_after_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PosechainTypes::tposechain(), Gen_temporal_after_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_after_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_after_timestamptz_d));
@@ -3831,6 +4255,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_after_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_after_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_after_timestamptz_d));
+    RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_after_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("afterTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_after_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("atMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_at_max));
     RegisterMeosFunction(loader, ScalarFunction("atMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_at_max));
@@ -3858,6 +4283,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_at_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_at_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_at_timestamptz));
+    RegisterMeosFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_at_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_at_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tint(), Gen_temporal_before_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TemporalTypes::tbigint(), Gen_temporal_before_timestamptz));
@@ -3877,6 +4303,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TPcpatchTypes::tpcpatch(), Gen_temporal_before_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, NpointTypes::tnpoint(), Gen_temporal_before_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PoseTypes::tpose(), Gen_temporal_before_timestamptz));
+    RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, TrgeometryTypes::trgeometry(), Gen_temporal_before_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, PosechainTypes::tposechain(), Gen_temporal_before_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_before_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_before_timestamptz_d));
@@ -3896,6 +4323,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_before_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_before_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_before_timestamptz_d));
+    RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_before_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("beforeTimestamp", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_before_timestamptz_d));
     RegisterMeosFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tint()}, TemporalTypes::tint(), Gen_temporal_minus_max));
     RegisterMeosFunction(loader, ScalarFunction("minusMax", {TemporalTypes::tbigint()}, TemporalTypes::tbigint(), Gen_temporal_minus_max));
@@ -3923,6 +4351,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_minus_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_minus_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_minus_timestamptz));
+    RegisterMeosFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_minus_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("atValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_at_value));
     RegisterMeosFunction(loader, ScalarFunction("minusValue", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, TemporalTypes::tfloat(), Gen_tfloat_minus_value));
@@ -3943,6 +4372,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), SetTypes::tstzset()}, PoseTypes::tpose(), Gen_temporal_at_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), SetTypes::tstzset()}, PosechainTypes::tposechain(), Gen_temporal_at_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzset));
+    RegisterMeosFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), SetTypes::tstzset()}, S2cellTypes::ts2cell(), Gen_temporal_at_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SetTypes::tstzset()}, TemporalTypes::tbool(), Gen_temporal_at_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SetTypes::tstzset()}, TemporalTypes::tint(), Gen_temporal_at_tstzset));
@@ -3962,6 +4392,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), SpanTypes::tstzspan()}, PoseTypes::tpose(), Gen_temporal_at_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), SpanTypes::tstzspan()}, PosechainTypes::tposechain(), Gen_temporal_at_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), SpanTypes::tstzspan()}, S2cellTypes::ts2cell(), Gen_temporal_at_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_temporal_at_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_temporal_at_tstzspan));
@@ -3981,6 +4412,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PoseTypes::tpose(), SpansetTypes::tstzspanset()}, PoseTypes::tpose(), Gen_temporal_at_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {PosechainTypes::tposechain(), SpansetTypes::tstzspanset()}, PosechainTypes::tposechain(), Gen_temporal_at_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {QuadbinTypes::tquadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_tstzspanset));
+    RegisterMeosFunction(loader, ScalarFunction("atTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {S2cellTypes::ts2cell(), SpansetTypes::tstzspanset()}, S2cellTypes::ts2cell(), Gen_temporal_at_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TemporalTypes::tbool(), SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_temporal_at_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("atTime", {TemporalTypes::tint(), SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_temporal_at_tstzspanset));
@@ -3999,6 +4431,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("atValues", {PoseTypes::tpose(), SetTypes::poseset()}, PoseTypes::tpose(), Gen_temporal_at_values));
     RegisterMeosFunction(loader, ScalarFunction("atValues", {PosechainTypes::tposechain(), SetTypes::posechainset()}, PosechainTypes::tposechain(), Gen_temporal_at_values));
     RegisterMeosFunction(loader, ScalarFunction("atValues", {QuadbinTypes::tquadbin(), SetTypes::quadbinset()}, QuadbinTypes::tquadbin(), Gen_temporal_at_values));
+    RegisterMeosFunction(loader, ScalarFunction("atValues", {TrgeometryTypes::trgeometry(), SetTypes::poseset()}, TrgeometryTypes::trgeometry(), Gen_temporal_at_values));
     RegisterMeosFunction(loader, ScalarFunction("atValues", {S2cellTypes::ts2cell(), SetTypes::s2cellset()}, S2cellTypes::ts2cell(), Gen_temporal_at_values));
     RegisterMeosFunction(loader, ScalarFunction("atValues", {TemporalTypes::tint(), SetTypes::intset()}, TemporalTypes::tint(), Gen_temporal_at_values));
     RegisterMeosFunction(loader, ScalarFunction("atValues", {TemporalTypes::tbigint(), SetTypes::bigintset()}, TemporalTypes::tbigint(), Gen_temporal_at_values));
@@ -4017,6 +4450,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), SetTypes::tstzset()}, PoseTypes::tpose(), Gen_temporal_minus_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), SetTypes::tstzset()}, PosechainTypes::tposechain(), Gen_temporal_minus_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SetTypes::tstzset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzset));
+    RegisterMeosFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), SetTypes::tstzset()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), SetTypes::tstzset()}, S2cellTypes::ts2cell(), Gen_temporal_minus_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SetTypes::tstzset()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SetTypes::tstzset()}, TemporalTypes::tint(), Gen_temporal_minus_tstzset));
@@ -4036,6 +4470,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), SpanTypes::tstzspan()}, PoseTypes::tpose(), Gen_temporal_minus_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), SpanTypes::tstzspan()}, PosechainTypes::tposechain(), Gen_temporal_minus_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzspan));
+    RegisterMeosFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), SpanTypes::tstzspan()}, S2cellTypes::ts2cell(), Gen_temporal_minus_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzspan));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SpanTypes::tstzspan()}, TemporalTypes::tint(), Gen_temporal_minus_tstzspan));
@@ -4055,6 +4490,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PoseTypes::tpose(), SpansetTypes::tstzspanset()}, PoseTypes::tpose(), Gen_temporal_minus_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {PosechainTypes::tposechain(), SpansetTypes::tstzspanset()}, PosechainTypes::tposechain(), Gen_temporal_minus_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {QuadbinTypes::tquadbin(), SpansetTypes::tstzspanset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_tstzspanset));
+    RegisterMeosFunction(loader, ScalarFunction("minusTime", {TrgeometryTypes::trgeometry(), SpansetTypes::tstzspanset()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {S2cellTypes::ts2cell(), SpansetTypes::tstzspanset()}, S2cellTypes::ts2cell(), Gen_temporal_minus_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tbool(), SpansetTypes::tstzspanset()}, TemporalTypes::tbool(), Gen_temporal_minus_tstzspanset));
     RegisterMeosFunction(loader, ScalarFunction("minusTime", {TemporalTypes::tint(), SpansetTypes::tstzspanset()}, TemporalTypes::tint(), Gen_temporal_minus_tstzspanset));
@@ -4073,6 +4509,7 @@ void RegisterGenerated_meos_temporal_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("minusValues", {PoseTypes::tpose(), SetTypes::poseset()}, PoseTypes::tpose(), Gen_temporal_minus_values));
     RegisterMeosFunction(loader, ScalarFunction("minusValues", {PosechainTypes::tposechain(), SetTypes::posechainset()}, PosechainTypes::tposechain(), Gen_temporal_minus_values));
     RegisterMeosFunction(loader, ScalarFunction("minusValues", {QuadbinTypes::tquadbin(), SetTypes::quadbinset()}, QuadbinTypes::tquadbin(), Gen_temporal_minus_values));
+    RegisterMeosFunction(loader, ScalarFunction("minusValues", {TrgeometryTypes::trgeometry(), SetTypes::poseset()}, TrgeometryTypes::trgeometry(), Gen_temporal_minus_values));
     RegisterMeosFunction(loader, ScalarFunction("minusValues", {S2cellTypes::ts2cell(), SetTypes::s2cellset()}, S2cellTypes::ts2cell(), Gen_temporal_minus_values));
     RegisterMeosFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tint(), SetTypes::intset()}, TemporalTypes::tint(), Gen_temporal_minus_values));
     RegisterMeosFunction(loader, ScalarFunction("minusValues", {TemporalTypes::tbigint(), SetTypes::bigintset()}, TemporalTypes::tbigint(), Gen_temporal_minus_values));

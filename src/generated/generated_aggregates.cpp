@@ -1279,6 +1279,9 @@ inline BandStats * raster_summary_stats_band_exclude_nodata(const Raster * p0) {
 inline Raster * raster_map_algebra_distancex_distancey(const Raster * p0, int p1, const char * p2, const char * p3, const char * p4, const Raster * p5) {
     return ::raster_map_algebra(p0, p1, p2, p3, p4, p5, 0, 0);
 }
+inline char * trgeometry_out_maxdd(const Temporal * p0) {
+    return SizedCall(::trgeometry_out, p0, 15);
+}
 inline bool trgeometry_value_at_timestamptz_strict(const Temporal * p0, TimestampTz p1, GSERIALIZED ** p2) {
     return ::trgeometry_value_at_timestamptz(p0, p1, true, p2);
 }
@@ -1287,12 +1290,6 @@ inline STBox * trgeometry_time_boxes_bitmatrix_border_inc(const Temporal * p0, c
 }
 inline STBox * trgeometry_time_boxes_bitmatrix_border_inc_torigin(const Temporal * p0, const MeosInterval * p1, int * p2) {
     return ::trgeometry_time_boxes(p0, p1, timestamptz_in("2000-01-03", -1), true, true, p2);
-}
-inline Temporal * trgeometry_append_tinstant_expand_interp_maxdist_maxt(Temporal * p0, const Temporal * p1) {
-    return ::trgeometry_append_tinstant(p0, (const TInstant *) p1, LINEAR, 0.0, NULL, false);
-}
-inline Temporal * trgeometry_append_tsequence_expand(Temporal * p0, const Temporal * p1) {
-    return ::trgeometry_append_tsequence(p0, (const TSequence *) p1, false);
 }
 
 struct AggOps_0 {
