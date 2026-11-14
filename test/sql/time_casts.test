@@ -1,0 +1,35 @@
+# name: test/sql/time_casts.test
+# description: The casts between the time types of DuckDB and those of MEOS convert through the
+#              MEOS conversions of the counts from the Unix epoch, as session_timezone.test
+#              reads the zone they print in: an instant crosses to the microsecond, and an
+#              instant MEOS holds beyond the range of a DuckDB timestamp is refused, never
+#              wrapped.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'UTC'
+
+# An instant to the microsecond, in and out
+query I
+SELECT startTimestamp(tfloat '1@2001-01-01 08:00:00.123456+00');
+----
+2001-01-01 08:00:00.123456+00
+
+query I
+SELECT lower(datespan '[2001-01-01, 2001-01-05]');
+----
+2001-01-01
+
+# The last finite instant of DuckDB crosses as it is
+query I
+SELECT asText(tstzset '{2001-01-01}' + '294247-01-01 00:00:00+00'::TIMESTAMPTZ);
+----
+{"2001-01-01 00:00:00+00", "294247-01-01 00:00:00+00"}
+
+# An instant MEOS holds beyond the range of a DuckDB timestamp is refused
+statement error
+SELECT startTimestamp(tfloat '1@294270-01-01 00:00:00+00');
+----
+timestamp out of range

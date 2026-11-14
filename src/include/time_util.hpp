@@ -35,47 +35,73 @@
 
 namespace duckdb {
 
-constexpr int32_t EPOCH_OFFSET_DAYS = 10957;
-constexpr int64_t EPOCH_OFFSET_MICROS = EPOCH_OFFSET_DAYS * 86400000000;
+/* The casts between the time types of DuckDB and those of MEOS. Each converts through a MEOS
+ * conversion of the counts from the Unix epoch, which DuckDB's types count from too, and builds
+ * the value with the constructor of its type, as the casts of the other bindings do: a value
+ * MEOS cannot state raises its error, which MobilityduckMeosErrorHandler throws. DuckDB and MEOS
+ * both hold the infinities of a timestamp and a date, each as its own count, so an infinity maps
+ * to the other side's through date_is_finite and timestamp_is_finite and MEOS's own reading of
+ * 'infinity', never through a count. */
 
-// MEOS's DEFAULT_TIME_ORIGIN, the torigin MobilityDB's tiling, splitting and
-// binning functions default to: '2000-01-03' (a Monday).
-// In MEOS PG-epoch microseconds: 2 days * 86_400 * 1_000_000.
-constexpr int64_t DEFAULT_TIME_ORIGIN_MEOS = 2LL * 86400LL * 1000000LL;
+/* The infinity of a MEOS timestamp, as MEOS reads it */
+inline TimestampTz MeosTimestampInfinity(bool positive) {
+    static const TimestampTz pos = timestamptz_in("infinity", -1);
+    static const TimestampTz neg = timestamptz_in("-infinity", -1);
+    return positive ? pos : neg;
+}
+
+/* The infinity of a MEOS date, as MEOS reads it */
+inline DateADT MeosDateInfinity(bool positive) {
+    static const DateADT pos = date_in("infinity");
+    static const DateADT neg = date_in("-infinity");
+    return positive ? pos : neg;
+}
 
 // DuckDB → MEOS
 inline int32_t ToMeosDate(duckdb::date_t d) {
-    return static_cast<int32_t>(d) - EPOCH_OFFSET_DAYS;
+    if (!Date::IsFinite(d))
+        return MeosDateInfinity(d == date_t::infinity());
+    return unix_days_to_date(d.days);
 }
 
 inline int64_t ToMeosTimestamp(duckdb::timestamp_t ts) {
-    // return ts.value - EPOCH_OFFSET_MICROS;
-    return Timestamp::GetEpochMicroSeconds(ts) - EPOCH_OFFSET_MICROS;
+    if (!Timestamp::IsFinite(ts))
+        return MeosTimestampInfinity(ts == timestamp_t::infinity());
+    return unix_us_to_timestamptz(Timestamp::GetEpochMicroSeconds(ts));
 }
 
 // MEOS → DuckDB
-inline duckdb::date_t FromMeosDate(int32_t pg_date) {
-    return duckdb::date_t(pg_date + EPOCH_OFFSET_DAYS);
+inline duckdb::date_t FromMeosDate(int32_t meos_date) {
+    if (!date_is_finite(meos_date))
+        return meos_date > 0 ? date_t::infinity() : date_t::ninfinity();
+    return date_t(date_to_unix_days(meos_date));
 }
 
-inline duckdb::timestamp_t FromMeosTimestamp(int64_t pg_ts) {    
-    // return duckdb::timestamp_t(pg_ts + EPOCH_OFFSET_MICROS);
-    return Timestamp::FromEpochMicroSeconds(pg_ts + EPOCH_OFFSET_MICROS);
+inline duckdb::timestamp_t FromMeosTimestamp(int64_t meos_ts) {
+    if (!timestamp_is_finite(meos_ts))
+        return meos_ts > 0 ? timestamp_t::infinity() : timestamp_t::ninfinity();
+    return Timestamp::FromEpochMicroSeconds(timestamptz_to_unix_us(meos_ts));
 }
 
+/* A MEOS interval as a DuckDB interval_t, through interval_to_parts: both hold months, days and
+ * microseconds */
 inline interval_t IntervalToIntervalt(MeosInterval *interval) {
+    int32 months, days;
+    int64 micros;
+    interval_to_parts(interval, &months, &days, &micros);
     interval_t duckdb_interval;
-    duckdb_interval.months = interval->month;
-    duckdb_interval.days = interval->day;
-    duckdb_interval.micros = interval->time;
+    duckdb_interval.months = months;
+    duckdb_interval.days = days;
+    duckdb_interval.micros = micros;
     return duckdb_interval;
 }
 
+/* A DuckDB interval_t as a MEOS interval, through interval_from_parts */
 inline MeosInterval IntervaltToInterval(interval_t duckdb_interval) {
-    MeosInterval meos_interval;
-    meos_interval.time = duckdb_interval.micros;
-    meos_interval.day = duckdb_interval.days;
-    meos_interval.month = duckdb_interval.months;
+    MeosInterval *p = interval_from_parts(duckdb_interval.months, duckdb_interval.days,
+        duckdb_interval.micros);
+    MeosInterval meos_interval = *p;
+    free(p);
     return meos_interval;
 }
 
@@ -101,15 +127,18 @@ struct MeosIntervalLiteral {
     operator const MeosInterval *() const { return p; }
 };
 
+/* A DuckDB timestamp_tz_t as the MEOS timestamptz a generated call passes, through
+ * #ToMeosTimestamp */
 inline timestamp_tz_t DuckDBToMeosTimestamp(timestamp_tz_t duckdb_ts) {
     timestamp_tz_t meos_ts;
-    meos_ts.value = duckdb_ts.value - EPOCH_OFFSET_MICROS;
+    meos_ts.value = ToMeosTimestamp(timestamp_t(duckdb_ts.value));
     return meos_ts;
 }
 
+/* A MEOS timestamptz as a DuckDB timestamp_tz_t, through #FromMeosTimestamp */
 inline timestamp_tz_t MeosToDuckDBTimestamp(timestamp_tz_t meos_ts) {
     timestamp_tz_t duckdb_ts;
-    duckdb_ts.value = meos_ts.value + EPOCH_OFFSET_MICROS;
+    duckdb_ts.value = FromMeosTimestamp(meos_ts.value).value;
     return duckdb_ts;
 }
 
