@@ -5095,6 +5095,19 @@ static void Gen_always_ne_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Ve
         });
 }
 
+static void Gen_always_overlaps_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = always_overlaps_tnpoint_tnpoint(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
 static void Gen_ever_eq_tnpoint_npoint(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::Execute<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
@@ -5139,6 +5152,19 @@ static void Gen_ever_ne_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vect
             Temporal *t1 = BlobToTemporal(in1);
             Temporal *t2 = BlobToTemporal(in2);
             int32_t r = ever_ne_tnpoint_tnpoint(t1, t2);
+            free(t1); free(t2);
+            if (r < 0) { mask.SetInvalid(idx); return bool(); }
+            return (r != 0);
+        });
+}
+
+static void Gen_ever_overlaps_tnpoint_tnpoint(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, bool>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in1, string_t in2, ValidityMask &mask, idx_t idx) -> bool {
+            Temporal *t1 = BlobToTemporal(in1);
+            Temporal *t2 = BlobToTemporal(in2);
+            int32_t r = ever_overlaps_tnpoint_tnpoint(t1, t2);
             free(t1); free(t2);
             if (r < 0) { mask.SetInvalid(idx); return bool(); }
             return (r != 0);
@@ -9099,6 +9125,8 @@ void RegisterGenerated_meos_npoint_comp_ever(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("%<>", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_always_ne_tnpoint_npoint));
     RegisterMeosFunction(loader, ScalarFunction("aNotEqual", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_ne_tnpoint_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("%<>", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_ne_tnpoint_tnpoint));
+    RegisterMeosFunction(loader, ScalarFunction("aOverlaps", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_tnpoint_tnpoint));
+    RegisterMeosFunction(loader, ScalarFunction("%&&", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_overlaps_tnpoint_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_ever_eq_tnpoint_npoint));
     RegisterMeosFunction(loader, ScalarFunction("?=", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_ever_eq_tnpoint_npoint));
     RegisterMeosFunction(loader, ScalarFunction("eEqual", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_ever_eq_tnpoint_tnpoint));
@@ -9107,6 +9135,8 @@ void RegisterGenerated_meos_npoint_comp_ever(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("?<>", {NpointTypes::tnpoint(), NpointTypes::npoint()}, LogicalType::BOOLEAN, Gen_ever_ne_tnpoint_npoint));
     RegisterMeosFunction(loader, ScalarFunction("eNotEqual", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_ever_ne_tnpoint_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("?<>", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_ever_ne_tnpoint_tnpoint));
+    RegisterMeosFunction(loader, ScalarFunction("eOverlaps", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tnpoint_tnpoint));
+    RegisterMeosFunction(loader, ScalarFunction("?&&", {NpointTypes::tnpoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_ever_overlaps_tnpoint_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("aEqual", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_eq_npoint_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("%=", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_eq_npoint_tnpoint));
     RegisterMeosFunction(loader, ScalarFunction("aNotEqual", {NpointTypes::npoint(), NpointTypes::tnpoint()}, LogicalType::BOOLEAN, Gen_always_ne_npoint_tnpoint));
