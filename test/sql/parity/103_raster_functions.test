@@ -200,7 +200,7 @@ WITH trip AS (
     POINT(2.5 2.5)@2001-01-02, POINT(0.5 0.5)@2001-01-03]' AS t
 )
 SELECT asText(rasterValue(t, 'test/data/raster_file_forms.tif'))
-    = asText(tfloat 'Interp=Step;[10@2001-01-01 00:00:00+00, 20@2001-01-01 06:00:00+00, 30@2001-01-01 18:00:00+00, 50@2001-01-02 06:00:00+00, 70@2001-01-02 18:00:00+00, 70@2001-01-03 00:00:00+00]'),
+    = asText(tfloat 'Interp=Step;{[10@2001-01-01 00:00:00+00, 20@2001-01-01 06:00:00+00, 30@2001-01-01 18:00:00+00, 60@2001-01-02 06:00:00+00], (50@2001-01-02 06:00:00+00, 80@2001-01-02 18:00:00+00], (70@2001-01-02 18:00:00+00, 70@2001-01-03 00:00:00+00]}'),
   asText(rasterValue(t, 'test/data/raster_file_forms.tif', 1))
     = asText(rasterValue(t, 'test/data/raster_file_forms.tif'))
 FROM trip;
