@@ -1880,6 +1880,41 @@ static void Gen_geo_transscale(DataChunk &args, ExpressionState &state, Vector &
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_geog_array_union(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    const int32_t crs0 = GeometryCrsSrid(args.data[0].GetType());
+    const int32_t crs_any = crs0 ? crs0 : 0;
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 1; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        GSERIALIZED **x0 = (GSERIALIZED **) malloc(sizeof(GSERIALIZED *) * (le0.length + 1));
+        int n0 = 0;
+        for (idx_t j = 0; j < le0.length; j++)
+            if (ch0v.RowIsValid(le0.offset + j))
+                x0[n0++] = GeometryToGSerialized(ch0d[le0.offset + j], crs_any);
+        if (n0 == 0) { free(x0); outv.SetInvalid(i); continue; }
+        GSERIALIZED *r = geog_array_union(x0, n0);
+        for (int j = 0; j < n0; j++) free(x0[j]);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = GSerializedToGeometry(r, state, result);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 
 // ===== @ingroup meos_geo_comp_ever =====
 static void Gen_always_eq_geo_tgeo(DataChunk &args, ExpressionState &, Vector &result) {
@@ -3941,6 +3976,7 @@ void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("translate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_translate));
     RegisterMeosFunction(loader, ScalarFunction("translate", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_translate_deltaz));
     RegisterMeosFunction(loader, ScalarFunction("transscale", {MobilityDuckGeometryType(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE}, MobilityDuckGeometryType(), Gen_geo_transscale));
+    RegisterMeosFunction(loader, ScalarFunction("geoUnion", {LogicalType::LIST(MobilityDuckGeometryType())}, MobilityDuckGeometryType(), Gen_geog_array_union));
 }
 
 void RegisterGenerated_meos_geo_comp_ever(ExtensionLoader &loader) {

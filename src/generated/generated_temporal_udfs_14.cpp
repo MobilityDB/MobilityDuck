@@ -3732,6 +3732,259 @@ static void Gen_raster_pixel_as_points_v2(DataChunk &args, ExpressionState &stat
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raster_set_values(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 7; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto in4 = ListVector::GetData(args.data[4]);
+    auto &ch4 = ListVector::GetEntry(args.data[4]);
+    ch4.Flatten(ListVector::GetListSize(args.data[4]));
+    auto ch4d = ListVector::GetData(ch4);
+    auto &ch4v = FlatVector::Validity(ch4);
+    auto &gc4 = ListVector::GetEntry(ch4);
+    gc4.Flatten(ListVector::GetListSize(ch4));
+    auto gc4d = FlatVector::GetData<double>(gc4);
+    auto &gc4v = FlatVector::Validity(gc4);
+    auto in5 = ListVector::GetData(args.data[5]);
+    auto &ch5 = ListVector::GetEntry(args.data[5]);
+    ch5.Flatten(ListVector::GetListSize(args.data[5]));
+    auto ch5d = ListVector::GetData(ch5);
+    auto &ch5v = FlatVector::Validity(ch5);
+    auto &gc5 = ListVector::GetEntry(ch5);
+    gc5.Flatten(ListVector::GetListSize(ch5));
+    auto gc5d = FlatVector::GetData<bool>(gc5);
+    auto &gc5v = FlatVector::Validity(gc5);
+    auto in6 = FlatVector::GetData<bool>(args.data[6]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n5 = !FlatVector::Validity(args.data[5]).RowIsValid(i);
+        if (!FlatVector::Validity(args.data[6]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int r4 = 0, c4 = 0;
+        vector<double> v4;
+        unique_ptr<bool[]> u4;
+        const list_entry_t le4 = in4[i];
+        r4 = (int) le4.length;
+        for (idx_t j = 0; j < le4.length; j++) {
+            if (!ch4v.RowIsValid(le4.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            const int w = (int) ch4d[le4.offset + j].length;
+            if (j == 0) c4 = w;
+            else if (w != c4)
+                throw InvalidInputException("multidimensional arrays must have array expressions with matching dimensions");
+        }
+        if (r4 == 0 || c4 == 0)
+            throw InvalidInputException("An array of values of a block of pixels has one or two dimensions, not 0");
+        v4.assign((size_t) r4 * c4, 0.0);
+        u4.reset(new bool[(size_t) r4 * c4]());
+        for (int j = 0; j < r4; j++) {
+            const list_entry_t row = ch4d[le4.offset + j];
+            for (int q = 0; q < c4; q++) {
+                const idx_t e = (idx_t) j * c4 + q;
+                if (!gc4v.RowIsValid(row.offset + q)) { u4[e] = true; continue; }
+                v4[e] = gc4d[row.offset + q];
+            }
+        }
+        int r5 = 0, c5 = 0;
+        unique_ptr<bool[]> v5;
+        unique_ptr<bool[]> u5;
+        if (!n5) {
+            const list_entry_t le5 = in5[i];
+            r5 = (int) le5.length;
+            for (idx_t j = 0; j < le5.length; j++) {
+                if (!ch5v.RowIsValid(le5.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                const int w = (int) ch5d[le5.offset + j].length;
+                if (j == 0) c5 = w;
+                else if (w != c5)
+                    throw InvalidInputException("multidimensional arrays must have array expressions with matching dimensions");
+            }
+            if (r5 == 0 || c5 == 0)
+                throw InvalidInputException("An array of values of a block of pixels has one or two dimensions, not 0");
+            v5.reset(new bool[(size_t) r5 * c5]());
+            u5.reset(new bool[(size_t) r5 * c5]());
+            for (int j = 0; j < r5; j++) {
+                const list_entry_t row = ch5d[le5.offset + j];
+                for (int q = 0; q < c5; q++) {
+                    const idx_t e = (idx_t) j * c5 + q;
+                    if (!gc5v.RowIsValid(row.offset + q)) { v5[e] = false; continue; }
+                    v5[e] = gc5d[row.offset + q];
+                }
+            }
+        }
+        Raster *r = raster_set_values(p0, in1[i], in2[i], in3[i], c4, r4, v4.data(), u4.get(), (n5 ? NULL : v5.get()), (n5 ? 0 : c5), (n5 ? 0 : r5), r4 * c4, in6[i]);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_set_values_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 6; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto in4 = ListVector::GetData(args.data[4]);
+    auto &ch4 = ListVector::GetEntry(args.data[4]);
+    ch4.Flatten(ListVector::GetListSize(args.data[4]));
+    auto ch4d = ListVector::GetData(ch4);
+    auto &ch4v = FlatVector::Validity(ch4);
+    auto &gc4 = ListVector::GetEntry(ch4);
+    gc4.Flatten(ListVector::GetListSize(ch4));
+    auto gc4d = FlatVector::GetData<double>(gc4);
+    auto &gc4v = FlatVector::Validity(gc4);
+    auto in5 = ListVector::GetData(args.data[5]);
+    auto &ch5 = ListVector::GetEntry(args.data[5]);
+    ch5.Flatten(ListVector::GetListSize(args.data[5]));
+    auto ch5d = ListVector::GetData(ch5);
+    auto &ch5v = FlatVector::Validity(ch5);
+    auto &gc5 = ListVector::GetEntry(ch5);
+    gc5.Flatten(ListVector::GetListSize(ch5));
+    auto gc5d = FlatVector::GetData<bool>(gc5);
+    auto &gc5v = FlatVector::Validity(gc5);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n5 = !FlatVector::Validity(args.data[5]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        int r4 = 0, c4 = 0;
+        vector<double> v4;
+        unique_ptr<bool[]> u4;
+        const list_entry_t le4 = in4[i];
+        r4 = (int) le4.length;
+        for (idx_t j = 0; j < le4.length; j++) {
+            if (!ch4v.RowIsValid(le4.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            const int w = (int) ch4d[le4.offset + j].length;
+            if (j == 0) c4 = w;
+            else if (w != c4)
+                throw InvalidInputException("multidimensional arrays must have array expressions with matching dimensions");
+        }
+        if (r4 == 0 || c4 == 0)
+            throw InvalidInputException("An array of values of a block of pixels has one or two dimensions, not 0");
+        v4.assign((size_t) r4 * c4, 0.0);
+        u4.reset(new bool[(size_t) r4 * c4]());
+        for (int j = 0; j < r4; j++) {
+            const list_entry_t row = ch4d[le4.offset + j];
+            for (int q = 0; q < c4; q++) {
+                const idx_t e = (idx_t) j * c4 + q;
+                if (!gc4v.RowIsValid(row.offset + q)) { u4[e] = true; continue; }
+                v4[e] = gc4d[row.offset + q];
+            }
+        }
+        int r5 = 0, c5 = 0;
+        unique_ptr<bool[]> v5;
+        unique_ptr<bool[]> u5;
+        if (!n5) {
+            const list_entry_t le5 = in5[i];
+            r5 = (int) le5.length;
+            for (idx_t j = 0; j < le5.length; j++) {
+                if (!ch5v.RowIsValid(le5.offset + j))
+                    throw InvalidInputException("null array element not allowed in this context");
+                const int w = (int) ch5d[le5.offset + j].length;
+                if (j == 0) c5 = w;
+                else if (w != c5)
+                    throw InvalidInputException("multidimensional arrays must have array expressions with matching dimensions");
+            }
+            if (r5 == 0 || c5 == 0)
+                throw InvalidInputException("An array of values of a block of pixels has one or two dimensions, not 0");
+            v5.reset(new bool[(size_t) r5 * c5]());
+            u5.reset(new bool[(size_t) r5 * c5]());
+            for (int j = 0; j < r5; j++) {
+                const list_entry_t row = ch5d[le5.offset + j];
+                for (int q = 0; q < c5; q++) {
+                    const idx_t e = (idx_t) j * c5 + q;
+                    if (!gc5v.RowIsValid(row.offset + q)) { v5[e] = false; continue; }
+                    v5[e] = gc5d[row.offset + q];
+                }
+            }
+        }
+        Raster *r = raster_set_values(p0, in1[i], in2[i], in3[i], c4, r4, v4.data(), u4.get(), (n5 ? NULL : v5.get()), (n5 ? 0 : c5), (n5 ? 0 : r5), r4 * c4, false);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_set_values_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 5; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto in4 = ListVector::GetData(args.data[4]);
+    auto &ch4 = ListVector::GetEntry(args.data[4]);
+    ch4.Flatten(ListVector::GetListSize(args.data[4]));
+    auto ch4d = ListVector::GetData(ch4);
+    auto &ch4v = FlatVector::Validity(ch4);
+    auto &gc4 = ListVector::GetEntry(ch4);
+    gc4.Flatten(ListVector::GetListSize(ch4));
+    auto gc4d = FlatVector::GetData<double>(gc4);
+    auto &gc4v = FlatVector::Validity(gc4);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[4]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        int r4 = 0, c4 = 0;
+        vector<double> v4;
+        unique_ptr<bool[]> u4;
+        const list_entry_t le4 = in4[i];
+        r4 = (int) le4.length;
+        for (idx_t j = 0; j < le4.length; j++) {
+            if (!ch4v.RowIsValid(le4.offset + j))
+                throw InvalidInputException("null array element not allowed in this context");
+            const int w = (int) ch4d[le4.offset + j].length;
+            if (j == 0) c4 = w;
+            else if (w != c4)
+                throw InvalidInputException("multidimensional arrays must have array expressions with matching dimensions");
+        }
+        if (r4 == 0 || c4 == 0)
+            throw InvalidInputException("An array of values of a block of pixels has one or two dimensions, not 0");
+        v4.assign((size_t) r4 * c4, 0.0);
+        u4.reset(new bool[(size_t) r4 * c4]());
+        for (int j = 0; j < r4; j++) {
+            const list_entry_t row = ch4d[le4.offset + j];
+            for (int q = 0; q < c4; q++) {
+                const idx_t e = (idx_t) j * c4 + q;
+                if (!gc4v.RowIsValid(row.offset + q)) { u4[e] = true; continue; }
+                v4[e] = gc4d[row.offset + q];
+            }
+        }
+        Raster *r = raster_set_values(p0, in1[i], in2[i], in3[i], c4, r4, v4.data(), u4.get(), NULL, 0, 0, r4 * c4, false);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_reclass(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -5279,6 +5532,9 @@ void RegisterGenerated_meos_raster_base_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::BOOLEAN}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points));
     RegisterMeosFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster(), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v1));
     RegisterMeosFunction(loader, ScalarFunction("pixelAsPoints", {RasterTypes::raster()}, LogicalType::LIST(LogicalType::STRUCT({{"geom", MobilityDuckGeometryType()}, {"val", LogicalType(LogicalType::DOUBLE)}, {"x", LogicalType(LogicalType::INTEGER)}, {"y", LogicalType(LogicalType::INTEGER)}})), Gen_raster_pixel_as_points_v2));
+    { ScalarFunction sf = ScalarFunction("setValues", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), LogicalType::LIST(LogicalType::LIST(LogicalType::BOOLEAN)), LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_set_values); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("setValues", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE)), LogicalType::LIST(LogicalType::LIST(LogicalType::BOOLEAN))}, RasterTypes::raster(), Gen_raster_set_values_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("setValues", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::LIST(LogicalType::LIST(LogicalType::DOUBLE))}, RasterTypes::raster(), Gen_raster_set_values_v2));
     { ScalarFunction sf = ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_reclass); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     RegisterMeosFunction(loader, ScalarFunction("reclass", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_reclass_v1));
     RegisterMeosFunction(loader, ScalarFunction("slope", {RasterTypes::raster(), LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN}, RasterTypes::raster(), Gen_raster_slope));

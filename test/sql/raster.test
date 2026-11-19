@@ -100,6 +100,70 @@ FROM depth;
 ----
 2	3	true	float32
 
+# ── a block of pixels set ────────────────────────────────────────────────────
+# Each answer is the one MobilityDB's 500_raster test answers for the same call,
+# a block of values a list of rows as PostgreSQL's two-dimensional array.
+
+# A NULL value sets the nodata value of the band, the block placed at the
+# column and row given; the flags, a block of their own, are read over the block
+# of the values, a NULL flag setting its value.
+query TTT
+SELECT dumpValues(setValues(addBand(makeEmptyRaster(3, 2, 0, 2, 1, -1, 0, 0, 3857), 1, '16BSI', 0, -1),
+    1, 2, 1, [[1, 2], [NULL, 4]]), 1)::VARCHAR,
+  dumpValues(setValues(r, 1, 1, 1, [[1, 2], [3, 4]],
+    [[false, false, false], [true, true, true], [true, true, true]]), 1)::VARCHAR,
+  dumpValues(setValues(r, 1, 1, 1, [[1, 2], [3, 4]], [[NULL, true], [false, NULL]]), 1)::VARCHAR
+FROM (SELECT addBand(makeEmptyRaster(3, 3, 0.0, 3.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '16BSI', 5, -1) AS r);
+----
+[[0.0, 1.0, 2.0], [0.0, NULL, 4.0]]	[[1.0, 2.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]]	[[1.0, 5.0, 5.0], [3.0, 4.0, 5.0], [5.0, 5.0, 5.0]]
+
+# The pixels holding the nodata value keep it when asked, no flags setting every
+# value; a band stating no nodata value takes the least value of its type for a
+# NULL; a block reaching beyond the raster sets the pixels it shares with it.
+query TTT
+SELECT dumpValues(setValues(setValues(r, 1, 1, 1, [[-1]]), 1, 1, 1, [[8, 9]], NULL, true), 1)::VARCHAR,
+  dumpValues(setValues(addBand(makeEmptyRaster(2, 1, 0.0, 1.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '8BSI', 5),
+    1, 1, 1, [[NULL, 3]]), 1)::VARCHAR,
+  dumpValues(setValues(addBand(makeEmptyRaster(2, 2, 0.0, 2.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '8BUI', 0),
+    1, 2, 2, [[1, 2], [3, 4]]), 1)::VARCHAR
+FROM (SELECT addBand(makeEmptyRaster(2, 1, 0.0, 1.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '16BSI', 5, -1) AS r);
+----
+[[NULL, 9.0]]	[[-128.0, 3.0]]	[[0.0, 0.0], [0.0, 1.0]]
+
+# The pixels of a band, row by row, each in the bytes of its type. DuckDB reads
+# the literal -0.0 as 0.0, so the negative zero is cast from its text.
+query III
+SELECT pixels(setValues(r, 1, 1, 1, [[1, -2], [300, -32768]]), 1) = from_hex('0100feff2c010080'),
+  pixels(setValues(addBand(r, 2, '32BF'), 2, 1, 1, [[1.5, -2], [0.25, 1e10]]), 2)
+    = from_hex('0000c03f000000c00000803ef9021550'),
+  pixels(setValues(addBand(r, 2, '64BF'), 2, 1, 1, [[0.1, '-0.0'::DOUBLE], [1e300, 3]]), 2)
+    = from_hex('9a9999999999b93f00000000000000809c7500883ce4377e0000000000000840')
+FROM (SELECT addBand(makeEmptyRaster(2, 2, 0.0, 2.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '16BSI', 0) AS r);
+----
+true	true	true
+
+# A NULL raster or block answers NULL.
+query II
+SELECT setValues(NULL, 1, 1, 1, [[1.0]]) IS NULL,
+  setValues(addBand(makeEmptyRaster(1, 1, 0.0, 1.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '8BUI'),
+    1, 1, 1, NULL::DOUBLE[][]) IS NULL;
+----
+true	true
+
+# Rows of different lengths and an empty block are refused, as PostgreSQL
+# refuses them.
+statement error
+SELECT setValues(addBand(makeEmptyRaster(2, 2, 0.0, 2.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '8BUI'),
+  1, 1, 1, [[1, 2], [3]]);
+----
+multidimensional arrays must have array expressions with matching dimensions
+
+statement error
+SELECT setValues(addBand(makeEmptyRaster(2, 2, 0.0, 2.0, 1.0, -1.0, 0.0, 0.0, 3857), 1, '8BUI'),
+  1, 1, 1, []::DOUBLE[][]);
+----
+An array of values of a block of pixels has one or two dimensions, not 0
+
 # ── arithmetic ───────────────────────────────────────────────────────────────
 
 # The raster of MobilityDB's raster regression test for the arithmetic of a

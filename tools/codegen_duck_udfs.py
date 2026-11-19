@@ -7195,6 +7195,75 @@ def emit_static_cell(f, args, ret, sfx="", dval=None):
 # argument fills takes (`boundArgs`), and the value a NULL argument binds (`nullDefaultBinds`). A
 # signature whose parameters these leave unfilled registers nothing.
 
+def sig_call_block(byname, layout, t, k):
+    """The marshalling of SQL argument `k`, a block of rows declared as SQL type `t`, into the C
+    parameters its `inputShape` `layout` names (#attach_input_shapes of MEOS-API): `values`, its
+    elements row by row, `rows` and `columns`, `count`, and `nulls`, true for a NULL element, or
+    `nullElement`, the value a NULL element passes. It reads each row as the list of numbers or
+    booleans of #sig_call_arg reads a list, one level deeper, and setValues reads its values and
+    its flags so. MobilityDB's wrapper reads an array of one or two dimensions
+    (raster_block_extract), and DuckDB states the dimensions in the type, so the block is a list
+    of rows, each row a list of the same length, as PostgreSQL refuses rows of different
+    lengths; an empty block, which PostgreSQL reads as an array of no dimension, is refused as
+    the wrapper refuses it. The lines declaring what the call reads are `decl`, those reading
+    the row `body`; None if the elements are no numbers or booleans of the type `t` names."""
+    vp = byname.get(layout.get("values"))
+    if vp is None or not t.endswith("[]"):
+        return None
+    eb = base(norm(vp["canonical"]).rstrip("*").strip())
+    if eb not in ("double", "bool") or BOUND_TAIL_SQL.get(eb) != t[:-2]:
+        return None
+    dt, cpp, _ = SCALAR_ARG[eb]
+    nulls, null_elem = layout.get("nulls"), layout.get("nullElement")
+    if nulls is None and null_elem is None:
+        return None
+    # a std::vector<bool> holds no array of bool, so the booleans lie in an array of their own
+    if eb == "bool":
+        buf, data = "unique_ptr<bool[]> v%d;" % k, "v%d.get()" % k
+        alloc = "v%d.reset(new bool[(size_t) r%d * c%d]());" % (k, k, k)
+    else:
+        buf, data = "vector<double> v%d;" % k, "v%d.data()" % k
+        alloc = "v%d.assign((size_t) r%d * c%d, 0.0);" % (k, k, k)
+    decl = ["int r%d = 0, c%d = 0;" % (k, k), buf, "unique_ptr<bool[]> u%d;" % k]
+    if null_elem is not None:
+        on_null = "v%d[e] = %s;" % (k, "true" if str(null_elem).strip().lower() == "true"
+                                     else "false")
+    else:
+        on_null = "u%d[e] = true;" % k
+    body = ["const list_entry_t le%d = in%d[i];" % (k, k),
+            "r%d = (int) le%d.length;" % (k, k),
+            "for (idx_t j = 0; j < le%d.length; j++) {" % k,
+            "    if (!ch%dv.RowIsValid(le%d.offset + j))" % (k, k),
+            "        throw InvalidInputException(\"null array element not allowed in this context\");",
+            "    const int w = (int) ch%dd[le%d.offset + j].length;" % (k, k),
+            "    if (j == 0) c%d = w;" % k,
+            "    else if (w != c%d)" % k,
+            "        throw InvalidInputException(\"multidimensional arrays must have array "
+            "expressions with matching dimensions\");",
+            "}",
+            "if (r%d == 0 || c%d == 0)" % (k, k),
+            "    throw InvalidInputException(\"An array of values of a block of pixels has one "
+            "or two dimensions, not 0\");",
+            alloc,
+            "u%d.reset(new bool[(size_t) r%d * c%d]());" % (k, k, k),
+            "for (int j = 0; j < r%d; j++) {" % k,
+            "    const list_entry_t row = ch%dd[le%d.offset + j];" % (k, k),
+            "    for (int q = 0; q < c%d; q++) {" % k,
+            "        const idx_t e = (idx_t) j * c%d + q;" % k,
+            "        if (!gc%dv.RowIsValid(row.offset + q)) { %s continue; }" % (k, on_null),
+            "        v%d[e] = gc%dd[row.offset + q];" % (k, k),
+            "    }",
+            "}"]
+    cexpr = {vp["name"]: data}
+    if nulls is not None:
+        cexpr[nulls] = "u%d.get()" % k
+    for key, ex in (("rows", "r%d" % k), ("columns", "c%d" % k), ("count", "r%d * c%d" % (k, k))):
+        if layout.get(key):
+            cexpr[layout[key]] = ex
+    return dict(kind="block", dt="LogicalType::LIST(LogicalType::LIST(%s))" % dt,
+                cpp="list_entry_t", elem_cpp=cpp, decl=decl, body=body, pre=decl + body,
+                post=[], cexpr=cexpr)
+
 def sig_call_arg(f, p, t, k, arrays, lenp):
     """The marshalling of SQL argument `k`, declared as SQL type `t`, into C parameter `p` (and, for
     a pointer and length pair, into the length parameter `lenp`): a dict with the DuckDB type `dt`,
@@ -7811,9 +7880,15 @@ def shape_sig_call(f):
         # value out passes 0.0 and false.
         present = {int(kk): b for kk, b in (s.get("presentBinds") or {}).items()}
         flags = {cn for b in present.values() for cn in b}
+        # a block of rows (`inputShape`, #sig_call_block) fills its values and the parameters of
+        # its size, count and NULL elements, which take no argument of their own
+        blocks = {int(kk): lay for kk, lay in (s.get("inputShape") or {}).items()}
+        shaped = {v for lay in blocks.values() for key, v in lay.items()
+                  if key not in ("values", "nullElement")}
         order = (s.get("sqlArgParams") or shape.get("sqlArgParams")
                  or [p["name"] for p in facing
-                     if p["name"] not in sbound and p["name"] not in flags])
+                     if p["name"] not in sbound and p["name"] not in flags
+                     and p["name"] not in shaped])
         if len(order) != len(s["args"]) or any(nm not in byname for nm in order):
             continue
         bound = {}
@@ -7821,6 +7896,7 @@ def shape_sig_call(f):
         # binds bands NULL and nbands 0); the length of an array an argument fills comes with it
         for p in ps:
             if (p["name"] in outn or p["name"] in order or p["name"] in flags
+                    or p["name"] in shaped
                     or (p["name"] in lenof and lenof[p["name"]] in order)):
                 continue
             lit = (s.get("boundArgs") or {}).get(p["name"])
@@ -7833,6 +7909,10 @@ def shape_sig_call(f):
             continue
         args = []
         for k, (nm, t) in enumerate(zip(order, s["args"])):
+            if k in blocks:
+                args.append(sig_call_block(byname, blocks[k], t, k)
+                            if blocks[k].get("values") == nm else None)
+                continue
             lenp = byname.get((arrays.get(nm) or {}).get("lengthFrom", {}).get("name", ""))
             args.append(sig_call_arg(f, byname[nm], t, k, arrays, lenp))
         if any(a is None for a in args):
@@ -7911,6 +7991,20 @@ def shape_sig_call(f):
                 nb[k] = {cn: ("nullptr" if "**" in byname[cn]["canonical"] else "0")
                          for cn in args[k]["cexpr"]}
                 continue
+            # a block the wrapper passes as no array when the argument is NULL (the flags of
+            # setValues: noset NULL, nosetwidth and nosetheight 0): the NULL row reads no block,
+            # as the list above, its values and sizes declared for the call
+            if (k < len(args) and args[k]["kind"] == "block"
+                    and set(binds) <= set(args[k]["cexpr"])):
+                lits = {cn: sig_call_literal(byname[cn], lit) for cn, lit in binds.items()
+                        if cn in byname}
+                if len(lits) != len(binds) or None in lits.values():
+                    nb = None
+                    break
+                args[k] = dict(args[k], pre=args[k]["decl"] + ["if (!n%d) {" % k] +
+                               ["    " + x for x in args[k]["body"]] + ["}"])
+                nb[k] = lits
+                continue
             if k >= len(args) or args[k]["kind"] != "byval":
                 nb = None
                 break
@@ -7987,6 +8081,17 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
             L += [f"    auto in{k} = ListVector::GetData(args.data[{k}]);",
                   f"    auto &ch{k} = ListVector::GetEntry(args.data[{k}]);",
                   f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));"]
+        elif a["kind"] == "block":
+            # the rows of a block, each a list, and their elements (#sig_call_block)
+            L += [f"    auto in{k} = ListVector::GetData(args.data[{k}]);",
+                  f"    auto &ch{k} = ListVector::GetEntry(args.data[{k}]);",
+                  f"    ch{k}.Flatten(ListVector::GetListSize(args.data[{k}]));",
+                  f"    auto ch{k}d = ListVector::GetData(ch{k});",
+                  f"    auto &ch{k}v = FlatVector::Validity(ch{k});",
+                  f"    auto &gc{k} = ListVector::GetEntry(ch{k});",
+                  f"    gc{k}.Flatten(ListVector::GetListSize(ch{k}));",
+                  f"    auto gc{k}d = FlatVector::GetData<{a['elem_cpp']}>(gc{k});",
+                  f"    auto &gc{k}v = FlatVector::Validity(gc{k});"]
         elif a["kind"] == "struct":
             # the children of a row of the fields of a structure (#struct_row)
             L.append(f"    auto &se{k} = StructVector::GetEntries(args.data[{k}]);")
