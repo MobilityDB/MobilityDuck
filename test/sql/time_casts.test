@@ -33,3 +33,41 @@ statement error
 SELECT startTimestamp(tfloat '1@294270-01-01 00:00:00+00');
 ----
 timestamp out of range
+
+# An infinity of DuckDB maps to that of MEOS, which refuses it where it enters a value
+statement error
+SELECT asText(tstzset '{2001-01-01}' + 'infinity'::TIMESTAMPTZ);
+----
+The timestamp must be finite
+
+statement error
+SELECT asText(tfloat(1.0, 'infinity'::TIMESTAMPTZ));
+----
+The timestamp must be finite
+
+# MEOS refuses its own infinities in a value as it refuses those of DuckDB
+statement error
+SELECT asText(tstzspan '[-infinity, 2001-01-01]');
+----
+The timestamp must be finite
+
+statement error
+SELECT asText(tstzspanset '{[2001-01-01, infinity]}');
+----
+The timestamp must be finite
+
+statement error
+SELECT asText(tfloat '1@infinity');
+----
+The timestamp must be finite
+
+statement error
+SELECT asText(datespan '[2001-01-01, infinity]');
+----
+The date must be finite
+
+# A predicate over an infinity answers, as in PostgreSQL
+query I
+SELECT tstzspan '[2001-01-01, 2001-01-05]' @> 'infinity'::TIMESTAMPTZ;
+----
+false
