@@ -3270,6 +3270,31 @@ static void Gen_raster_from_wkb(DataChunk &args, ExpressionState &, Vector &resu
         });
 }
 
+static void Gen_tfloat_as_coveragejson(DataChunk &args, ExpressionState &state, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        bool valid = true;
+        for (idx_t c = 0; c < 2; c++)
+            if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
+        if (!valid) { outv.SetInvalid(i); continue; }
+        Temporal *x0 = BlobToTemporal(in0[i]);
+        Temporal *p1 = BlobToTemporal(in1[i]);
+        char *r = tfloat_as_coveragejson(x0, p1);
+        free(p1);
+        free(x0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddString(result, r);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raquet_from_hexwkb(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -3367,6 +3392,331 @@ static void Gen_raquet_as_hexwkb_v1(DataChunk &args, ExpressionState &, Vector &
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = StringVector::AddString(result, r);
         free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_as_coveragejson(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raquet *p0 = BlobToRaquet(in0[i]);
+        SizedString r = raquet_as_coveragejson(p0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_coveragejson(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        SizedString r = raster_as_coveragejson(p0);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_gdal(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ListVector::GetData(args.data[2]);
+    auto &ch2 = ListVector::GetEntry(args.data[2]);
+    ch2.Flatten(ListVector::GetListSize(args.data[2]));
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
+        const bool n3 = !FlatVector::Validity(args.data[3]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        std::string s1 = in1[i].GetString();
+        int ne2 = 0;
+        text **v2 = n2 ? nullptr : ListToTextArr(ch2, in2[i], &ne2);
+        size_t sz = 0;
+        uint8_t *r = raster_as_gdal(p0, s1.c_str(), (n2 ? nullptr : v2), (n2 ? 0 : (int) ne2), (n3 ? 0 : in3[i]), &sz);
+        free(p0);
+        FreeTextArr(v2, ne2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_gdal_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = ListVector::GetData(args.data[2]);
+    auto &ch2 = ListVector::GetEntry(args.data[2]);
+    ch2.Flatten(ListVector::GetListSize(args.data[2]));
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        std::string s1 = in1[i].GetString();
+        int ne2 = 0;
+        text **v2 = n2 ? nullptr : ListToTextArr(ch2, in2[i], &ne2);
+        size_t sz = 0;
+        uint8_t *r = raster_as_gdal(p0, s1.c_str(), (n2 ? nullptr : v2), (n2 ? 0 : (int) ne2), 0, &sz);
+        free(p0);
+        FreeTextArr(v2, ne2);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_gdal_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        std::string s1 = in1[i].GetString();
+        size_t sz = 0;
+        uint8_t *r = raster_as_gdal(p0, s1.c_str(), nullptr, 0, 0, &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_tiff(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto in2 = FlatVector::GetData<int32_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
+        const bool n2 = !FlatVector::Validity(args.data[2]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        int ne1 = 0;
+        text **v1 = n1 ? nullptr : ListToTextArr(ch1, in1[i], &ne1);
+        size_t sz = 0;
+        uint8_t *r = raster_as_tiff(p0, (n1 ? nullptr : v1), (n1 ? 0 : (int) ne1), (n2 ? 0 : in2[i]), &sz);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_tiff_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        int ne1 = 0;
+        text **v1 = n1 ? nullptr : ListToTextArr(ch1, in1[i], &ne1);
+        size_t sz = 0;
+        uint8_t *r = raster_as_tiff(p0, (n1 ? nullptr : v1), (n1 ? 0 : (int) ne1), 0, &sz);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_tiff_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raster_as_tiff(p0, nullptr, 0, 0, &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_png(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        int ne1 = 0;
+        text **v1 = n1 ? nullptr : ListToTextArr(ch1, in1[i], &ne1);
+        size_t sz = 0;
+        uint8_t *r = raster_as_png(p0, (n1 ? nullptr : v1), (n1 ? 0 : (int) ne1), &sz);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_png_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raster_as_png(p0, nullptr, 0, &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_jpeg(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = ListVector::GetData(args.data[1]);
+    auto &ch1 = ListVector::GetEntry(args.data[1]);
+    ch1.Flatten(ListVector::GetListSize(args.data[1]));
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const bool n1 = !FlatVector::Validity(args.data[1]).RowIsValid(i);
+        Raster *p0 = BlobToRaster(in0[i]);
+        int ne1 = 0;
+        text **v1 = n1 ? nullptr : ListToTextArr(ch1, in1[i], &ne1);
+        size_t sz = 0;
+        uint8_t *r = raster_as_jpeg(p0, (n1 ? nullptr : v1), (n1 ? 0 : (int) ne1), &sz);
+        free(p0);
+        FreeTextArr(v1, ne1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_as_jpeg_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *p0 = BlobToRaster(in0[i]);
+        size_t sz = 0;
+        uint8_t *r = raster_as_jpeg(p0, nullptr, 0, &sz);
+        free(p0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = StringVector::AddStringOrBlob(result, (const char *) r, sz);
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_from_gdal(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *r = raster_from_gdal((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize(), in1[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raster_from_gdal_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Raster *r = raster_from_gdal((const uint8_t *) in0[i].GetData(), (size_t) in0[i].GetSize(), 0);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RasterToBlob(result, r);
     }
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
@@ -5324,11 +5674,26 @@ void RegisterGenerated_meos_raster_base_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("raquet", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_in));
     RegisterMeosFunction(loader, ScalarFunction("raquetFromBinary", {LogicalType::BLOB}, RaquetTypes::raquet(), Gen_raquet_from_wkb));
     RegisterMeosFunction(loader, ScalarFunction("rasterFromBinary", {LogicalType::BLOB}, RasterTypes::raster(), Gen_raster_from_wkb));
+    RegisterMeosFunction(loader, ScalarFunction("asCoverageJSON", {TemporalTypes::tfloat(), TgeompointType::tgeompoint()}, LogicalType::VARCHAR, Gen_tfloat_as_coveragejson));
     RegisterMeosFunction(loader, ScalarFunction("raquetFromHexWKB", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_from_hexwkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RaquetTypes::raquet(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_raquet_as_wkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RaquetTypes::raquet()}, LogicalType::BLOB, Gen_raquet_as_wkb_v1));
     RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {RaquetTypes::raquet(), LogicalType::VARCHAR}, LogicalType::VARCHAR, Gen_raquet_as_hexwkb));
     RegisterMeosFunction(loader, ScalarFunction("asHexWKB", {RaquetTypes::raquet()}, LogicalType::VARCHAR, Gen_raquet_as_hexwkb_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asCoverageJSON", {RaquetTypes::raquet()}, LogicalType::VARCHAR, Gen_raquet_as_coveragejson));
+    RegisterMeosFunction(loader, ScalarFunction("asCoverageJSON", {RasterTypes::raster()}, LogicalType::VARCHAR, Gen_raster_as_coveragejson));
+    { ScalarFunction sf = ScalarFunction("asGDALRaster", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR), LogicalType::INTEGER}, LogicalType::BLOB, Gen_raster_as_gdal); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("asGDALRaster", {RasterTypes::raster(), LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::BLOB, Gen_raster_as_gdal_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("asGDALRaster", {RasterTypes::raster(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_raster_as_gdal_v2));
+    { ScalarFunction sf = ScalarFunction("asTIFF", {RasterTypes::raster(), LogicalType::LIST(LogicalType::VARCHAR), LogicalType::INTEGER}, LogicalType::BLOB, Gen_raster_as_tiff); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    { ScalarFunction sf = ScalarFunction("asTIFF", {RasterTypes::raster(), LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::BLOB, Gen_raster_as_tiff_v1); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("asTIFF", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_as_tiff_v2));
+    { ScalarFunction sf = ScalarFunction("asPNG", {RasterTypes::raster(), LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::BLOB, Gen_raster_as_png); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("asPNG", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_as_png_v1));
+    { ScalarFunction sf = ScalarFunction("asJPEG", {RasterTypes::raster(), LogicalType::LIST(LogicalType::VARCHAR)}, LogicalType::BLOB, Gen_raster_as_jpeg); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
+    RegisterMeosFunction(loader, ScalarFunction("asJPEG", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_as_jpeg_v1));
+    RegisterMeosFunction(loader, ScalarFunction("rasterFromGDALRaster", {LogicalType::BLOB, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_from_gdal));
+    RegisterMeosFunction(loader, ScalarFunction("rasterFromGDALRaster", {LogicalType::BLOB}, RasterTypes::raster(), Gen_raster_from_gdal_v1));
     RegisterMeosFunction(loader, ScalarFunction("rasterFromHexWKB", {LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_from_hexwkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RasterTypes::raster(), LogicalType::VARCHAR}, LogicalType::BLOB, Gen_raster_as_wkb));
     RegisterMeosFunction(loader, ScalarFunction("asBinary", {RasterTypes::raster()}, LogicalType::BLOB, Gen_raster_as_wkb_v1));

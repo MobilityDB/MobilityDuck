@@ -392,3 +392,29 @@ SELECT s.count, s.sum IS NULL, s.mean IS NULL, s.stddev IS NULL, s.min IS NULL, 
 FROM (SELECT summaryStatsAgg(e, 1, true) AS s FROM stats);
 ----
 0	true	true	true	true	true
+
+# ── a raster in a format of GDAL ────────────────────────────────────────────
+
+# A GeoTIFF read back keeps the values, a creation option reaches the driver,
+# one KEY=VALUE an element, and a NULL list states no option; asGDALRaster in
+# GTiff writes what asTIFF writes, and the SRID given is the one the file states.
+query IIIIII
+SELECT dumpValues(rasterFromGDALRaster(asTIFF(r)), 1) = dumpValues(r, 1),
+  dumpValues(rasterFromGDALRaster(asTIFF(r, ['COMPRESS=DEFLATE'])), 1) = dumpValues(r, 1),
+  asTIFF(r, ['COMPRESS=DEFLATE']) <> asTIFF(r),
+  asTIFF(r, NULL) = asTIFF(r),
+  asGDALRaster(r, 'GTiff') = asTIFF(r),
+  SRID(rasterFromGDALRaster(asTIFF(r, NULL, 3857)))
+FROM depth;
+----
+true	true	true	true	true	3857
+
+# An image of a band of 8 unsigned bits opens with its format's signature, and a
+# PNG comment holding spaces and quotes, one option, is written into the file.
+query IIII
+SELECT to_hex(asPNG(r)[1:8]), to_hex(asJPEG(r)[1:2]),
+  asPNG(r, ['COMMENT=two words, "quoted"']) <> asPNG(r),
+  dumpValues(rasterFromGDALRaster(asPNG(r)), 1) = dumpValues(r, 1)
+FROM (SELECT addBand(makeEmptyRaster(2, 2, 0.0, 2.0, 1.0, -1.0, 0.0, 0.0, 4326), 1, '8BUI', 7.0) AS r);
+----
+89504E470D0A1A0A	FFD8	true	true

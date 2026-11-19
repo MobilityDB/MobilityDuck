@@ -2722,6 +2722,50 @@ static void Gen_raquet_read_bytes_v1(DataChunk &args, ExpressionState &, Vector 
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
+static void Gen_raquet_from_row(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<int32_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s2 = in2[i].GetString();
+        Raquet *r = raquet_from_row((uint64_t) in0[i], (const uint8_t *) in1[i].GetData(), (size_t) in1[i].GetSize(), s2.c_str(), in3[i]);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_raquet_from_row_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<int64_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<string_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        std::string s2 = in2[i].GetString();
+        Raquet *r = raquet_from_row((uint64_t) in0[i], (const uint8_t *) in1[i].GetData(), (size_t) in1[i].GetSize(), s2.c_str(), 1);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = RaquetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 static void Gen_raster_make(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
@@ -3948,6 +3992,8 @@ void RegisterGenerated_meos_raster_base_constructor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("raquetRead", {LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_read_v1));
     { ScalarFunction sf = ScalarFunction("raquetRead", {LogicalType::BLOB, QuadbinTypes::quadbin()}, RaquetTypes::raquet(), Gen_raquet_read_bytes); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     RegisterMeosFunction(loader, ScalarFunction("raquetRead", {LogicalType::BLOB}, RaquetTypes::raquet(), Gen_raquet_read_bytes_v1));
+    RegisterMeosFunction(loader, ScalarFunction("raquetFromRow", {LogicalType::BIGINT, LogicalType::BLOB, LogicalType::VARCHAR, LogicalType::INTEGER}, RaquetTypes::raquet(), Gen_raquet_from_row));
+    RegisterMeosFunction(loader, ScalarFunction("raquetFromRow", {LogicalType::BIGINT, LogicalType::BLOB, LogicalType::VARCHAR}, RaquetTypes::raquet(), Gen_raquet_from_row_v1));
     { ScalarFunction sf = ScalarFunction("raster", {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER, LogicalType::VARCHAR, LogicalType::DOUBLE}, RasterTypes::raster(), Gen_raster_make); sf.null_handling = FunctionNullHandling::SPECIAL_HANDLING; RegisterMeosFunction(loader, sf); }
     RegisterMeosFunction(loader, ScalarFunction("raster", {LogicalType::BLOB, LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER, LogicalType::VARCHAR}, RasterTypes::raster(), Gen_raster_make_v1));
     RegisterMeosFunction(loader, ScalarFunction("makeEmptyRaster", {LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::INTEGER}, RasterTypes::raster(), Gen_raster_make_empty));

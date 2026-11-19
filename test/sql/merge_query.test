@@ -1,0 +1,61 @@
+# name: test/sql/merge_query.test
+# description: The boxes of a value merged for the extents a query box states:
+#              mergeQuerySpans, mergeQueryTboxes and mergeQueryStboxes.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'UTC';
+
+# The query box gives only the extents a query is expected to have, not its
+# position, and the answer is the boxes of the value that minimize the boxes
+# such a query is expected to read: there is at least one, and each lies inside
+# the box of the value.
+
+# The spans of a time span set, for a query one day long.
+query II
+SELECT len(b) > 0, list_bool_and(list_transform(b, x -> x <@ span(v)))
+FROM (SELECT '{[2001-01-01, 2001-01-02], [2001-01-04, 2001-01-05], [2001-01-08, 2001-01-09]}'::tstzspanset AS v),
+  LATERAL (SELECT mergeQuerySpans(v, '[2001-01-01, 2001-01-02]'::tstzspan) AS b);
+----
+true	true
+
+# The spans of the time of a temporal float.
+query II
+SELECT len(b) > 0, list_bool_and(list_transform(b, x -> x <@ timeSpan(v)))
+FROM (SELECT '[1@2001-01-01, 5@2001-01-05, 2@2001-01-09]'::tfloat AS v),
+  LATERAL (SELECT mergeQuerySpans(v, '[2001-01-01, 2001-01-02]'::tstzspan) AS b);
+----
+true	true
+
+# The value-time boxes of a temporal float.
+query II
+SELECT len(b) > 0, list_bool_and(list_transform(b, x -> x <@ tbox(v)))
+FROM (SELECT '[1@2001-01-01, 5@2001-01-05, 2@2001-01-09]'::tfloat AS v),
+  LATERAL (SELECT mergeQueryTboxes(v, 'TBOXFLOAT XT([0, 1],[2001-01-01, 2001-01-02])'::tbox) AS b);
+----
+true	true
+
+# The spatiotemporal boxes of a temporal point.
+query II
+SELECT len(b) > 0, list_bool_and(list_transform(b, x -> x <@ stbox(v)))
+FROM (SELECT '[Point(1 1)@2001-01-01, Point(5 5)@2001-01-05, Point(9 1)@2001-01-09]'::tgeompoint AS v),
+  LATERAL (SELECT mergeQueryStboxes(v, 'STBOX XT(((0,0),(2,2)),[2001-01-01, 2001-01-02])'::stbox) AS b);
+----
+true	true
+
+# The spatial boxes of a geometry, read as every geometry argument is read, with
+# SRID 0, so that a query box stating no SRID meets it.
+statement ok
+INSTALL spatial;
+
+statement ok
+LOAD spatial;
+
+query II
+SELECT len(b) > 0, list_bool_and(list_transform(b, x -> x <@ stbox(g)))
+FROM (SELECT 'LINESTRING(0 0, 9 9)'::GEOMETRY AS g),
+  LATERAL (SELECT mergeQueryStboxes(g, 'STBOX X((0,0),(2,2))'::stbox) AS b);
+----
+true	true

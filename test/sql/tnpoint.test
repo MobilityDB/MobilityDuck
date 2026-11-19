@@ -148,7 +148,9 @@ SELECT nearestApproachDistance(tnpoint '{Npoint(1,0.2)@2000-01-01, Npoint(1,0.8)
 ----
 21.39201569925701	21.39201569925701
 
-# The restriction to and outside a time box, which carries no SRID
+# The restriction to and outside a time box, which carries no SRID, each in the
+# container the restriction of the geometry point it converts to answers in: the
+# restriction to the box is a sequence, the one outside it a sequence set
 
 query II
 SELECT asText(atStbox(tnpoint '[NPoint(1, 0.2)@2000-01-01, NPoint(1, 0.8)@2000-01-03]',
@@ -156,7 +158,7 @@ SELECT asText(atStbox(tnpoint '[NPoint(1, 0.2)@2000-01-01, NPoint(1, 0.8)@2000-0
        asText(minusStbox(tnpoint '[NPoint(1, 0.2)@2000-01-01, NPoint(1, 0.8)@2000-01-03]',
                          stbox 'STBOX T([2000-01-01,2000-01-02])'));
 ----
-{[NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01]}	{(NPoint(1,0.5)@2000-01-02 00:00:00+01, NPoint(1,0.8)@2000-01-03 00:00:00+01]}
+[NPoint(1,0.2)@2000-01-01 00:00:00+01, NPoint(1,0.5)@2000-01-02 00:00:00+01]	{(NPoint(1,0.5)@2000-01-02 00:00:00+01, NPoint(1,0.8)@2000-01-03 00:00:00+01]}
 
 # The route operators with the network point first answer as their twins with the
 # temporal value first: containedRid(np, temp) asks whether the routes of temp hold the
