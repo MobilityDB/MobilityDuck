@@ -6114,6 +6114,42 @@ static void Gen_temporal_merge_n_spans(DataChunk &args, ExpressionState &, Vecto
     }
 }
 
+static void Gen_temporal_merge_query_spans(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &q_vec = args.data[1];
+    q_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || q_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        string_t q_blob = FlatVector::GetData<string_t>(q_vec)[i];
+        Span *q_arg = BlobToSpan(q_blob);
+        int count = 0;
+        Span * arr = temporal_merge_query_spans(in, q_arg, &count);
+        free(in);
+        free(q_arg);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(Span)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
 static void Gen_temporal_split_each_n_spans(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -6234,6 +6270,42 @@ static void Gen_tnumber_merge_n_tboxes(DataChunk &args, ExpressionState &, Vecto
         int count = 0;
         TBox * arr = tnumber_merge_n_tboxes(in, n_arg, &count);
         free(in);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(TBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
+static void Gen_tnumber_merge_query_tboxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &q_vec = args.data[1];
+    q_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || q_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        Temporal *in = BlobToTemporal(blob);
+        string_t q_blob = FlatVector::GetData<string_t>(q_vec)[i];
+        TBox *q_arg = BlobToTbox(q_blob);
+        int count = 0;
+        TBox * arr = tnumber_merge_query_tboxes(in, q_arg, &count);
+        free(in);
+        free(q_arg);
         int n = (arr && count > 0) ? count : 0;
         ListVector::Reserve(result, off + n);
         ListVector::SetListSize(result, off + n);
@@ -7325,6 +7397,25 @@ void RegisterGenerated_meos_temporal_bbox_split(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("mergeNSpans", {TemporalTypes::tbigint(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_n_spans));
     RegisterMeosFunction(loader, ScalarFunction("mergeNSpans", {TemporalTypes::tfloat(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_n_spans));
     RegisterMeosFunction(loader, ScalarFunction("mergeNSpans", {TemporalTypes::ttext(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_n_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {CbufferTypes::tcbuffer(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TGeometryTypes::tgeometry(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TGeographyTypes::tgeography(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TgeompointType::tgeompoint(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TgeogpointType::tgeogpoint(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {H3indexTypes::th3index(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TJsonbTypes::tjsonb(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {NpointTypes::tnpoint(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TPcpointTypes::tpcpoint(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TPcpatchTypes::tpcpatch(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {PoseTypes::tpose(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {QuadbinTypes::tquadbin(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TrgeometryTypes::trgeometry(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {S2cellTypes::ts2cell(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TemporalTypes::tbool(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TemporalTypes::tint(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TemporalTypes::tbigint(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TemporalTypes::tfloat(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQuerySpans", {TemporalTypes::ttext(), SpanTypes::tstzspan()}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_merge_query_spans));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNSpans", {CbufferTypes::tcbuffer(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_split_each_n_spans));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNSpans", {TGeometryTypes::tgeometry(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_split_each_n_spans));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNSpans", {TGeographyTypes::tgeography(), LogicalType::INTEGER}, LogicalType::LIST(SpanTypes::tstzspan()), Gen_temporal_split_each_n_spans));
@@ -7369,6 +7460,9 @@ void RegisterGenerated_meos_temporal_bbox_split(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("mergeNTboxes", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_merge_n_tboxes));
     RegisterMeosFunction(loader, ScalarFunction("mergeNTboxes", {TemporalTypes::tbigint(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_merge_n_tboxes));
     RegisterMeosFunction(loader, ScalarFunction("mergeNTboxes", {TemporalTypes::tfloat(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_merge_n_tboxes));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQueryTboxes", {TemporalTypes::tint(), TboxType::tbox()}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_merge_query_tboxes));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQueryTboxes", {TemporalTypes::tbigint(), TboxType::tbox()}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_merge_query_tboxes));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQueryTboxes", {TemporalTypes::tfloat(), TboxType::tbox()}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_merge_query_tboxes));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNTboxes", {TemporalTypes::tint(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_split_each_n_tboxes));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNTboxes", {TemporalTypes::tbigint(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_split_each_n_tboxes));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNTboxes", {TemporalTypes::tfloat(), LogicalType::INTEGER}, LogicalType::LIST(TboxType::tbox()), Gen_tnumber_split_each_n_tboxes));

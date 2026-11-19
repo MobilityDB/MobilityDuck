@@ -4931,6 +4931,33 @@ def array_tail_sql(f, n):
              if len(s.get("args") or []) == 1 + n and (s.get("ret") or "").endswith("[]")}
     return tails.pop() if len(tails) == 1 else None
 
+def box_query_tail(f, ins):
+    """The query box after an array-return's container, as `(C box type, {container accessor:
+    (box SQL type, box accessor)})`, each container paired with the box its own array-returning
+    signature declares (mergeQuerySpans(intset, intspan), mergeQuerySpans(floatset, floatspan));
+    None when the one argument after the container is not a box read through its pointer."""
+    if len(ins) != 2:
+        return None
+    p = ins[1]
+    b = base(p["canonical"])
+    if b not in ("Span", "STBox", "TBox") or norm(p["canonical"]).count("*") != 1:
+        return None
+    geo = base(ins[0]["canonical"]) == "GSERIALIZED"
+    m = {**SET_TYPES, **SPAN_TYPES, **SPANSET_TYPES, **SIG_TEMPORAL_ACC}
+    pairs = {}
+    for s in f.get("sqlSignatures") or []:
+        a = s.get("args") or []
+        if len(a) != 2 or not (s.get("ret") or "").endswith("[]"):
+            continue
+        tacc = CONT_SQL_ACC[b].get(a[1])
+        # DuckDB's one GEOMETRY type stands for the geometry and geography signatures alike, as
+        # #shape_array reads a geometry container
+        cacc = ("MobilityDuckGeometryType()" if geo and a[0] in ("geometry", "geography")
+                else m.get(a[0]))
+        if tacc and cacc:
+            pairs.setdefault(cacc, (a[1], tacc))
+    return (b, pairs) if pairs else None
+
 def array_tail_params(f):
     """The scalar parameters after an array-return's container, its count parameter left out,
     split as #shape_array splits them (`ins[1:]`)."""
@@ -5043,6 +5070,16 @@ def shape_array(f):
     # them: one integer for the split-into-N family, a size, an origin and a border flag for the
     # bins of a span (bins(intspan, integer, integer, boolean) -> intspan[]).
     tailp = ins[1:]
+    # A query box after the container, its type following the container's in each signature: the
+    # boxes of a value merged for the extents a query box states (mergeQuerySpans, mergeQueryTboxes,
+    # mergeQueryStboxes), registered once per (container, box) pair its signatures declare
+    bq = box_query_tail(f, ins)
+    if bq is not None:
+        ib = base(ins[0]["canonical"])
+        if (ib not in ARRAY_IN or not norm(ins[0]["canonical"]).endswith("*")
+                or (ib == "GSERIALIZED" and not retired(f))):
+            return None
+        return ("array", ec, ib, list(bq[1]), ("box",) + bq)
     targs = [scalar_arg_for(f, p) for p in tailp]
     if any(t is None for t in targs):
         return None
@@ -5114,15 +5151,26 @@ def emit_array(f, ec, ib, tail=()):
     # One vector per scalar after the container, read per row through its #scalar_arg_for triple
     # and passed in the order the function declares it; a NULL in any of them answers a NULL list.
     # The first keeps the n_vec / n_arg names of the split-into-N count.
-    targs = [scalar_arg_for(f, p) for p in array_tail_params(f)] if tail else []
-    nm = ["n" if k == 1 else f"n{k}" for k in range(1, len(targs) + 1)]
+    # A query box (#box_query_tail) is read from its BLOB as every box argument is, and freed
+    # after the call; otherwise the tail is the by-value scalars below
+    box = tail[1] if tail and tail[0] == "box" else None
+    targs = ([] if box else
+             [scalar_arg_for(f, p) for p in array_tail_params(f)] if tail else [])
+    nm = (["q"] if box else
+          ["n" if k == 1 else f"n{k}" for k in range(1, len(targs) + 1)])
     n_vec = "".join(f"    auto &{v}_vec = args.data[{k}];\n"
                     f"    {v}_vec.Flatten(row_count);\n" for k, v in enumerate(nm, start=1))
     n_null = "".join(f" || {v}_vec.GetValue(i).IsNull()" for v in nm)
-    n_read = "".join(f"        {cpp} {v}_arg = FlatVector::GetData<{cpp}>({v}_vec)[i];\n"
-                     for v, (_dt, cpp, _m) in zip(nm, targs))
-    call_args = ", ".join(["in"] + [m.replace("a2", f"{v}_arg")
-                                    for v, (_dt, _cpp, m) in zip(nm, targs)] + ["&count"])
+    if box:
+        n_read = (f"        string_t q_blob = FlatVector::GetData<string_t>(q_vec)[i];\n"
+                  f"        {box} *q_arg = {CONT_BLOBTO[box]}(q_blob);\n")
+        call_args = "in, q_arg, &count"
+        free_in += "        free(q_arg);\n"
+    else:
+        n_read = "".join(f"        {cpp} {v}_arg = FlatVector::GetData<{cpp}>({v}_vec)[i];\n"
+                         for v, (_dt, cpp, _m) in zip(nm, targs))
+        call_args = ", ".join(["in"] + [m.replace("a2", f"{v}_arg")
+                                        for v, (_dt, _cpp, m) in zip(nm, targs)] + ["&count"])
     return (
 f"static void Gen_{name}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
 f"    EnsureMeosThreadInitialized();\n"
@@ -7277,6 +7325,12 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
     if b in ENUM_READER and t == "text":
         return dict(kind="byval", dt="LogicalType::VARCHAR", cpp="string_t", pre=[], post=[],
                     cexpr={p["name"]: "%s(%s.GetString().c_str())" % (ENUM_READER[b], v)})
+    # An unsigned 64-bit parameter a signature declares bigint, as a Raquet file stores the
+    # QUADBIN cell of a block: registered as the bigint the signature names and passed as its
+    # 64 bits, as MobilityDB's wrapper passes `(Quadbin) PG_GETARG_INT64` (raquetFromRow)
+    if b == "uint64_t" and t == "bigint":
+        return dict(kind="byval", dt="LogicalType::BIGINT", cpp="int64_t", pre=[], post=[],
+                    cexpr={p["name"]: "(uint64_t) %s" % v})
     if b in SCALAR_ARG and SQL_SCALAR_RET.get(t) == SCALAR_ARG[b][0]:
         dt, cpp, ex = SCALAR_ARG[b]
         return dict(kind="byval", dt=dt, cpp=cpp, pre=[], post=[],
@@ -7840,6 +7894,22 @@ def shape_sig_call(f):
                 args[k] = dict(args[k], pre=decl + ["if (!n%d) {" % k] +
                                ["    " + x for x in body] + ["}"])
                 nb[k] = lits
+                continue
+            # a list of texts the wrapper passes as NULL (the creation options of asGDALRaster,
+            # asTIFF, asPNG and asJPEG): a NULL array has no elements, so its length is 0 whether
+            # or not the catalog binds it, and the NULL row reads no list; FreeTextArr releases
+            # the NULL array of length 0 as it releases any other
+            if (k < len(args) and args[k]["kind"] == "textlist"
+                    and set(binds) <= set(args[k]["cexpr"])
+                    and all(str(binds[cn]).strip().upper() == "NULL"
+                            for cn in binds if "**" in byname[cn]["canonical"])
+                    and all(str(binds[cn]).strip() == "0"
+                            for cn in binds if "**" not in byname[cn]["canonical"])):
+                decl, read = args[k]["pre"]
+                lhs, rhs = read.rstrip(";").split(" = ", 1)
+                args[k] = dict(args[k], pre=[decl, "%s = n%d ? nullptr : %s;" % (lhs, k, rhs)])
+                nb[k] = {cn: ("nullptr" if "**" in byname[cn]["canonical"] else "0")
+                         for cn in args[k]["cexpr"]}
                 continue
             if k >= len(args) or args[k]["kind"] != "byval":
                 nb = None
@@ -9671,9 +9741,13 @@ def gen_cpp(fns, out_path, aliases=None):
             spec_sink = specific_regs
         # The registered signature carries the container plus one DuckDB type per `tail` entry
         # (the split-into-N count), matching the catalog overload the return type is read from.
-        sig_tail = "".join(", " + SQL_BASE_TO_DUCK[t] for t in tail)
+        box = tail[2] if tail and tail[0] == "box" else None
+        sig_tail = "" if box else "".join(", " + SQL_BASE_TO_DUCK[t] for t in tail)
         for acc in accs:                                    # sig-declared canonical types; per-acc LIST type
-            ret = array_ret_duck(f, acc, tail)
+            # a query box (#box_query_tail) is the one its container's signature declares
+            if box:
+                sig_tail = ", " + box[acc][1]
+            ret = array_ret_duck(f, acc, (box[acc][0],) if box else tail)
             if ret is None:
                 continue
             for nm in names:

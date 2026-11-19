@@ -1802,6 +1802,42 @@ static void Gen_geo_merge_n_stboxes(DataChunk &args, ExpressionState &, Vector &
     }
 }
 
+static void Gen_geo_merge_query_stboxes(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    auto &in_vec = args.data[0];
+    idx_t row_count = args.size();
+    in_vec.Flatten(row_count);
+    auto &q_vec = args.data[1];
+    q_vec.Flatten(row_count);
+    auto &result_validity = FlatVector::Validity(result);
+    auto list_entries = FlatVector::GetData<list_entry_t>(result);
+    idx_t off = 0;
+    for (idx_t i = 0; i < row_count; ++i) {
+        if (in_vec.GetValue(i).IsNull() || q_vec.GetValue(i).IsNull()) { result_validity.SetInvalid(i); continue; }
+        string_t blob = FlatVector::GetData<string_t>(in_vec)[i];
+        GSERIALIZED *in = GeometryToGSerialized(blob, 0);
+        string_t q_blob = FlatVector::GetData<string_t>(q_vec)[i];
+        STBox *q_arg = BlobToStbox(q_blob);
+        int count = 0;
+        STBox * arr = geo_merge_query_stboxes(in, q_arg, &count);
+        free(in);
+        free(q_arg);
+        int n = (arr && count > 0) ? count : 0;
+        ListVector::Reserve(result, off + n);
+        ListVector::SetListSize(result, off + n);
+        list_entries[i] = list_entry_t{off, (uint64_t) n};
+        if (n > 0) {
+            auto &child_vector = ListVector::GetEntry(result);
+            child_vector.SetVectorType(VectorType::FLAT_VECTOR);
+            auto *cd = FlatVector::GetData<string_t>(child_vector);
+            for (int j = 0; j < n; ++j) { cd[off + j] = StringVector::AddStringOrBlob(child_vector, (const char *) &arr[j], sizeof(STBox)); }
+            off += n;
+        }
+        if (arr) free(arr);
+        result_validity.SetValid(i);
+    }
+}
+
 static void Gen_geo_split_each_n_stboxes(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     auto &in_vec = args.data[0];
@@ -6917,6 +6953,7 @@ void RegisterGenerated_meos_geo_base_bbox(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("stboxes", {MobilityDuckGeometryType()}, LogicalType::LIST(StboxType::stbox()), Gen_geo_stboxes));
     RegisterMeosFunction(loader, ScalarFunction("mergeEachNStboxes", {MobilityDuckGeometryType(), LogicalType::INTEGER}, LogicalType::LIST(StboxType::stbox()), Gen_geo_merge_each_n_stboxes));
     RegisterMeosFunction(loader, ScalarFunction("mergeNStboxes", {MobilityDuckGeometryType(), LogicalType::INTEGER}, LogicalType::LIST(StboxType::stbox()), Gen_geo_merge_n_stboxes));
+    RegisterMeosFunction(loader, ScalarFunction("mergeQueryStboxes", {MobilityDuckGeometryType(), StboxType::stbox()}, LogicalType::LIST(StboxType::stbox()), Gen_geo_merge_query_stboxes));
     RegisterMeosFunction(loader, ScalarFunction("splitEachNStboxes", {MobilityDuckGeometryType(), LogicalType::INTEGER}, LogicalType::LIST(StboxType::stbox()), Gen_geo_split_each_n_stboxes));
     RegisterMeosFunction(loader, ScalarFunction("splitNStboxes", {MobilityDuckGeometryType(), LogicalType::INTEGER}, LogicalType::LIST(StboxType::stbox()), Gen_geo_split_n_stboxes));
 }

@@ -248,3 +248,13 @@ query I
 SELECT getValues(tquadbin(NULL::TGEOMPOINT, 0)) IS NULL;
 ----
 true
+
+# A row of a Raquet file is read into a tile as an engine scanning the Parquet
+# file hands it over: its block, the bytes of its band and the metadata of the
+# file, giving the tile the constructor gives.
+query I
+SELECT raquetFromRow(quadbinTileToCell(1, 0, 1)::BIGINT, from_hex('01020304'),
+    '{"file_format": "raquet", "version": "0.5.0", "tiling": {"scheme": "quadbin", "block_width": 2, "block_height": 2}, "bands": [{"name": "band_1", "type": "uint8", "nodata": 0}]}')
+  = raquet(from_hex('01020304'), 2, 2, quadbinTileToCell(1, 0, 1), 'UINT8', 0);
+----
+true

@@ -40,7 +40,9 @@
               {
                 "name": "openssl",
                 "platform": "!wasm32 & !ios & !android"
-              }
+              },
+              "png",
+              "jpeg"
             ]
           }
         ],
