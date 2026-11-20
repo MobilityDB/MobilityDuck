@@ -84,13 +84,13 @@ SELECT pose 'Pose(Point(1 2),0.5)' < pose 'Pose(Point(3 4),0.5)',
        pose 'Pose(Point(1 2),0.5)' > pose 'Pose(Point(3 4),0.5)',
        pose 'Pose(Point(1 2),0.5)' = pose 'Pose(Point(3 4),0.5)';
 ----
-false	true	false
+true	false	false
 
 query II
 SELECT pose 'Pose(Point(3 4),0.5)' < pose 'Pose(Point(1 2),0.5)',
        pose 'Pose(Point(3 4),0.5)' >= pose 'Pose(Point(1 2),0.5)';
 ----
-true	false
+false	true
 
 query II
 SELECT cbuffer 'Cbuffer(Point(1 1),1)' <> cbuffer 'Cbuffer(Point(2 2),2)',

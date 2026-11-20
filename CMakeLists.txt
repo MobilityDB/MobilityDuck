@@ -137,6 +137,7 @@ set(EXTENSION_SOURCES
     src/generated/generated_aggregates.cpp
     src/temporal/temporal.cpp
     src/temporal/temporal_functions.cpp
+    src/temporal/meos_collation.cpp
     src/temporal/tbox.cpp
     src/temporal/tbox_functions.cpp
     src/geo/stbox.cpp

@@ -31,6 +31,7 @@
 
 #include <cstdio>
 #include "mobilityduck_extension.hpp"
+#include "mobilityduck/meos_collation.hpp"
 #include "temporal/spanset.hpp"
 #include "temporal/set.hpp"
 #include "geo/geoset.hpp"
@@ -511,6 +512,10 @@ static void LoadInternal(ExtensionLoader &loader) {
 	RegisterGeneratedAggregates(loader);
 	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
 	TemporalParquetFunctions::Register(loader);
+	// The order and the equality of every MEOS type stored as a BLOB: its MEOS
+	// sort key, in every operation DuckDB binds to a comparison and in MIN,
+	// MAX and COUNT. Registered after every type exists.
+	RegisterMeosCollation(loader);
 }
 
 // MobilityDuck links no spatial extension: it loads the one DuckDB publishes
