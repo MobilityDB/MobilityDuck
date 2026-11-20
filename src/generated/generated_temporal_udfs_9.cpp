@@ -202,9 +202,19 @@ inline SizedString quadbin_cell_to_quadkey(uint64_t p0) {
     char *s = ::quadbin_cell_to_quadkey(p0, &size);
     return SizedString(s, size);
 }
+inline SizedString raquet_as_coveragejson(const Raquet * p0) {
+    size_t size = 0;
+    char *s = ::raquet_as_coveragejson(p0, &size);
+    return SizedString(s, size);
+}
 inline SizedString raquet_band_pixel_type(const Raquet * p0) {
     size_t size = 0;
     char *s = ::raquet_band_pixel_type(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString raster_as_coveragejson(const Raster * p0) {
+    size_t size = 0;
+    char *s = ::raster_as_coveragejson(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString raster_band_pixel_type(const Raster * p0, int p1) {
@@ -215,6 +225,11 @@ inline SizedString raster_band_pixel_type(const Raster * p0, int p1) {
 inline SizedString raster_not_same_alignment_reason(const Raster * p0, const Raster * p1) {
     size_t size = 0;
     char *s = ::raster_not_same_alignment_reason(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tfloat_as_coveragejson(const Temporal * p0, const Temporal * p1) {
+    size_t size = 0;
+    char *s = ::tfloat_as_coveragejson(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString trgeometry_as_text(const Temporal * p0, int p1) {

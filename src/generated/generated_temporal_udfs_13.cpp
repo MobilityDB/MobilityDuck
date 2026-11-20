@@ -202,9 +202,19 @@ inline SizedString quadbin_cell_to_quadkey(uint64_t p0) {
     char *s = ::quadbin_cell_to_quadkey(p0, &size);
     return SizedString(s, size);
 }
+inline SizedString raquet_as_coveragejson(const Raquet * p0) {
+    size_t size = 0;
+    char *s = ::raquet_as_coveragejson(p0, &size);
+    return SizedString(s, size);
+}
 inline SizedString raquet_band_pixel_type(const Raquet * p0) {
     size_t size = 0;
     char *s = ::raquet_band_pixel_type(p0, &size);
+    return SizedString(s, size);
+}
+inline SizedString raster_as_coveragejson(const Raster * p0) {
+    size_t size = 0;
+    char *s = ::raster_as_coveragejson(p0, &size);
     return SizedString(s, size);
 }
 inline SizedString raster_band_pixel_type(const Raster * p0, int p1) {
@@ -215,6 +225,11 @@ inline SizedString raster_band_pixel_type(const Raster * p0, int p1) {
 inline SizedString raster_not_same_alignment_reason(const Raster * p0, const Raster * p1) {
     size_t size = 0;
     char *s = ::raster_not_same_alignment_reason(p0, p1, &size);
+    return SizedString(s, size);
+}
+inline SizedString tfloat_as_coveragejson(const Temporal * p0, const Temporal * p1) {
+    size_t size = 0;
+    char *s = ::tfloat_as_coveragejson(p0, p1, &size);
     return SizedString(s, size);
 }
 inline SizedString trgeometry_as_text(const Temporal * p0, int p1) {
@@ -1738,6 +1753,50 @@ static void Gen_tpcpoint_value(DataChunk &args, ExpressionState &, Vector &resul
             Pcpoint * r = tpcpoint_value(t);
             free(t);
             return PcpointToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpoint_get_x(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpcpoint_get_x(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpoint_get_y(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpcpoint_get_y(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpoint_get_z(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpcpoint_get_z(t);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tpcpoint_get_dim(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = tpcpoint_get_dim(t, a2.GetString().c_str());
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
         });
 }
 
@@ -3475,6 +3534,10 @@ void RegisterGenerated_meos_pointcloud_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("startValue", {TPcpointTypes::tpcpoint()}, TPcpointTypes::pcpoint(), Gen_tpcpoint_start_value));
     RegisterMeosFunction(loader, ScalarFunction("endValue", {TPcpointTypes::tpcpoint()}, TPcpointTypes::pcpoint(), Gen_tpcpoint_end_value));
     RegisterMeosFunction(loader, ScalarFunction("getValue", {TPcpointTypes::tpcpoint()}, TPcpointTypes::pcpoint(), Gen_tpcpoint_value));
+    RegisterMeosFunction(loader, ScalarFunction("getX", {TPcpointTypes::tpcpoint()}, TemporalTypes::tfloat(), Gen_tpcpoint_get_x));
+    RegisterMeosFunction(loader, ScalarFunction("getY", {TPcpointTypes::tpcpoint()}, TemporalTypes::tfloat(), Gen_tpcpoint_get_y));
+    RegisterMeosFunction(loader, ScalarFunction("getZ", {TPcpointTypes::tpcpoint()}, TemporalTypes::tfloat(), Gen_tpcpoint_get_z));
+    RegisterMeosFunction(loader, ScalarFunction("getDim", {TPcpointTypes::tpcpoint(), LogicalType::VARCHAR}, TemporalTypes::tfloat(), Gen_tpcpoint_get_dim));
     RegisterMeosFunction(loader, ScalarFunction("valueN", {TPcpointTypes::tpcpoint(), LogicalType::INTEGER}, TPcpointTypes::pcpoint(), Gen_tpcpoint_value_n));
     RegisterMeosFunction(loader, ScalarFunction("valueAtTimestamp", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ}, TPcpointTypes::pcpoint(), Gen_tpcpoint_value_at_timestamptz));
     RegisterMeosFunction(loader, ScalarFunction("pcid", {TPcpointTypes::tpcpoint()}, LogicalType::UINTEGER, Gen_tpcpoint_pcid));
