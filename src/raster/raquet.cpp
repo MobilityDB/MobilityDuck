@@ -72,27 +72,19 @@ void RaquetTypes::RegisterTypes(ExtensionLoader &loader) {
 
 namespace {
 
-/* The Raquet structure is opaque to callers, so a tile travels as its WKB
- * serialisation rather than as raw bytes of the structure. */
+/* A tile is stored as its memory image (raquet_copy / raquet_mem_size), as the
+ * catalog's sqlTypes state it and as the generated preamble carries it. */
 inline Raquet *BlobToRaquet(string_t blob) {
-    Raquet *rq = raquet_from_wkb(
-        reinterpret_cast<const uint8_t *>(blob.GetData()), blob.GetSize());
-    if (!rq) {
-        throw InvalidInputException("raquet: invalid tile serialisation");
-    }
-    return rq;
+    size_t sz = blob.GetSize();
+    void *copy = malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return static_cast<Raquet *>(copy);
 }
 
 inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
-    size_t sz = 0;
-    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
+    string_t out = StringVector::AddStringOrBlob(result,
+        (const char *) rq, (size_t) raquet_mem_size(rq));
     free(rq);
-    if (!wkb) {
-        throw InvalidInputException("raquet: cannot serialise tile");
-    }
-    string_t out = StringVector::AddStringOrBlob(
-        result, string_t(reinterpret_cast<const char *>(wkb), sz));
-    free(wkb);
     return out;
 }
 

@@ -431,6 +431,7 @@ void RegisterGenerated_meos_pointcloud_box_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_pointcloud_box_comp(ExtensionLoader &loader);
 void RegisterGenerated_meos_pointcloud_box_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_pointcloud_box_pos(ExtensionLoader &loader);
+void RegisterGenerated_meos_pointcloud_box_setops(ExtensionLoader &loader);
 void RegisterGenerated_meos_pointcloud_box_topo(ExtensionLoader &loader);
 void RegisterGenerated_meos_pointcloud_comp_ever(ExtensionLoader &loader);
 void RegisterGenerated_meos_pointcloud_comp_temp(ExtensionLoader &loader);
@@ -704,6 +705,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_pointcloud_box_comp(loader);
     RegisterGenerated_meos_pointcloud_box_inout(loader);
     RegisterGenerated_meos_pointcloud_box_pos(loader);
+    RegisterGenerated_meos_pointcloud_box_setops(loader);
     RegisterGenerated_meos_pointcloud_box_topo(loader);
     RegisterGenerated_meos_pointcloud_comp_ever(loader);
     RegisterGenerated_meos_pointcloud_comp_temp(loader);

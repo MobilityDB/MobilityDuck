@@ -298,24 +298,323 @@ inline SizedString s2cell_cell_to_token(uint64_t p0) {
 
 namespace duckdb {
 namespace {
-// Self-contained blob<->Temporal marshalling (generated owns it; no hand-header dep).
-inline string_t TemporalToBlob(Vector &result, Temporal *t) {
-    size_t sz = temporal_mem_size(t);
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)t, sz);
-    free(t);
+// Temporal: its memory image (temporal_copy / temporal_mem_size), as the catalog's sqlTypes state it.
+inline string_t TemporalToBlob(Vector &result, Temporal *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, temporal_mem_size(v));
+    free(v);
     return out;
 }
-// Null-aware variants: a MEOS function returning NULL (empty/undefined result,
-// e.g. an intersection or restriction with no match) maps to SQL NULL via the mask.
-inline string_t TemporalToBlobN(Vector &result, Temporal *t, ValidityMask &mask, idx_t idx) {
-    if (!t) { mask.SetInvalid(idx); return string_t(); }
-    return TemporalToBlob(result, t);
+inline string_t TemporalToBlobN(Vector &result, Temporal *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return TemporalToBlob(result, v);
 }
 inline Temporal *BlobToTemporal(string_t blob) {
     size_t sz = blob.GetSize();
     uint8_t *copy = (uint8_t *)malloc(sz);
     memcpy(copy, blob.GetData(), sz);
     return reinterpret_cast<Temporal *>(copy);
+}
+// Set: its memory image (set_copy / set_mem_size), as the catalog's sqlTypes state it.
+inline string_t SetToBlob(Vector &result, Set *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, set_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t SetToBlobN(Vector &result, Set *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return SetToBlob(result, v);
+}
+inline Set *BlobToSet(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Set *>(copy);
+}
+// Span: its memory image (span_copy / 24 bytes), as the catalog's sqlTypes state it.
+static_assert(sizeof(Span) == 24, "the catalog lays a Span in 24 bytes");
+inline string_t SpanToBlob(Vector &result, Span *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, sizeof(Span));
+    free(v);
+    return out;
+}
+inline string_t SpanToBlobN(Vector &result, Span *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return SpanToBlob(result, v);
+}
+inline Span *BlobToSpan(string_t blob) {
+    if (blob.GetSize() != sizeof(Span)) {
+        throw InvalidInputException("A Span value is 24 bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Span *>(copy);
+}
+// SpanSet: its memory image (spanset_copy / spanset_mem_size), as the catalog's sqlTypes state it.
+inline string_t SpanSetToBlob(Vector &result, SpanSet *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, spanset_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t SpanSetToBlobN(Vector &result, SpanSet *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return SpanSetToBlob(result, v);
+}
+inline SpanSet *BlobToSpanSet(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<SpanSet *>(copy);
+}
+// STBox: its memory image (stbox_copy / 80 bytes), as the catalog's sqlTypes state it.
+static_assert(sizeof(STBox) == 80, "the catalog lays a STBox in 80 bytes");
+inline string_t StboxToBlob(Vector &result, STBox *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, sizeof(STBox));
+    free(v);
+    return out;
+}
+inline string_t StboxToBlobN(Vector &result, STBox *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return StboxToBlob(result, v);
+}
+inline STBox *BlobToStbox(string_t blob) {
+    if (blob.GetSize() != sizeof(STBox)) {
+        throw InvalidInputException("A STBox value is 80 bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<STBox *>(copy);
+}
+// TPCBox: its memory image (tpcbox_copy / 88 bytes), as the catalog's sqlTypes state it.
+static_assert(sizeof(TPCBox) == 88, "the catalog lays a TPCBox in 88 bytes");
+inline string_t TpcboxToBlob(Vector &result, TPCBox *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, sizeof(TPCBox));
+    free(v);
+    return out;
+}
+inline string_t TpcboxToBlobN(Vector &result, TPCBox *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return TpcboxToBlob(result, v);
+}
+inline TPCBox *BlobToTpcbox(string_t blob) {
+    if (blob.GetSize() != sizeof(TPCBox)) {
+        throw InvalidInputException("A TPCBox value is 88 bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<TPCBox *>(copy);
+}
+// TBox: its memory image (tbox_copy / 56 bytes), as the catalog's sqlTypes state it.
+static_assert(sizeof(TBox) == 56, "the catalog lays a TBox in 56 bytes");
+inline string_t TboxToBlob(Vector &result, TBox *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, sizeof(TBox));
+    free(v);
+    return out;
+}
+inline string_t TboxToBlobN(Vector &result, TBox *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return TboxToBlob(result, v);
+}
+inline TBox *BlobToTbox(string_t blob) {
+    if (blob.GetSize() != sizeof(TBox)) {
+        throw InvalidInputException("A TBox value is 56 bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<TBox *>(copy);
+}
+// Cbuffer: its memory image (cbuffer_copy / cbuffer_mem_size), as the catalog's sqlTypes state it.
+inline string_t CbufferToBlob(Vector &result, Cbuffer *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, cbuffer_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t CbufferToBlobN(Vector &result, Cbuffer *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return CbufferToBlob(result, v);
+}
+inline Cbuffer *BlobToCbuffer(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Cbuffer *>(copy);
+}
+// Jsonb: its memory image (jsonb_copy / jsonb_mem_size), as the catalog's sqlTypes state it.
+inline string_t JsonbToBlob(Vector &result, Jsonb *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, jsonb_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t JsonbToBlobN(Vector &result, Jsonb *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return JsonbToBlob(result, v);
+}
+inline Jsonb *BlobToJsonb(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Jsonb *>(copy);
+}
+// JsonPath: its memory image (jsonpath_copy / jsonpath_mem_size), as the catalog's sqlTypes state it.
+inline string_t JsonpathToBlob(Vector &result, JsonPath *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, jsonpath_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t JsonpathToBlobN(Vector &result, JsonPath *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return JsonpathToBlob(result, v);
+}
+inline JsonPath *BlobToJsonpath(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<JsonPath *>(copy);
+}
+// Pcpoint: its memory image (pcpoint_copy / pcpoint_mem_size), as the catalog's sqlTypes state it.
+inline string_t PcpointToBlob(Vector &result, Pcpoint *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, pcpoint_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t PcpointToBlobN(Vector &result, Pcpoint *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return PcpointToBlob(result, v);
+}
+inline Pcpoint *BlobToPcpoint(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Pcpoint *>(copy);
+}
+// Pcpatch: its memory image (pcpatch_copy / pcpatch_mem_size), as the catalog's sqlTypes state it.
+inline string_t PcpatchToBlob(Vector &result, Pcpatch *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, pcpatch_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t PcpatchToBlobN(Vector &result, Pcpatch *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return PcpatchToBlob(result, v);
+}
+inline Pcpatch *BlobToPcpatch(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Pcpatch *>(copy);
+}
+// Npoint: its memory image (npoint_copy / 16 bytes), as the catalog's sqlTypes state it.
+static_assert(sizeof(Npoint) == 16, "the catalog lays a Npoint in 16 bytes");
+inline string_t NpointToBlob(Vector &result, Npoint *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, sizeof(Npoint));
+    free(v);
+    return out;
+}
+inline string_t NpointToBlobN(Vector &result, Npoint *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return NpointToBlob(result, v);
+}
+inline Npoint *BlobToNpoint(string_t blob) {
+    if (blob.GetSize() != sizeof(Npoint)) {
+        throw InvalidInputException("A Npoint value is 16 bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Npoint *>(copy);
+}
+// Pose: its memory image (pose_copy / pose_mem_size), as the catalog's sqlTypes state it.
+inline string_t PoseToBlob(Vector &result, Pose *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, pose_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t PoseToBlobN(Vector &result, Pose *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return PoseToBlob(result, v);
+}
+inline Pose *BlobToPose(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Pose *>(copy);
+}
+// PoseChain: its memory image (posechain_copy / posechain_mem_size), as the catalog's sqlTypes state it.
+inline string_t PosechainToBlob(Vector &result, PoseChain *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, posechain_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t PosechainToBlobN(Vector &result, PoseChain *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return PosechainToBlob(result, v);
+}
+inline PoseChain *BlobToPosechain(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<PoseChain *>(copy);
+}
+// Nsegment: its memory image (nsegment_copy / 24 bytes), as the catalog's sqlTypes state it.
+static_assert(sizeof(Nsegment) == 24, "the catalog lays a Nsegment in 24 bytes");
+inline string_t NsegmentToBlob(Vector &result, Nsegment *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, sizeof(Nsegment));
+    free(v);
+    return out;
+}
+inline string_t NsegmentToBlobN(Vector &result, Nsegment *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return NsegmentToBlob(result, v);
+}
+inline Nsegment *BlobToNsegment(string_t blob) {
+    if (blob.GetSize() != sizeof(Nsegment)) {
+        throw InvalidInputException("A Nsegment value is 24 bytes, and this one holds " +
+            std::to_string(blob.GetSize()));
+    }
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Nsegment *>(copy);
+}
+// Raquet: its memory image (raquet_copy / raquet_mem_size), as the catalog's sqlTypes state it.
+inline string_t RaquetToBlob(Vector &result, Raquet *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, raquet_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t RaquetToBlobN(Vector &result, Raquet *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return RaquetToBlob(result, v);
+}
+inline Raquet *BlobToRaquet(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Raquet *>(copy);
+}
+// Raster: its memory image (raster_copy / raster_mem_size), as the catalog's sqlTypes state it.
+inline string_t RasterToBlob(Vector &result, Raster *v) {
+    string_t out = StringVector::AddStringOrBlob(result, (const char *)v, raster_mem_size(v));
+    free(v);
+    return out;
+}
+inline string_t RasterToBlobN(Vector &result, Raster *v, ValidityMask &mask, idx_t idx) {
+    if (!v) { mask.SetInvalid(idx); return string_t(); }
+    return RasterToBlob(result, v);
+}
+inline Raster *BlobToRaster(string_t blob) {
+    size_t sz = blob.GetSize();
+    uint8_t *copy = (uint8_t *)malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return reinterpret_cast<Raster *>(copy);
 }
 // Array-of-temporal (LIST(blob)) INPUT marshalling for the NxN set-set functions
 // (minDistance(tgeo[],tgeo[]) etc.). Reads a DuckDB LIST row's child BLOBs into a fresh
@@ -331,266 +630,6 @@ inline const Temporal **ListToTemporalArr(Vector &child, list_entry_t le, int *c
 inline void FreeTemporalArr(const Temporal **arr, int n) {
     for (int i = 0; i < n; i++) free((void *) arr[i]);
     free((void *) arr);
-}
-// Self-contained blob<->Set marshalling (hand binding's exact method: set_mem_size out).
-inline string_t SetToBlob(Vector &result, Set *s) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)s, set_mem_size(s));
-    free(s);
-    return out;
-}
-inline string_t SetToBlobN(Vector &result, Set *s, ValidityMask &mask, idx_t idx) {
-    if (!s) { mask.SetInvalid(idx); return string_t(); }
-    return SetToBlob(result, s);
-}
-inline Set *BlobToSet(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Set *>(copy);
-}
-// Self-contained blob<->Span marshalling (Span is a FIXED-size struct -> sizeof(Span)).
-inline string_t SpanToBlob(Vector &result, Span *s) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)s, sizeof(Span));
-    free(s);
-    return out;
-}
-inline Span *BlobToSpan(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Span *>(copy);
-}
-// Self-contained blob<->SpanSet marshalling (varlena -> spanset_mem_size out).
-inline string_t SpanSetToBlob(Vector &result, SpanSet *ss) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)ss, spanset_mem_size(ss));
-    free(ss);
-    return out;
-}
-inline SpanSet *BlobToSpanSet(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<SpanSet *>(copy);
-}
-// Self-contained blob<->Cbuffer marshalling. Cbuffer is a 4-byte-header varlena
-// (int32 vl_len_ + point + radius) -> VARSIZE out; the stored BLOB is the raw bytes.
-inline string_t CbufferToBlob(Vector &result, Cbuffer *cb) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)cb, VARSIZE(cb));
-    free(cb);
-    return out;
-}
-inline string_t CbufferToBlobN(Vector &result, Cbuffer *cb, ValidityMask &mask, idx_t idx) {
-    if (!cb) { mask.SetInvalid(idx); return string_t(); }
-    return CbufferToBlob(result, cb);
-}
-inline Cbuffer *BlobToCbuffer(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Cbuffer *>(copy);
-}
-// Self-contained blob<->Jsonb marshalling. Jsonb is a varlena (vl_len_ header)
-// -> VARSIZE out; the stored BLOB is the raw jsonb bytes (mirror Cbuffer).
-inline string_t JsonbToBlob(Vector &result, Jsonb *jb) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)jb, VARSIZE(jb));
-    free(jb);
-    return out;
-}
-inline string_t JsonbToBlobN(Vector &result, Jsonb *jb, ValidityMask &mask, idx_t idx) {
-    if (!jb) { mask.SetInvalid(idx); return string_t(); }
-    return JsonbToBlob(result, jb);
-}
-// JsonPath is a varlena, so the blob carries the value whole.
-inline JsonPath *BlobToJsonpath(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<JsonPath *>(copy);
-}
-inline Jsonb *BlobToJsonb(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Jsonb *>(copy);
-}
-// Self-contained blob<->Pose marshalling. Pose is a 4-byte-header varlena
-// (int32 vl_len_ + flags + srid + position/orientation doubles) -> VARSIZE out;
-// the stored BLOB is the raw bytes (mirror Cbuffer).
-inline string_t PoseToBlob(Vector &result, Pose *p) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)p, VARSIZE(p));
-    free(p);
-    return out;
-}
-inline string_t PoseToBlobN(Vector &result, Pose *p, ValidityMask &mask, idx_t idx) {
-    if (!p) { mask.SetInvalid(idx); return string_t(); }
-    return PoseToBlob(result, p);
-}
-inline Pose *BlobToPose(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Pose *>(copy);
-}
-// Self-contained blob<->PoseChain marshalling. A 4-byte-header varlena
-// (int32 vl_len_ + flags + srid + link count + the links' doubles) -> VARSIZE out;
-// the stored BLOB is the raw bytes (mirror Pose).
-inline string_t PosechainToBlob(Vector &result, PoseChain *pc) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)pc, VARSIZE(pc));
-    free(pc);
-    return out;
-}
-inline string_t PosechainToBlobN(Vector &result, PoseChain *pc, ValidityMask &mask, idx_t idx) {
-    if (!pc) { mask.SetInvalid(idx); return string_t(); }
-    return PosechainToBlob(result, pc);
-}
-inline PoseChain *BlobToPosechain(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<PoseChain *>(copy);
-}
-// Self-contained blob<->Pcpoint/Pcpatch marshalling. Both are varlena (vl_len_
-// header) -> VARSIZE out; the stored BLOB is the raw bytes (mirror Cbuffer).
-inline string_t PcpointToBlob(Vector &result, Pcpoint *pt) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)pt, VARSIZE(pt));
-    free(pt);
-    return out;
-}
-inline string_t PcpointToBlobN(Vector &result, Pcpoint *pt, ValidityMask &mask, idx_t idx) {
-    if (!pt) { mask.SetInvalid(idx); return string_t(); }
-    return PcpointToBlob(result, pt);
-}
-inline Pcpoint *BlobToPcpoint(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Pcpoint *>(copy);
-}
-inline string_t PcpatchToBlob(Vector &result, Pcpatch *pa) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)pa, VARSIZE(pa));
-    free(pa);
-    return out;
-}
-inline string_t PcpatchToBlobN(Vector &result, Pcpatch *pa, ValidityMask &mask, idx_t idx) {
-    if (!pa) { mask.SetInvalid(idx); return string_t(); }
-    return PcpatchToBlob(result, pa);
-}
-inline Pcpatch *BlobToPcpatch(string_t blob) {
-    size_t sz = blob.GetSize();
-    uint8_t *copy = (uint8_t *)malloc(sz);
-    memcpy(copy, blob.GetData(), sz);
-    return reinterpret_cast<Pcpatch *>(copy);
-}
-// Self-contained blob<->Npoint/Nsegment marshalling. Npoint {rid,pos} and Nsegment
-// {rid,pos1,pos2} are FIXED-size structs (palloc(sizeof)) -> sizeof out.
-inline string_t NpointToBlob(Vector &result, Npoint *np) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)np, sizeof(Npoint));
-    free(np);
-    return out;
-}
-inline string_t NpointToBlobN(Vector &result, Npoint *np, ValidityMask &mask, idx_t idx) {
-    if (!np) { mask.SetInvalid(idx); return string_t(); }
-    return NpointToBlob(result, np);
-}
-inline Npoint *BlobToNpoint(string_t blob) {
-    if (blob.GetSize() != sizeof(Npoint)) {
-        throw InvalidInputException("An npoint value is " +
-            std::to_string(sizeof(Npoint)) + " bytes, and this one holds " +
-            std::to_string(blob.GetSize()));
-    }
-    Npoint *copy = (Npoint *)malloc(sizeof(Npoint));
-    memcpy(copy, blob.GetData(), sizeof(Npoint));
-    return copy;
-}
-inline string_t NsegmentToBlob(Vector &result, Nsegment *ns) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)ns, sizeof(Nsegment));
-    free(ns);
-    return out;
-}
-inline string_t NsegmentToBlobN(Vector &result, Nsegment *ns, ValidityMask &mask, idx_t idx) {
-    if (!ns) { mask.SetInvalid(idx); return string_t(); }
-    return NsegmentToBlob(result, ns);
-}
-inline Nsegment *BlobToNsegment(string_t blob) {
-    if (blob.GetSize() != sizeof(Nsegment)) {
-        throw InvalidInputException("An nsegment value is " +
-            std::to_string(sizeof(Nsegment)) + " bytes, and this one holds " +
-            std::to_string(blob.GetSize()));
-    }
-    Nsegment *copy = (Nsegment *)malloc(sizeof(Nsegment));
-    memcpy(copy, blob.GetData(), sizeof(Nsegment));
-    return copy;
-}
-// Self-contained blob<->Raquet marshalling. The Raquet structure is opaque, so the
-// stored BLOB is the WKB serialisation of the tile, the wire form its text hex-encodes.
-inline string_t RaquetToBlob(Vector &result, Raquet *rq) {
-    size_t sz = 0;
-    uint8_t *wkb = raquet_as_wkb(rq, 0, &sz);
-    free(rq);
-    if (!wkb) throw InvalidInputException("raquet: cannot serialise the tile");
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
-    free(wkb);
-    return out;
-}
-inline string_t RaquetToBlobN(Vector &result, Raquet *rq, ValidityMask &mask, idx_t idx) {
-    if (!rq) { mask.SetInvalid(idx); return string_t(); }
-    return RaquetToBlob(result, rq);
-}
-inline Raquet *BlobToRaquet(string_t blob) {
-    Raquet *rq = raquet_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
-    if (!rq) throw InvalidInputException("raquet: invalid tile serialisation");
-    return rq;
-}
-// Self-contained blob<->Raster marshalling, as the Raquet one: the stored BLOB is the
-// WKB serialisation of the raster, the form its text hex-encodes.
-inline string_t RasterToBlob(Vector &result, Raster *rast) {
-    size_t sz = 0;
-    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
-    free(rast);
-    if (!wkb) throw InvalidInputException("raster: cannot serialise the raster");
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
-    free(wkb);
-    return out;
-}
-inline string_t RasterToBlobN(Vector &result, Raster *rast, ValidityMask &mask, idx_t idx) {
-    if (!rast) { mask.SetInvalid(idx); return string_t(); }
-    return RasterToBlob(result, rast);
-}
-inline Raster *BlobToRaster(string_t blob) {
-    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
-    if (!rast) throw InvalidInputException("raster: invalid raster serialisation");
-    return rast;
-}
-// Self-contained blob<->STBox/TBox marshalling (FIXED-size structs -> sizeof).
-inline string_t StboxToBlob(Vector &result, STBox *b) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(STBox));
-    free(b);
-    return out;
-}
-inline STBox *BlobToStbox(string_t blob) {
-    uint8_t *copy = (uint8_t *)malloc(blob.GetSize());
-    memcpy(copy, blob.GetData(), blob.GetSize());
-    return reinterpret_cast<STBox *>(copy);
-}
-inline string_t TboxToBlob(Vector &result, TBox *b) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(TBox));
-    free(b);
-    return out;
-}
-inline TBox *BlobToTbox(string_t blob) {
-    uint8_t *copy = (uint8_t *)malloc(blob.GetSize());
-    memcpy(copy, blob.GetData(), blob.GetSize());
-    return reinterpret_cast<TBox *>(copy);
-}
-inline string_t TpcboxToBlob(Vector &result, TPCBox *b) {
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)b, sizeof(TPCBox));
-    free(b);
-    return out;
-}
-inline TPCBox *BlobToTpcbox(string_t blob) {
-    uint8_t *copy = (uint8_t *)malloc(blob.GetSize());
-    memcpy(copy, blob.GetData(), blob.GetSize());
-    return reinterpret_cast<TPCBox *>(copy);
 }
 // Build a MEOS text* varlena from a DuckDB VARCHAR (hand binding's exact method); caller frees.
 inline text *MakeText(string_t s) {
