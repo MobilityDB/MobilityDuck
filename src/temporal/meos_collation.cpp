@@ -106,20 +106,8 @@ uint8_t *
 meos_value_sortkey(MeosKeyKind kind, MeosType type, const string_t &blob,
   size_t *size)
 {
-  /* A Raquet tile, whose structure is opaque, is stored as its WKB, the
-   * codec of BlobToRaquet */
-  if (kind == MeosKeyKind::RAQUET)
-  {
-    Raquet *rq = raquet_from_wkb((const uint8_t *) blob.GetData(),
-      blob.GetSize());
-    if (! rq)
-      return nullptr;
-    uint8_t *result = raquet_sortkey(rq, size);
-    free(rq);
-    return result;
-  }
-  /* The stored bytes of every other type are the memory image of the value,
-   * which MEOS reads aligned */
+  /* The stored bytes are the memory image of the value, as the catalog's
+   * sqlTypes state it, which MEOS reads aligned */
   size_t len = blob.GetSize();
   void *value = malloc(len);
   memcpy(value, blob.GetData(), len);
@@ -160,6 +148,8 @@ meos_value_sortkey(MeosKeyKind kind, MeosType type, const string_t &blob,
       result = nsegment_sortkey((const Nsegment *) value, size);
       break;
     case MeosKeyKind::RAQUET:
+      result = raquet_sortkey((const Raquet *) value, size);
+      break;
     case MeosKeyKind::NONE:
       break;
   }

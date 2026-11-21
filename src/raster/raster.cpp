@@ -29,9 +29,9 @@
 
 /* MobilityDuck binding for MEOS's raster (`meos_raster.h`).
  *
- * RASTER is stored as a BLOB holding the MEOS WKB serialisation of the raster,
- * so a raster survives a Parquet round trip and matches the hex-encoded text
- * form of the VARCHAR casts. Only the type registration and its text casts
+ * RASTER is stored as a BLOB holding the memory image of the raster
+ * (raster_copy / raster_mem_size), as the catalog's sqlTypes state it; its text
+ * is the hex of its WKB, as in PostgreSQL. Only the type registration and its text casts
  * are hand-written here, as for RAQUET in raquet.cpp; the operation surface
  * is generated from the MEOS-API catalog into src/generated/, whose preamble
  * carries the same BlobToRaster and RasterToBlob as the ones below.
@@ -50,6 +50,7 @@ extern "C" {
 }
 
 #include <cstdlib>
+#include <cstring>
 #include <string>
 
 namespace duckdb {
@@ -67,22 +68,16 @@ void RasterTypes::RegisterTypes(ExtensionLoader &loader) {
 namespace {
 
 inline Raster *BlobToRaster(string_t blob) {
-    Raster *rast = raster_from_wkb((const uint8_t *)blob.GetData(), blob.GetSize());
-    if (!rast) {
-        throw InvalidInputException("raster: invalid raster serialisation");
-    }
-    return rast;
+    size_t sz = blob.GetSize();
+    void *copy = malloc(sz);
+    memcpy(copy, blob.GetData(), sz);
+    return static_cast<Raster *>(copy);
 }
 
 inline string_t RasterToBlob(Vector &result, Raster *rast) {
-    size_t sz = 0;
-    uint8_t *wkb = raster_as_wkb(rast, 0, &sz);
+    string_t out = StringVector::AddStringOrBlob(result,
+        (const char *) rast, (size_t) raster_mem_size(rast));
     free(rast);
-    if (!wkb) {
-        throw InvalidInputException("raster: cannot serialise the raster");
-    }
-    string_t out = StringVector::AddStringOrBlob(result, (const char *)wkb, sz);
-    free(wkb);
     return out;
 }
 

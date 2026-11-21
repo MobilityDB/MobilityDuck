@@ -104,21 +104,18 @@ using RasterPtr = std::unique_ptr<Raster, MeosFree>;
 using BytesPtr = std::unique_ptr<uint8_t, MeosFree>;
 using CharsPtr = std::unique_ptr<char, MeosFree>;
 
+/* A raster is stored as its memory image (raster_copy / raster_mem_size), as
+ * the catalog's sqlTypes state it and as the generated preamble carries it. */
 RasterPtr ReadRaster(string_t blob) {
-	Raster *rast = raster_from_wkb(const_data_ptr_cast(blob.GetData()), blob.GetSize());
-	if (!rast) {
-		throw InvalidInputException("raster: invalid raster serialisation");
-	}
-	return RasterPtr(rast);
+	size_t size = blob.GetSize();
+	void *copy = malloc(size);
+	memcpy(copy, blob.GetData(), size);
+	return RasterPtr(static_cast<Raster *>(copy));
 }
 
 string_t WriteRaster(Vector &result, const Raster *rast) {
-	size_t size = 0;
-	BytesPtr wkb(raster_as_wkb(rast, 0, &size));
-	if (!wkb) {
-		throw InvalidInputException("raster: cannot serialise the raster");
-	}
-	return StringVector::AddStringOrBlob(result, const_char_ptr_cast(wkb.get()), size);
+	return StringVector::AddStringOrBlob(result, const_char_ptr_cast(rast),
+	                                     static_cast<size_t>(raster_mem_size(rast)));
 }
 
 /* The pixel types of a MEOS raster band and of a datacube, as PostGIS maps its
