@@ -223,3 +223,51 @@ query I
 SELECT a.k FROM tbl_raquet a JOIN tbl_raquet b ON a.rq = b.rq AND a.k < b.k;
 ----
 3
+
+# A raster is equal to another when their serialized bytes are the same, the
+# equality of raster_eq of MEOS and of the operator = of PostGIS, so its stored
+# bytes are its key: equal rasters group together and join, different ones do not
+
+statement ok
+CREATE TABLE tbl_raster AS SELECT * FROM (VALUES
+  (1, raster(from_hex('0001027F80FF'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BUI', 255.0)),
+  (2, raster(from_hex('0A141E28323C'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BUI', 255.0)),
+  (3, raster(from_hex('0001027F80FF'), 3, 2, 10.0, 50.0, 2.0, -2.0, 0.0, 0.0, 4326, '8BUI', 255.0))) t(k, r);
+
+query II
+SELECT COUNT(*), COUNT(DISTINCT r) FROM tbl_raster;
+----
+3	2
+
+query I
+SELECT a.k FROM tbl_raster a JOIN tbl_raster b ON a.r = b.r AND a.k < b.k;
+----
+1
+
+# PostgreSQL states neither an order nor an equality for a JSON path, so every
+# operation that compares one is refused, never answered by its stored bytes
+
+statement error
+SELECT '$.a'::jsonpath = '$.a'::jsonpath;
+----
+has no order or equality
+
+statement error
+SELECT DISTINCT p FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+has no order or equality
+
+statement error
+SELECT p FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p) ORDER BY p;
+----
+has no order or equality
+
+statement error
+SELECT MIN(p) FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+has no order or equality
+
+query I
+SELECT COUNT(p) FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+2

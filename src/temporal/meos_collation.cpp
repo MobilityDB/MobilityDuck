@@ -47,9 +47,13 @@
  * are keyed by their family, and a base value by the key of the set holding it
  * alone, a set key being one byte for the set type followed by the keys of its
  * values; a network segment and a Raquet tile, which no set holds, by their
- * own keys. Every type MEOS compares has a key, and a type it does not
- * compare, the PostGIS raster and the JSON path, keeps the comparison of
- * DuckDB, since MEOS states no order for it.
+ * own keys. A raster, whose equality is that of its serialized bytes
+ * (#raster_eq of MEOS), is keyed by the bytes stored here: DuckDB compares them
+ * as they are, so its equality is that of MEOS and PostGIS, and the order of
+ * those bytes, which no reference states for a raster, has no meaning. A type
+ * MEOS does not compare, the JSON path, for which PostgreSQL states neither an
+ * order nor an equality, is refused by every such operation, MIN and MAX
+ * included.
  */
 
 #include "meos_wrapper_simple.hpp"
@@ -72,7 +76,7 @@ namespace {
 
 /* The kinds of key a MEOS type takes */
 enum class MeosKeyKind { NONE, SET, SPAN, SPANSET, TBOX, STBOX, TPCBOX, TEMPORAL, BASE,
-  NSEGMENT, RAQUET };
+  NSEGMENT, RAQUET, IMAGE };
 
 MeosKeyKind
 meos_key_kind(MeosType type)
@@ -98,6 +102,11 @@ meos_key_kind(MeosType type)
     return MeosKeyKind::NSEGMENT;
   if (type == T_RAQUET)
     return MeosKeyKind::RAQUET;
+  /* A raster is equal to another when their serialized bytes are the same
+   * (#raster_eq of MEOS), which are the bytes stored here, so its stored bytes
+   * are its key */
+  if (type == T_RASTER)
+    return MeosKeyKind::IMAGE;
   return MeosKeyKind::NONE;
 }
 
@@ -150,6 +159,7 @@ meos_value_sortkey(MeosKeyKind kind, MeosType type, const string_t &blob,
     case MeosKeyKind::RAQUET:
       result = raquet_sortkey((const Raquet *) value, size);
       break;
+    case MeosKeyKind::IMAGE:
     case MeosKeyKind::NONE:
       break;
   }
@@ -168,11 +178,15 @@ PushMeosCollation(ClientContext &context, unique_ptr<Expression> &source,
   if (type == T_UNKNOWN)
     return false;
   /* Every type MEOS compares has a key; a type it does not compare, the
-   * PostGIS raster and the JSON path, has no MEOS order, and DuckDB keeps its
-   * own comparison of it */
+   * PostGIS raster and the JSON path, has neither an order nor an equality,
+   * and is refused, never compared by its stored bytes */
   MeosKeyKind kind = meos_key_kind(type);
-  if (kind == MeosKeyKind::NONE)
+  /* A raster keyed by its stored bytes is compared by DuckDB as it is */
+  if (kind == MeosKeyKind::IMAGE)
     return false;
+  if (kind == MeosKeyKind::NONE)
+    throw NotImplementedException("Type %s has no order or equality: it "
+      "cannot be compared, ordered, grouped or made distinct", name);
 
   ScalarFunction key_function("meos_sortkey", {sql_type}, LogicalType::BLOB,
     [kind, type](DataChunk &args, ExpressionState &, Vector &result) {
@@ -273,7 +287,10 @@ RegisterMeosCollation(ExtensionLoader &loader)
     CollationCallback(PushMeosCollation));
 
   /* MIN, MAX and COUNT, which the collation does not reach, over each MEOS
-   * type the extension registers as a BLOB and MEOS keys. The overloads join
+   * type the extension registers as a BLOB. MIN and MAX read the key of a type
+   * MEOS keys, and refuse a type it does not compare through the collation
+   * their rebinding pushes; COUNT reads the key of a keyed type, so that
+   * COUNT(DISTINCT x) counts the values it holds distinct. The overloads join
    * the sets of the built-in aggregates as #ExtensionLoader::AddFunctionOverload
    * joins a scalar overload to its set, an aggregate having no such loader
    * entry */
@@ -294,7 +311,7 @@ RegisterMeosCollation(ExtensionLoader &loader)
   {
     MeosType type = (MeosType) i;
     const char *name = meostype_name(type);
-    if (! name || meos_key_kind(type) == MeosKeyKind::NONE)
+    if (! name)
       continue;
     auto entry = schema.GetEntry(transaction, CatalogType::TYPE_ENTRY, name);
     if (! entry)
@@ -302,10 +319,15 @@ RegisterMeosCollation(ExtensionLoader &loader)
     LogicalType sql_type = entry->Cast<TypeCatalogEntry>().user_type;
     if (sql_type.id() != LogicalTypeId::BLOB)
       continue;
+    /* The built-in aggregates of DuckDB read a raster's stored bytes, its key */
+    if (meos_key_kind(type) == MeosKeyKind::IMAGE)
+      continue;
     min_set.AddFunction(AggregateFunction("min", {sql_type}, sql_type,
       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, BindMeosMinMax));
     max_set.AddFunction(AggregateFunction("max", {sql_type}, sql_type,
       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, BindMeosMinMax));
+    if (meos_key_kind(type) == MeosKeyKind::NONE)
+      continue;
     count_set.AddFunction(AggregateFunction("count", {sql_type},
       LogicalType::BIGINT, nullptr, nullptr, nullptr, nullptr, nullptr,
       nullptr, BindMeosCount));

@@ -105,6 +105,22 @@ from those specific cases by design. This is not a parity gap to close on the
 MobilityDuck side; the regression files are the artifacts that should track
 the user-facing convention.
 
+## Comparing a raster and a JSON path
+
+DuckDB binds `=`, `<`, `ORDER BY`, `GROUP BY`, `DISTINCT` and joins over a
+type to one collation, which answers equality and order together or refuses
+both; it cannot answer one and refuse the other, as PostgreSQL does.
+
+* **raster** — PostGIS states an equality over a raster (`=`, the operator
+  class `hash_raster_ops`) and no order. MobilityDuck compares a raster by its
+  stored bytes, which are the bytes MEOS's `raster_eq` compares, so `=`,
+  `GROUP BY`, `DISTINCT` and joins answer as in PostgreSQL. `ORDER BY`, `<`,
+  `MIN` and `MAX` also answer, with the order of those bytes: an order no
+  reference states and that has no meaning, where PostgreSQL refuses.
+* **jsonpath** — PostgreSQL states neither an equality nor an order over a
+  JSON path, and every operation that compares one raises an error here, as
+  it does there (`MIN` and `MAX` included). `COUNT(p)` counts the values.
+
 ## Out of scope (deferred upstream work)
 
 These rows are not DuckDB-specific gaps but appear here for completeness so
