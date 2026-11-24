@@ -882,114 +882,6 @@ inline Span * intspan_make_lower_inc_upper_inc(int p0, int p1) {
 inline Span * tstzspan_make_lower_inc_upper_inc(TimestampTz p0, TimestampTz p1) {
     return ::tstzspan_make(p0, p1, true, false);
 }
-inline Set * bigintset_shift_scale_hasshift_haswidth_width(const Set * p0, int64_t p1) {
-    return ::bigintset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * bigintset_shift_scale_hasshift_haswidth_shift(const Set * p0, int64_t p1) {
-    return ::bigintset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * bigintset_shift_scale_hasshift_haswidth(const Set * p0, int64_t p1, int64_t p2) {
-    return ::bigintset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * bigintspan_shift_scale_hasshift_haswidth_width(const Span * p0, int64_t p1) {
-    return ::bigintspan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * bigintspan_shift_scale_hasshift_haswidth_shift(const Span * p0, int64_t p1) {
-    return ::bigintspan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * bigintspan_shift_scale_hasshift_haswidth(const Span * p0, int64_t p1, int64_t p2) {
-    return ::bigintspan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * bigintspanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, int64_t p1) {
-    return ::bigintspanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * bigintspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, int64_t p1) {
-    return ::bigintspanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * bigintspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int64_t p1, int64_t p2) {
-    return ::bigintspanset_shift_scale(p0, p1, p2, true, true);
-}
-inline Set * dateset_shift_scale_hasshift_haswidth_width(const Set * p0, int p1) {
-    return ::dateset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * dateset_shift_scale_hasshift_haswidth_shift(const Set * p0, int p1) {
-    return ::dateset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * dateset_shift_scale_hasshift_haswidth(const Set * p0, int p1, int p2) {
-    return ::dateset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * datespan_shift_scale_hasshift_haswidth_width(const Span * p0, int p1) {
-    return ::datespan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * datespan_shift_scale_hasshift_haswidth_shift(const Span * p0, int p1) {
-    return ::datespan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * datespan_shift_scale_hasshift_haswidth(const Span * p0, int p1, int p2) {
-    return ::datespan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * datespanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, int p1) {
-    return ::datespanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * datespanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, int p1) {
-    return ::datespanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * datespanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int p1, int p2) {
-    return ::datespanset_shift_scale(p0, p1, p2, true, true);
-}
-inline Set * floatset_shift_scale_hasshift_haswidth_width(const Set * p0, double p1) {
-    return ::floatset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * floatset_shift_scale_hasshift_haswidth_shift(const Set * p0, double p1) {
-    return ::floatset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * floatset_shift_scale_hasshift_haswidth(const Set * p0, double p1, double p2) {
-    return ::floatset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * floatspan_shift_scale_hasshift_haswidth_width(const Span * p0, double p1) {
-    return ::floatspan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * floatspan_shift_scale_hasshift_haswidth_shift(const Span * p0, double p1) {
-    return ::floatspan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * floatspan_shift_scale_hasshift_haswidth(const Span * p0, double p1, double p2) {
-    return ::floatspan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * floatspanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, double p1) {
-    return ::floatspanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * floatspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, double p1) {
-    return ::floatspanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * floatspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, double p1, double p2) {
-    return ::floatspanset_shift_scale(p0, p1, p2, true, true);
-}
-inline Set * intset_shift_scale_hasshift_haswidth_width(const Set * p0, int p1) {
-    return ::intset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * intset_shift_scale_hasshift_haswidth_shift(const Set * p0, int p1) {
-    return ::intset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * intset_shift_scale_hasshift_haswidth(const Set * p0, int p1, int p2) {
-    return ::intset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * intspan_shift_scale_hasshift_haswidth_width(const Span * p0, int p1) {
-    return ::intspan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * intspan_shift_scale_hasshift_haswidth_shift(const Span * p0, int p1) {
-    return ::intspan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * intspan_shift_scale_hasshift_haswidth(const Span * p0, int p1, int p2) {
-    return ::intspan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * intspanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, int p1) {
-    return ::intspanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * intspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, int p1) {
-    return ::intspanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * intspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int p1, int p2) {
-    return ::intspanset_shift_scale(p0, p1, p2, true, true);
-}
 inline Span * bigintspan_bins_border_inc_vorigin(const Span * p0, int64_t p1, int * p2) {
     return ::bigintspan_bins(p0, p1, 0, true, p2);
 }
@@ -1019,33 +911,6 @@ inline Span * tstzspan_bins_border_inc_torigin(const Span * p0, const MeosInterv
 }
 inline Span * tstzspanset_bins_border_inc_torigin(const SpanSet * p0, const MeosInterval * p1, int * p2) {
     return ::tstzspanset_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
-}
-inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
-    return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
-}
-inline TBox * tfloatbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, double p1) {
-    return ::tfloatbox_shift_scale(p0, 0, p1, false, true);
-}
-inline TBox * tfloatbox_shift_scale_hasshift_haswidth(const TBox * p0, double p1, double p2) {
-    return ::tfloatbox_shift_scale(p0, p1, p2, true, true);
-}
-inline TBox * tintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int p1) {
-    return ::tintbox_shift_scale(p0, p1, 0, true, false);
-}
-inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p1) {
-    return ::tintbox_shift_scale(p0, 0, p1, false, true);
-}
-inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
-    return ::tintbox_shift_scale(p0, p1, p2, true, true);
-}
-inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
-    return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
-}
-inline TBox * tbigintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int64_t p1) {
-    return ::tbigintbox_shift_scale(p0, 0, p1, false, true);
-}
-inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t p1, int64_t p2) {
-    return ::tbigintbox_shift_scale(p0, p1, p2, true, true);
 }
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
@@ -4319,7 +4184,7 @@ static void Gen_adwithin_trgeometry_trgeometry(DataChunk &args, ExpressionState 
 
 
 // ===== @ingroup meos_setspan_transf =====
-static void Gen_bigintset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_bigintset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4334,7 +4199,7 @@ static void Gen_bigintset_shift_scale_hasshift_haswidth(DataChunk &args, Express
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Set *x0 = BlobToSet(in0[i]);
-        Set *r = bigintset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Set *r = bigintset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
@@ -4342,7 +4207,7 @@ static void Gen_bigintset_shift_scale_hasshift_haswidth(DataChunk &args, Express
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_bigintspan_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_bigintspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4357,7 +4222,7 @@ static void Gen_bigintspan_shift_scale_hasshift_haswidth(DataChunk &args, Expres
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Span *x0 = BlobToSpan(in0[i]);
-        Span *r = bigintspan_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Span *r = bigintspan_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanToBlob(result, r);
@@ -4365,7 +4230,7 @@ static void Gen_bigintspan_shift_scale_hasshift_haswidth(DataChunk &args, Expres
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_bigintspanset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_bigintspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4380,7 +4245,7 @@ static void Gen_bigintspanset_shift_scale_hasshift_haswidth(DataChunk &args, Exp
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         SpanSet *x0 = BlobToSpanSet(in0[i]);
-        SpanSet *r = bigintspanset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        SpanSet *r = bigintspanset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanSetToBlob(result, r);
@@ -4388,7 +4253,7 @@ static void Gen_bigintspanset_shift_scale_hasshift_haswidth(DataChunk &args, Exp
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_dateset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_dateset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4403,7 +4268,7 @@ static void Gen_dateset_shift_scale_hasshift_haswidth(DataChunk &args, Expressio
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Set *x0 = BlobToSet(in0[i]);
-        Set *r = dateset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Set *r = dateset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
@@ -4411,7 +4276,7 @@ static void Gen_dateset_shift_scale_hasshift_haswidth(DataChunk &args, Expressio
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_datespan_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_datespan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4426,7 +4291,7 @@ static void Gen_datespan_shift_scale_hasshift_haswidth(DataChunk &args, Expressi
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Span *x0 = BlobToSpan(in0[i]);
-        Span *r = datespan_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Span *r = datespan_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanToBlob(result, r);
@@ -4434,7 +4299,7 @@ static void Gen_datespan_shift_scale_hasshift_haswidth(DataChunk &args, Expressi
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_datespanset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_datespanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4449,7 +4314,7 @@ static void Gen_datespanset_shift_scale_hasshift_haswidth(DataChunk &args, Expre
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         SpanSet *x0 = BlobToSpanSet(in0[i]);
-        SpanSet *r = datespanset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        SpanSet *r = datespanset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanSetToBlob(result, r);
@@ -4457,7 +4322,7 @@ static void Gen_datespanset_shift_scale_hasshift_haswidth(DataChunk &args, Expre
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_floatset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_floatset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4472,7 +4337,7 @@ static void Gen_floatset_shift_scale_hasshift_haswidth(DataChunk &args, Expressi
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Set *x0 = BlobToSet(in0[i]);
-        Set *r = floatset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Set *r = floatset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
@@ -4480,7 +4345,7 @@ static void Gen_floatset_shift_scale_hasshift_haswidth(DataChunk &args, Expressi
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_floatspan_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_floatspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4495,7 +4360,7 @@ static void Gen_floatspan_shift_scale_hasshift_haswidth(DataChunk &args, Express
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Span *x0 = BlobToSpan(in0[i]);
-        Span *r = floatspan_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Span *r = floatspan_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanToBlob(result, r);
@@ -4503,7 +4368,7 @@ static void Gen_floatspan_shift_scale_hasshift_haswidth(DataChunk &args, Express
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_floatspanset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_floatspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4518,7 +4383,7 @@ static void Gen_floatspanset_shift_scale_hasshift_haswidth(DataChunk &args, Expr
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         SpanSet *x0 = BlobToSpanSet(in0[i]);
-        SpanSet *r = floatspanset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        SpanSet *r = floatspanset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanSetToBlob(result, r);
@@ -4526,7 +4391,7 @@ static void Gen_floatspanset_shift_scale_hasshift_haswidth(DataChunk &args, Expr
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_intset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_intset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4541,7 +4406,7 @@ static void Gen_intset_shift_scale_hasshift_haswidth(DataChunk &args, Expression
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Set *x0 = BlobToSet(in0[i]);
-        Set *r = intset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Set *r = intset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SetToBlob(result, r);
@@ -4549,7 +4414,7 @@ static void Gen_intset_shift_scale_hasshift_haswidth(DataChunk &args, Expression
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_intspan_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_intspan_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4564,7 +4429,7 @@ static void Gen_intspan_shift_scale_hasshift_haswidth(DataChunk &args, Expressio
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         Span *x0 = BlobToSpan(in0[i]);
-        Span *r = intspan_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        Span *r = intspan_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanToBlob(result, r);
@@ -4572,7 +4437,7 @@ static void Gen_intspan_shift_scale_hasshift_haswidth(DataChunk &args, Expressio
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_intspanset_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_intspanset_shift_scale(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -4587,7 +4452,7 @@ static void Gen_intspanset_shift_scale_hasshift_haswidth(DataChunk &args, Expres
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         SpanSet *x0 = BlobToSpanSet(in0[i]);
-        SpanSet *r = intspanset_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        SpanSet *r = intspanset_shift_scale(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = SpanSetToBlob(result, r);
@@ -4953,45 +4818,45 @@ static void Gen_tstzspanset_tprecision_d(DataChunk &args, ExpressionState &state
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_bigintset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bigintset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = bigintset_shift_scale_hasshift_haswidth_width(s, a2);
+            Set *r = bigintset_scale(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_bigintset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bigintset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = bigintset_shift_scale_hasshift_haswidth_shift(s, a2);
+            Set *r = bigintset_shift(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_dateset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_dateset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = dateset_shift_scale_hasshift_haswidth_width(s, a2);
+            Set *r = dateset_scale(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_dateset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_dateset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = dateset_shift_scale_hasshift_haswidth_shift(s, a2);
+            Set *r = dateset_shift(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
@@ -5052,45 +4917,45 @@ static void Gen_floatset_radians(DataChunk &args, ExpressionState &, Vector &res
         });
 }
 
-static void Gen_floatset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = floatset_shift_scale_hasshift_haswidth_width(s, a2);
+            Set *r = floatset_scale(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_floatset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = floatset_shift_scale_hasshift_haswidth_shift(s, a2);
+            Set *r = floatset_shift(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_intset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_intset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = intset_shift_scale_hasshift_haswidth_width(s, a2);
+            Set *r = intset_scale(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
 }
 
-static void Gen_intset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_intset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t a, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Set *s = BlobToSet(a);
-            Set *r = intset_shift_scale_hasshift_haswidth_shift(s, a2);
+            Set *r = intset_shift(s, a2);
             free(s);
             return SetToBlobN(result, r, mask, idx);
         });
@@ -5211,48 +5076,48 @@ static void Gen_intspan_expand(DataChunk &args, ExpressionState &, Vector &resul
         });
 }
 
-static void Gen_bigintspan_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bigintspan_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = bigintspan_shift_scale_hasshift_haswidth_width(s, a2);
+            Span *r = bigintspan_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_bigintspan_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bigintspan_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = bigintspan_shift_scale_hasshift_haswidth_shift(s, a2);
+            Span *r = bigintspan_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_datespan_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_datespan_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = datespan_shift_scale_hasshift_haswidth_width(s, a2);
+            Span *r = datespan_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_datespan_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_datespan_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = datespan_shift_scale_hasshift_haswidth_shift(s, a2);
+            Span *r = datespan_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
@@ -5341,96 +5206,96 @@ static void Gen_floatspan_round_d(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
-static void Gen_floatspan_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspan_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = floatspan_shift_scale_hasshift_haswidth_width(s, a2);
+            Span *r = floatspan_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_floatspan_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspan_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = floatspan_shift_scale_hasshift_haswidth_shift(s, a2);
+            Span *r = floatspan_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_intspan_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_intspan_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = intspan_shift_scale_hasshift_haswidth_width(s, a2);
+            Span *r = intspan_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_intspan_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_intspan_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             Span *s = BlobToSpan(in);
-            Span *r = intspan_shift_scale_hasshift_haswidth_shift(s, a2);
+            Span *r = intspan_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanToBlob(result, r);
         });
 }
 
-static void Gen_bigintspanset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bigintspanset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = bigintspanset_shift_scale_hasshift_haswidth_width(s, a2);
+            SpanSet *r = bigintspanset_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_bigintspanset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_bigintspanset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = bigintspanset_shift_scale_hasshift_haswidth_shift(s, a2);
+            SpanSet *r = bigintspanset_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_datespanset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_datespanset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = datespanset_shift_scale_hasshift_haswidth_width(s, a2);
+            SpanSet *r = datespanset_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_datespanset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_datespanset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = datespanset_shift_scale_hasshift_haswidth_shift(s, a2);
+            SpanSet *r = datespanset_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
@@ -5519,48 +5384,48 @@ static void Gen_floatspanset_round_d(DataChunk &args, ExpressionState &, Vector 
         });
 }
 
-static void Gen_floatspanset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspanset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = floatspanset_shift_scale_hasshift_haswidth_width(s, a2);
+            SpanSet *r = floatspanset_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_floatspanset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_floatspanset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = floatspanset_shift_scale_hasshift_haswidth_shift(s, a2);
+            SpanSet *r = floatspanset_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_intspanset_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_intspanset_scale(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = intspanset_shift_scale_hasshift_haswidth_width(s, a2);
+            SpanSet *r = intspanset_scale(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
         });
 }
 
-static void Gen_intspanset_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_intspanset_shift(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             SpanSet *s = BlobToSpanSet(in);
-            SpanSet *r = intspanset_shift_scale_hasshift_haswidth_shift(s, a2);
+            SpanSet *r = intspanset_shift(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return SpanSetToBlob(result, r);
@@ -8758,18 +8623,18 @@ void RegisterGenerated_meos_rgeo_rel_ever(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::bigintset(), LogicalType::BIGINT, LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigintset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::bigintspanset(), LogicalType::BIGINT, LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigintspanset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::dateset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::dateset(), Gen_dateset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::datespan(), LogicalType::INTEGER, LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::datespanset(), LogicalType::INTEGER, LogicalType::INTEGER}, SpansetTypes::datespanset(), Gen_datespanset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::floatset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SetTypes::floatset(), Gen_floatset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::floatspanset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_floatspanset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::intset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::intspanset(), LogicalType::INTEGER, LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intspanset_shift_scale_hasshift_haswidth));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::bigintset(), LogicalType::BIGINT, LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigintset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::bigintspan(), LogicalType::BIGINT, LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::bigintspanset(), LogicalType::BIGINT, LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigintspanset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::dateset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::dateset(), Gen_dateset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::datespan(), LogicalType::INTEGER, LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::datespanset(), LogicalType::INTEGER, LogicalType::INTEGER}, SpansetTypes::datespanset(), Gen_datespanset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::floatset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SetTypes::floatset(), Gen_floatset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::floatspan(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::floatspanset(), LogicalType::DOUBLE, LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_floatspanset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SetTypes::intset(), LogicalType::INTEGER, LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpanTypes::intspan(), LogicalType::INTEGER, LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_shift_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::intspanset(), LogicalType::INTEGER, LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intspanset_shift_scale));
     RegisterMeosFunction(loader, ScalarFunction("expand", {SpanTypes::tstzspan(), LogicalType::INTERVAL}, SpanTypes::tstzspan(), Gen_tstzspan_expand));
     RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), Gen_tstzset_scale));
     RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::tstzset(), LogicalType::INTERVAL}, SetTypes::tstzset(), Gen_tstzset_shift));
@@ -8786,19 +8651,19 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("shiftScale", {SpansetTypes::tstzspanset(), LogicalType::INTERVAL, LogicalType::INTERVAL}, SpansetTypes::tstzspanset(), Gen_tstzspanset_shift_scale));
     RegisterMeosFunction(loader, ScalarFunction("tprecision", {SpansetTypes::tstzspanset(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_tstzspanset_tprecision));
     RegisterMeosFunction(loader, ScalarFunction("tprecision", {SpansetTypes::tstzspanset(), LogicalType::INTERVAL}, SpansetTypes::tstzspanset(), Gen_tstzspanset_tprecision_d));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigintset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigintset_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), Gen_dateset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), Gen_dateset_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigintset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::bigintset(), LogicalType::BIGINT}, SetTypes::bigintset(), Gen_bigintset_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), Gen_dateset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::dateset(), LogicalType::INTEGER}, SetTypes::dateset(), Gen_dateset_shift));
     RegisterMeosFunction(loader, ScalarFunction("ceil", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_ceil));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {SetTypes::floatset(), LogicalType::BOOLEAN}, SetTypes::floatset(), Gen_floatset_degrees));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_degrees_d));
     RegisterMeosFunction(loader, ScalarFunction("floor", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_floor));
     RegisterMeosFunction(loader, ScalarFunction("radians", {SetTypes::floatset()}, SetTypes::floatset(), Gen_floatset_radians));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_floatset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_floatset_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_floatset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::floatset(), LogicalType::DOUBLE}, SetTypes::floatset(), Gen_floatset_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SetTypes::intset(), LogicalType::INTEGER}, SetTypes::intset(), Gen_intset_shift));
     RegisterMeosFunction(loader, ScalarFunction("round", {SetTypes::cbufferset(), LogicalType::INTEGER}, SetTypes::cbufferset(), Gen_set_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {SpatialSetType::geomset(), LogicalType::INTEGER}, SpatialSetType::geomset(), Gen_set_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {SpatialSetType::geogset(), LogicalType::INTEGER}, SpatialSetType::geogset(), Gen_set_round));
@@ -8824,10 +8689,10 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("expand", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_expand));
     RegisterMeosFunction(loader, ScalarFunction("expand", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_expand));
     RegisterMeosFunction(loader, ScalarFunction("expand", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_intspan_expand));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::bigintspan(), LogicalType::BIGINT}, SpanTypes::bigintspan(), Gen_bigintspan_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::datespan(), LogicalType::INTEGER}, SpanTypes::datespan(), Gen_datespan_shift));
     RegisterMeosFunction(loader, ScalarFunction("ceil", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_ceil));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {SpanTypes::floatspan(), LogicalType::BOOLEAN}, SpanTypes::floatspan(), Gen_floatspan_degrees));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_degrees_d));
@@ -8835,14 +8700,14 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("radians", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_radians));
     RegisterMeosFunction(loader, ScalarFunction("round", {SpanTypes::floatspan(), LogicalType::INTEGER}, SpanTypes::floatspan(), Gen_floatspan_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {SpanTypes::floatspan()}, SpanTypes::floatspan(), Gen_floatspan_round_d));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigintspanset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigintspanset_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::datespanset(), LogicalType::INTEGER}, SpansetTypes::datespanset(), Gen_datespanset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::datespanset(), LogicalType::INTEGER}, SpansetTypes::datespanset(), Gen_datespanset_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::floatspan(), LogicalType::DOUBLE}, SpanTypes::floatspan(), Gen_floatspan_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpanTypes::intspan(), LogicalType::INTEGER}, SpanTypes::intspan(), Gen_intspan_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigintspanset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::bigintspanset(), LogicalType::BIGINT}, SpansetTypes::bigintspanset(), Gen_bigintspanset_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::datespanset(), LogicalType::INTEGER}, SpansetTypes::datespanset(), Gen_datespanset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::datespanset(), LogicalType::INTEGER}, SpansetTypes::datespanset(), Gen_datespanset_shift));
     RegisterMeosFunction(loader, ScalarFunction("ceil", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_ceil));
     RegisterMeosFunction(loader, ScalarFunction("floor", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_floor));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {SpansetTypes::floatspanset(), LogicalType::BOOLEAN}, SpansetTypes::floatspanset(), Gen_floatspanset_degrees));
@@ -8850,10 +8715,10 @@ void RegisterGenerated_meos_setspan_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("radians", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_radians));
     RegisterMeosFunction(loader, ScalarFunction("round", {SpansetTypes::floatspanset(), LogicalType::INTEGER}, SpansetTypes::floatspanset(), Gen_floatspanset_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {SpansetTypes::floatspanset()}, SpansetTypes::floatspanset(), Gen_floatspanset_round_d));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::floatspanset(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_floatspanset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::floatspanset(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_floatspanset_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::intspanset(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intspanset_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::intspanset(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intspanset_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::floatspanset(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_floatspanset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::floatspanset(), LogicalType::DOUBLE}, SpansetTypes::floatspanset(), Gen_floatspanset_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scale", {SpansetTypes::intspanset(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intspanset_scale));
+    RegisterMeosFunction(loader, ScalarFunction("shift", {SpansetTypes::intspanset(), LogicalType::INTEGER}, SpansetTypes::intspanset(), Gen_intspanset_shift));
 }
 
 void RegisterGenerated_meos_temporal_accessor(ExtensionLoader &loader) {

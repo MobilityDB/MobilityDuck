@@ -882,114 +882,6 @@ inline Span * intspan_make_lower_inc_upper_inc(int p0, int p1) {
 inline Span * tstzspan_make_lower_inc_upper_inc(TimestampTz p0, TimestampTz p1) {
     return ::tstzspan_make(p0, p1, true, false);
 }
-inline Set * bigintset_shift_scale_hasshift_haswidth_width(const Set * p0, int64_t p1) {
-    return ::bigintset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * bigintset_shift_scale_hasshift_haswidth_shift(const Set * p0, int64_t p1) {
-    return ::bigintset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * bigintset_shift_scale_hasshift_haswidth(const Set * p0, int64_t p1, int64_t p2) {
-    return ::bigintset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * bigintspan_shift_scale_hasshift_haswidth_width(const Span * p0, int64_t p1) {
-    return ::bigintspan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * bigintspan_shift_scale_hasshift_haswidth_shift(const Span * p0, int64_t p1) {
-    return ::bigintspan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * bigintspan_shift_scale_hasshift_haswidth(const Span * p0, int64_t p1, int64_t p2) {
-    return ::bigintspan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * bigintspanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, int64_t p1) {
-    return ::bigintspanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * bigintspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, int64_t p1) {
-    return ::bigintspanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * bigintspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int64_t p1, int64_t p2) {
-    return ::bigintspanset_shift_scale(p0, p1, p2, true, true);
-}
-inline Set * dateset_shift_scale_hasshift_haswidth_width(const Set * p0, int p1) {
-    return ::dateset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * dateset_shift_scale_hasshift_haswidth_shift(const Set * p0, int p1) {
-    return ::dateset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * dateset_shift_scale_hasshift_haswidth(const Set * p0, int p1, int p2) {
-    return ::dateset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * datespan_shift_scale_hasshift_haswidth_width(const Span * p0, int p1) {
-    return ::datespan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * datespan_shift_scale_hasshift_haswidth_shift(const Span * p0, int p1) {
-    return ::datespan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * datespan_shift_scale_hasshift_haswidth(const Span * p0, int p1, int p2) {
-    return ::datespan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * datespanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, int p1) {
-    return ::datespanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * datespanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, int p1) {
-    return ::datespanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * datespanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int p1, int p2) {
-    return ::datespanset_shift_scale(p0, p1, p2, true, true);
-}
-inline Set * floatset_shift_scale_hasshift_haswidth_width(const Set * p0, double p1) {
-    return ::floatset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * floatset_shift_scale_hasshift_haswidth_shift(const Set * p0, double p1) {
-    return ::floatset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * floatset_shift_scale_hasshift_haswidth(const Set * p0, double p1, double p2) {
-    return ::floatset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * floatspan_shift_scale_hasshift_haswidth_width(const Span * p0, double p1) {
-    return ::floatspan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * floatspan_shift_scale_hasshift_haswidth_shift(const Span * p0, double p1) {
-    return ::floatspan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * floatspan_shift_scale_hasshift_haswidth(const Span * p0, double p1, double p2) {
-    return ::floatspan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * floatspanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, double p1) {
-    return ::floatspanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * floatspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, double p1) {
-    return ::floatspanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * floatspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, double p1, double p2) {
-    return ::floatspanset_shift_scale(p0, p1, p2, true, true);
-}
-inline Set * intset_shift_scale_hasshift_haswidth_width(const Set * p0, int p1) {
-    return ::intset_shift_scale(p0, p1, 0, true, false);
-}
-inline Set * intset_shift_scale_hasshift_haswidth_shift(const Set * p0, int p1) {
-    return ::intset_shift_scale(p0, 0, p1, false, true);
-}
-inline Set * intset_shift_scale_hasshift_haswidth(const Set * p0, int p1, int p2) {
-    return ::intset_shift_scale(p0, p1, p2, true, true);
-}
-inline Span * intspan_shift_scale_hasshift_haswidth_width(const Span * p0, int p1) {
-    return ::intspan_shift_scale(p0, p1, 0, true, false);
-}
-inline Span * intspan_shift_scale_hasshift_haswidth_shift(const Span * p0, int p1) {
-    return ::intspan_shift_scale(p0, 0, p1, false, true);
-}
-inline Span * intspan_shift_scale_hasshift_haswidth(const Span * p0, int p1, int p2) {
-    return ::intspan_shift_scale(p0, p1, p2, true, true);
-}
-inline SpanSet * intspanset_shift_scale_hasshift_haswidth_width(const SpanSet * p0, int p1) {
-    return ::intspanset_shift_scale(p0, p1, 0, true, false);
-}
-inline SpanSet * intspanset_shift_scale_hasshift_haswidth_shift(const SpanSet * p0, int p1) {
-    return ::intspanset_shift_scale(p0, 0, p1, false, true);
-}
-inline SpanSet * intspanset_shift_scale_hasshift_haswidth(const SpanSet * p0, int p1, int p2) {
-    return ::intspanset_shift_scale(p0, p1, p2, true, true);
-}
 inline Span * bigintspan_bins_border_inc_vorigin(const Span * p0, int64_t p1, int * p2) {
     return ::bigintspan_bins(p0, p1, 0, true, p2);
 }
@@ -1019,33 +911,6 @@ inline Span * tstzspan_bins_border_inc_torigin(const Span * p0, const MeosInterv
 }
 inline Span * tstzspanset_bins_border_inc_torigin(const SpanSet * p0, const MeosInterval * p1, int * p2) {
     return ::tstzspanset_bins(p0, p1, timestamptz_in("2000-01-03", -1), true, p2);
-}
-inline TBox * tfloatbox_shift_scale_hasshift_haswidth_width(const TBox * p0, double p1) {
-    return ::tfloatbox_shift_scale(p0, p1, 0, true, false);
-}
-inline TBox * tfloatbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, double p1) {
-    return ::tfloatbox_shift_scale(p0, 0, p1, false, true);
-}
-inline TBox * tfloatbox_shift_scale_hasshift_haswidth(const TBox * p0, double p1, double p2) {
-    return ::tfloatbox_shift_scale(p0, p1, p2, true, true);
-}
-inline TBox * tintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int p1) {
-    return ::tintbox_shift_scale(p0, p1, 0, true, false);
-}
-inline TBox * tintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int p1) {
-    return ::tintbox_shift_scale(p0, 0, p1, false, true);
-}
-inline TBox * tintbox_shift_scale_hasshift_haswidth(const TBox * p0, int p1, int p2) {
-    return ::tintbox_shift_scale(p0, p1, p2, true, true);
-}
-inline TBox * tbigintbox_shift_scale_hasshift_haswidth_width(const TBox * p0, int64_t p1) {
-    return ::tbigintbox_shift_scale(p0, p1, 0, true, false);
-}
-inline TBox * tbigintbox_shift_scale_hasshift_haswidth_shift(const TBox * p0, int64_t p1) {
-    return ::tbigintbox_shift_scale(p0, 0, p1, false, true);
-}
-inline TBox * tbigintbox_shift_scale_hasshift_haswidth(const TBox * p0, int64_t p1, int64_t p2) {
-    return ::tbigintbox_shift_scale(p0, p1, p2, true, true);
 }
 inline TBox * union_tbox_tbox_strict(const TBox * p0, const TBox * p1) {
     return ::union_tbox_tbox(p0, p1, true);
@@ -1369,7 +1234,7 @@ static void Gen_tbox_expand_time(DataChunk &args, ExpressionState &state, Vector
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_tfloatbox_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_tfloatbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -1384,7 +1249,7 @@ static void Gen_tfloatbox_shift_scale_hasshift_haswidth(DataChunk &args, Express
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         TBox *x0 = BlobToTbox(in0[i]);
-        TBox *r = tfloatbox_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        TBox *r = tfloatbox_shift_scale_value(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TboxToBlob(result, r);
@@ -1392,7 +1257,7 @@ static void Gen_tfloatbox_shift_scale_hasshift_haswidth(DataChunk &args, Express
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_tintbox_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_tintbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -1407,7 +1272,7 @@ static void Gen_tintbox_shift_scale_hasshift_haswidth(DataChunk &args, Expressio
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         TBox *x0 = BlobToTbox(in0[i]);
-        TBox *r = tintbox_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        TBox *r = tintbox_shift_scale_value(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TboxToBlob(result, r);
@@ -1482,7 +1347,7 @@ static void Gen_tbox_shift_time(DataChunk &args, ExpressionState &state, Vector 
     if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
-static void Gen_tbigintbox_shift_scale_hasshift_haswidth(DataChunk &args, ExpressionState &state, Vector &result) {
+static void Gen_tbigintbox_shift_scale_value(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     const idx_t rows = args.size();
     for (idx_t c = 0; c < 3; c++) args.data[c].Flatten(rows);
@@ -1497,7 +1362,7 @@ static void Gen_tbigintbox_shift_scale_hasshift_haswidth(DataChunk &args, Expres
             if (!FlatVector::Validity(args.data[c]).RowIsValid(i)) { valid = false; break; }
         if (!valid) { outv.SetInvalid(i); continue; }
         TBox *x0 = BlobToTbox(in0[i]);
-        TBox *r = tbigintbox_shift_scale_hasshift_haswidth(x0, in1[i], in2[i]);
+        TBox *r = tbigintbox_shift_scale_value(x0, in1[i], in2[i]);
         free(x0);
         if (!r) { outv.SetInvalid(i); continue; }
         out[i] = TboxToBlob(result, r);
@@ -1552,48 +1417,48 @@ static void Gen_tbox_round_d(DataChunk &args, ExpressionState &, Vector &result)
         });
 }
 
-static void Gen_tfloatbox_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tfloatbox_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s = BlobToTbox(in);
-            TBox *r = tfloatbox_shift_scale_hasshift_haswidth_width(s, a2);
+            TBox *r = tfloatbox_scale_value(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
         });
 }
 
-static void Gen_tfloatbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tfloatbox_shift_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, double, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, double a2, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s = BlobToTbox(in);
-            TBox *r = tfloatbox_shift_scale_hasshift_haswidth_shift(s, a2);
+            TBox *r = tfloatbox_shift_value(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
         });
 }
 
-static void Gen_tintbox_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tintbox_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s = BlobToTbox(in);
-            TBox *r = tintbox_shift_scale_hasshift_haswidth_width(s, a2);
+            TBox *r = tintbox_scale_value(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
         });
 }
 
-static void Gen_tintbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tintbox_shift_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int32_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s = BlobToTbox(in);
-            TBox *r = tintbox_shift_scale_hasshift_haswidth_shift(s, a2);
+            TBox *r = tintbox_shift_value(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
@@ -1612,24 +1477,24 @@ static void Gen_tbigintbox_expand(DataChunk &args, ExpressionState &, Vector &re
         });
 }
 
-static void Gen_tbigintbox_shift_scale_hasshift_haswidth_width(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tbigintbox_scale_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s = BlobToTbox(in);
-            TBox *r = tbigintbox_shift_scale_hasshift_haswidth_width(s, a2);
+            TBox *r = tbigintbox_scale_value(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
         });
 }
 
-static void Gen_tbigintbox_shift_scale_hasshift_haswidth_shift(DataChunk &args, ExpressionState &, Vector &result) {
+static void Gen_tbigintbox_shift_value(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int64_t, string_t>(args.data[0], args.data[1], result, args.size(),
         [&](string_t in, int64_t a2, ValidityMask &mask, idx_t idx) -> string_t {
             TBox *s = BlobToTbox(in);
-            TBox *r = tbigintbox_shift_scale_hasshift_haswidth_shift(s, a2);
+            TBox *r = tbigintbox_shift_value(s, a2);
             free(s);
             if (!r) { mask.SetInvalid(idx); return string_t(); }
             return TboxToBlob(result, r);
@@ -5400,23 +5265,23 @@ static void Gen_temporal_append_finalfn(DataChunk &args, ExpressionState &, Vect
 
 void RegisterGenerated_meos_box_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("expandTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_expand_time));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_value));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_value));
     RegisterMeosFunction(loader, ScalarFunction("scaleTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_scale_time));
     RegisterMeosFunction(loader, ScalarFunction("shiftScaleTime", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_scale_time));
     RegisterMeosFunction(loader, ScalarFunction("shiftTime", {TboxType::tbox(), LogicalType::INTERVAL}, TboxType::tbox(), Gen_tbox_shift_time));
-    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth));
+    RegisterMeosFunction(loader, ScalarFunction("shiftScaleValue", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_value));
     RegisterMeosFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_expand));
     RegisterMeosFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_expand));
     RegisterMeosFunction(loader, ScalarFunction("round", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tbox_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {TboxType::tbox()}, TboxType::tbox(), Gen_tbox_round_d));
-    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_scale_hasshift_haswidth_shift));
-    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_scale_value));
+    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::DOUBLE}, TboxType::tbox(), Gen_tfloatbox_shift_value));
+    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_scale_value));
+    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::INTEGER}, TboxType::tbox(), Gen_tintbox_shift_value));
     RegisterMeosFunction(loader, ScalarFunction("expandValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_expand));
-    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_width));
-    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_scale_hasshift_haswidth_shift));
+    RegisterMeosFunction(loader, ScalarFunction("scaleValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_scale_value));
+    RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TboxType::tbox(), LogicalType::BIGINT}, TboxType::tbox(), Gen_tbigintbox_shift_value));
 }
 
 void RegisterGenerated_meos_cbuffer_rel_ever(ExtensionLoader &loader) {
