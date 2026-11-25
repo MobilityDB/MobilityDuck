@@ -1,0 +1,55 @@
+# name: test/sql/parquet/stored_image_parquet.test
+# description: A raster and a Raquet tile are stored as the memory image of
+#              MEOS, which a Parquet file carries as its bytes
+# group: [sql]
+
+require mobilityduck
+
+require parquet
+
+# A column of a MEOS type is written to Parquet as the bytes it stores, read
+# back as a BLOB, so the length read back is that of the stored form. The
+# stored form of both types is the memory image the catalog states, not their
+# well-known binary form, whose length differs.
+
+# ── raster ───────────────────────────────────────────────────────────────────
+
+# A 3x3 32BF raster in SRID 4326, as in raster.test
+statement ok
+CREATE TABLE depth AS
+SELECT rasterFromHexWKB('0100000100000000000000F03F000000000000F0BF0000000000000000000000000000084000000000000000000000000000000000E6100000030003000A00000000000020410000A0410000F04100002042000048420000704200008C420000A0420000B442') AS r;
+
+statement ok
+COPY depth TO '__TEST_DIR__/stored_raster.parquet' (FORMAT PARQUET)
+
+query T
+SELECT type FROM parquet_schema('__TEST_DIR__/stored_raster.parquet')
+WHERE name = 'r'
+----
+BYTE_ARRAY
+
+# The memory image holds 112 bytes and the well-known binary form 102
+query II
+SELECT octet_length(r),
+  (SELECT octet_length(asBinary(r)) FROM depth)
+FROM read_parquet('__TEST_DIR__/stored_raster.parquet');
+----
+112	102
+
+# ── Raquet ───────────────────────────────────────────────────────────────────
+
+# A 1x1 UINT8 tile at the root cell, as in raquet.test
+statement ok
+CREATE TABLE tile AS
+SELECT raquet(from_hex('2a'), 1, 1, quadbinTileToCell(0, 0, 0), 'UINT8') AS rq;
+
+statement ok
+COPY tile TO '__TEST_DIR__/stored_raquet.parquet' (FORMAT PARQUET)
+
+# The memory image holds 27 bytes and the well-known binary form 28
+query II
+SELECT octet_length(rq),
+  (SELECT octet_length(asBinary(rq)) FROM tile)
+FROM read_parquet('__TEST_DIR__/stored_raquet.parquet');
+----
+27	28
