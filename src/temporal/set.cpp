@@ -56,13 +56,6 @@ namespace duckdb {
 
 // Register all cast functions
 void SetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    for (const auto &set_type : SetTypes::AllTypes()) {
-        RegisterMeosCastFunction(loader, 
-            set_type,                      
-            LogicalType::VARCHAR,   
-            SetFunctions::Set_to_text   
-        ); // Blob to text
-    }
     /* The cast from text to a set runs its portable reader (RegisterGeneratedCasts), except for
      * the H3 cell set, whose reader the surface does not register, and the text set, which reads
      * a braced text as a set and any other text as the set of it, as MobilityDB reads an untyped

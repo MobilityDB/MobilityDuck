@@ -116,47 +116,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-bool PosechainFunctions::Posechain_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            PoseChain *pc = BlobToPosechain(blob);
-            char *str = posechain_as_text(pc, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(pc);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-bool PosechainFunctions::Tposechain_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
 
 void PosechainTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, posechain(), LogicalType::VARCHAR,
-        PosechainFunctions::Posechain_out_cast);
-    RegisterMeosCastFunction(loader, tposechain(), LogicalType::VARCHAR,
-        PosechainFunctions::Tposechain_out_cast);
 }
 
 } // namespace duckdb

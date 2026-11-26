@@ -132,38 +132,6 @@ bool PoseFunctions::Pose_in_cast(
     return true;
 }
 
-bool PoseFunctions::Pose_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Pose *p = BlobToPose(blob);
-            char *str = pose_as_text(p, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(p);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-bool PoseFunctions::Tpose_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
@@ -171,10 +139,6 @@ bool PoseFunctions::Tpose_out_cast(
 void PoseTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, pose(),
         PoseFunctions::Pose_in_cast);
-    RegisterMeosCastFunction(loader, pose(), LogicalType::VARCHAR,
-        PoseFunctions::Pose_out_cast);
-    RegisterMeosCastFunction(loader, tpose(), LogicalType::VARCHAR,
-        PoseFunctions::Tpose_out_cast);
 }
 
 } // namespace duckdb

@@ -58,15 +58,4 @@ struct NpointTypes {
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
-struct NpointFunctions {
-    /* In/out — static npoint value */
-    static bool Npoint_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* In/out — static nsegment value */
-    static bool Nsegment_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* In/out — tnpoint temporal value */
-    static bool Tnpoint_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-};
-
 } // namespace duckdb

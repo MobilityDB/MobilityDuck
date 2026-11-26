@@ -87,6 +87,22 @@ for _f in CATALOG["functions"]:
                     and _s.get("sqlName")):
                 TEXT_READER.setdefault(_t, _s["sqlName"])
 
+# The output function of each SQL type (a signature's typeSupport `output`): (the SQL type, the C
+# function, its first parameter, the names of the others but the size it states, the arguments
+# the signature binds, or the function when all its signatures bind the same), read from the
+# catalog as loaded, as #INPUT_OF is. The cast from the type
+# to text runs it (#catalog_output_casts).
+OUTPUT_OF = []
+for _f in CATALOG["functions"]:
+    _ps = _f.get("params") or []
+    for _s in _f.get("sqlSignatures") or []:
+        if _s.get("typeSupport") == "output" and len(_s.get("args") or []) == 1 and _ps:
+            OUTPUT_OF.append((_s["args"][0], _f["name"], _ps[0],
+                              [_p["name"] for _p in _ps[1:]
+                               if " ".join(_p["cType"].split()) != "size_t *"],
+                              dict(_s.get("boundArgs")
+                                   or (_f.get("shape") or {}).get("boundArgs") or {})))
+
 def type_support_name(name):
     """Whether the SQL name `name` is the name of a type support function (#TYPE_SUPPORT_NAMES)."""
     return name in TYPE_SUPPORT_NAMES
@@ -5091,7 +5107,64 @@ def catalog_casts_text():
     runs the scalar function the generated surface registers under the cast's SQL function"""
     lines = "".join('    RegisterCatalogCast(loader, %s, %s, "%s");  // %s -> %s\n' % c
                     for c in catalog_casts())
-    return ("void RegisterGeneratedCasts(ExtensionLoader &loader) {\n" + lines + "}\n")
+    return ("void RegisterGeneratedOutputCasts(ExtensionLoader &loader);\n\n"
+            "void RegisterGeneratedCasts(ExtensionLoader &loader) {\n"
+            "    RegisterGeneratedOutputCasts(loader);\n" + lines + "}\n")
+
+def catalog_output_casts():
+    """[(source accessor, source SQL type, C function, C++ argument type, its read, whether the
+    read allocates, bound arguments)] of the casts to text: each SQL type casts to text through
+    its output function (a signature's typeSupport `output`), as PostgreSQL's cast to text runs
+    the type's output function, with the arguments its signature binds (`maxdd` to
+    OUT_DEFAULT_DECIMAL_DIGITS). A type #CAST_TYPE does not name, and an output function reading
+    an argument its signature does not bind or a value no marshaller reads, are left out."""
+    out = []
+    for sqlt, name, p0, rest, bound in OUTPUT_OF:
+        b, n = base(p0["canonical"]), norm(p0["canonical"])
+        if n.count("*") == 1 and b in PTR_IN:
+            cpp, read, owned = "string_t", PTR_IN[b][1] % "in", True
+        elif "*" not in n and b in SCALAR_ARG:
+            cpp, read, owned = SCALAR_ARG[b][1], "in", False
+        else:
+            continue
+        acc = CAST_TYPE.get(sqlt)
+        if not acc or any(r not in bound for r in rest):
+            continue
+        vals = tuple(str(MACRO_VALUES.get(bound[r], bound[r])) for r in rest)
+        out.append((acc, sqlt, name, cpp, read, owned, vals))
+    return out
+
+def output_cast_executor(name, cpp, read, owned, vals):
+    """The name and body of the executor of a cast to text through the output function `name`,
+    called with the arguments its signature binds, as #emit_defaulted_unary_temporal_scalar
+    calls a string writer with its default, a NULL string being SQL NULL"""
+    ex = "Gen_cast_out_%s%s" % (name, "".join("_" + re.sub(r"\W", "_", v) for v in vals))
+    call = ", ".join(("v",) + vals)
+    body = (f"static void {ex}(DataChunk &args, ExpressionState &, Vector &result) {{\n"
+            f"    EnsureMeosThreadInitialized();\n"
+            f"    UnaryExecutor::ExecuteWithNulls<{cpp}, string_t>(args.data[0], result, args.size(),\n"
+            f"        [&]({cpp} in, ValidityMask &mask, idx_t idx) -> string_t {{\n"
+            f"            auto v = {read};\n"
+            f"            SizedString r = ::{name}({call});\n"
+            + ("            free(v);\n" if owned else "")
+            + "            if (!r) { mask.SetInvalid(idx); return string_t(); }\n"
+            "            return TakeCString(result, r);\n"
+            "        });\n}\n")
+    return ex, body
+
+def output_casts_unit():
+    """(the bodies, the registering function) of the casts to text of #catalog_output_casts: an
+    executor per output function and bound arguments, and RegisterGeneratedOutputCasts, which
+    registers it for each type through #RegisterScalarCast"""
+    bodies, regs = {}, []
+    for acc, sqlt, name, cpp, read, owned, vals in catalog_output_casts():
+        ex, body = output_cast_executor(name, cpp, read, owned, vals)
+        bodies.setdefault(ex, body)
+        # The executor reads the session's time zone as a registered scalar does
+        regs.append("    RegisterScalarCast(loader, %s, LogicalType::VARCHAR, "
+                    "FollowingSessionTimezone(%s));  // %s -> text\n" % (acc, ex, sqlt))
+    return ("".join(bodies.values()),
+            "void RegisterGeneratedOutputCasts(ExtensionLoader &loader) {\n" + "".join(regs) + "}\n")
 
 def array_ret_duck(f, acc, tail=()):
     """The DuckDB LIST return type for this array-return on input accessor `acc`, from the catalog
@@ -9949,6 +10022,10 @@ def gen_cpp(fns, out_path, aliases=None):
         if body_by_grp.get(g):
             text += "\n// ===== @ingroup %s =====\n" % g + "\n".join(body_by_grp[g]) + "\n"
         units.append((g, text, grp_fn.get(g, ""), grp_call.get(g)))
+    # The casts to text land in a unit as a group does, since their executors read the values
+    # with the marshallers every unit carries; RegisterGeneratedCasts calls them
+    oc_bodies, oc_fn = output_casts_unit()
+    units.append(("meos_output_casts", "\n// ===== casts to text =====\n" + oc_bodies + "\n", oc_fn, None))
     # A group's unit is a hash of its name alone, so a change to one group rewrites only the
     # unit that group lands in and every other unit keeps its bytes: the compiler cache then
     # serves them, where a packing by size moves groups between units whenever one grows and

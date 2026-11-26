@@ -53,35 +53,6 @@ inline string_t MallocBlobToResult(Vector &result, void *buf, size_t sz) {
 
 } // namespace
 
-bool TboxFunctions::Tbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    bool success = true;
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input) {
-            TBox *tbox = nullptr;
-            if (input.GetSize() > 0) {
-                tbox = (TBox*)malloc(input.GetSize());
-                memcpy(tbox, input.GetDataUnsafe(), input.GetSize());
-            }
-            if (!tbox) {
-                throw InternalException("Failure in Tbox_out_cast: unable to cast binary to tbox");
-                success = false;
-                return string_t();
-            }
-            char *str = tbox_out(tbox, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            if (!str) {
-                free(tbox);
-                throw InternalException("Failure in Tbox_out_cast: tbox_out returned null");
-            }
-            std::string out(str);
-            free(str);
-            free(tbox);
-            return StringVector::AddString(result, out);
-        }
-    );
-    return success;
-}
-
 template <typename TA>
 void TboxFunctions::NumberToTboxExecutor(Vector &value, MeosType basetype, Vector &result, idx_t count) {
     UnaryExecutor::Execute<TA, string_t>(

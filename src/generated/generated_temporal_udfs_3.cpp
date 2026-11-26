@@ -3294,6 +3294,183 @@ static void Gen_ttext_lower(DataChunk &args, ExpressionState &, Vector &result) 
         });
 }
 
+
+// ===== casts to text =====
+static void Gen_cast_out_set_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToSet(in);
+            SizedString r = SizedCall(::set_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_span_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToSpan(in);
+            SizedString r = SizedCall(::span_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_spanset_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToSpanSet(in);
+            SizedString r = SizedCall(::spanset_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_tbox_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToTbox(in);
+            SizedString r = SizedCall(::tbox_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_temporal_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToTemporal(in);
+            SizedString r = SizedCall(::temporal_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_stbox_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToStbox(in);
+            SizedString r = SizedCall(::stbox_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_cbuffer_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToCbuffer(in);
+            SizedString r = SizedCall(::cbuffer_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_npoint_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToNpoint(in);
+            SizedString r = SizedCall(::npoint_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_nsegment_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToNsegment(in);
+            SizedString r = SizedCall(::nsegment_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_tpcbox_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToTpcbox(in);
+            SizedString r = SizedCall(::tpcbox_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_pose_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToPose(in);
+            SizedString r = SizedCall(::pose_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_posechain_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToPosechain(in);
+            SizedString r = SizedCall(::posechain_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_quadbin_out(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = in;
+            SizedString r = SizedCall(::quadbin_out, v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_raquet_out(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToRaquet(in);
+            SizedString r = SizedCall(::raquet_out, v);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_trgeometry_out_15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = BlobToTemporal(in);
+            SizedString r = SizedCall(::trgeometry_out, v, 15);
+            free(v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+static void Gen_cast_out_s2cell_out(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<uint64_t, string_t>(args.data[0], result, args.size(),
+        [&](uint64_t in, ValidityMask &mask, idx_t idx) -> string_t {
+            auto v = in;
+            SizedString r = SizedCall(::s2cell_out, v);
+            if (!r) { mask.SetInvalid(idx); return string_t(); }
+            return TakeCString(result, r);
+        });
+}
+
 } // anonymous
 
 void RegisterGenerated_meos_box_set(ExtensionLoader &loader) {
@@ -3670,6 +3847,67 @@ void RegisterGenerated_meos_temporal_text(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("initcap", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_ttext_initcap));
     RegisterMeosFunction(loader, ScalarFunction("upper", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_ttext_upper));
     RegisterMeosFunction(loader, ScalarFunction("lower", {TemporalTypes::ttext()}, TemporalTypes::ttext(), Gen_ttext_lower));
+}
+void RegisterGeneratedOutputCasts(ExtensionLoader &loader) {
+    RegisterScalarCast(loader, SetTypes::cbufferset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // cbufferset -> text
+    RegisterScalarCast(loader, SpatialSetType::geomset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // geomset -> text
+    RegisterScalarCast(loader, SpatialSetType::geogset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // geogset -> text
+    RegisterScalarCast(loader, SetTypes::h3indexset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // h3indexset -> text
+    RegisterScalarCast(loader, SetTypes::jsonbset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // jsonbset -> text
+    RegisterScalarCast(loader, SetTypes::npointset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // npointset -> text
+    RegisterScalarCast(loader, SetTypes::pcpointset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // pcpointset -> text
+    RegisterScalarCast(loader, SetTypes::pcpatchset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // pcpatchset -> text
+    RegisterScalarCast(loader, SetTypes::poseset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // poseset -> text
+    RegisterScalarCast(loader, SetTypes::posechainset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // posechainset -> text
+    RegisterScalarCast(loader, SetTypes::quadbinset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // quadbinset -> text
+    RegisterScalarCast(loader, SetTypes::s2cellset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // s2cellset -> text
+    RegisterScalarCast(loader, SetTypes::intset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // intset -> text
+    RegisterScalarCast(loader, SetTypes::bigintset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // bigintset -> text
+    RegisterScalarCast(loader, SetTypes::floatset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // floatset -> text
+    RegisterScalarCast(loader, SetTypes::textset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // textset -> text
+    RegisterScalarCast(loader, SetTypes::dateset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // dateset -> text
+    RegisterScalarCast(loader, SetTypes::tstzset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_set_out_15));  // tstzset -> text
+    RegisterScalarCast(loader, SpanTypes::intspan(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_span_out_15));  // intspan -> text
+    RegisterScalarCast(loader, SpanTypes::bigintspan(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_span_out_15));  // bigintspan -> text
+    RegisterScalarCast(loader, SpanTypes::floatspan(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_span_out_15));  // floatspan -> text
+    RegisterScalarCast(loader, SpanTypes::datespan(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_span_out_15));  // datespan -> text
+    RegisterScalarCast(loader, SpanTypes::tstzspan(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_span_out_15));  // tstzspan -> text
+    RegisterScalarCast(loader, SpansetTypes::intspanset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_spanset_out_15));  // intspanset -> text
+    RegisterScalarCast(loader, SpansetTypes::bigintspanset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_spanset_out_15));  // bigintspanset -> text
+    RegisterScalarCast(loader, SpansetTypes::floatspanset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_spanset_out_15));  // floatspanset -> text
+    RegisterScalarCast(loader, SpansetTypes::datespanset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_spanset_out_15));  // datespanset -> text
+    RegisterScalarCast(loader, SpansetTypes::tstzspanset(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_spanset_out_15));  // tstzspanset -> text
+    RegisterScalarCast(loader, TboxType::tbox(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_tbox_out_15));  // tbox -> text
+    RegisterScalarCast(loader, CbufferTypes::tcbuffer(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tcbuffer -> text
+    RegisterScalarCast(loader, TGeometryTypes::tgeometry(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tgeometry -> text
+    RegisterScalarCast(loader, TGeographyTypes::tgeography(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tgeography -> text
+    RegisterScalarCast(loader, TgeompointType::tgeompoint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tgeompoint -> text
+    RegisterScalarCast(loader, TgeogpointType::tgeogpoint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tgeogpoint -> text
+    RegisterScalarCast(loader, H3indexTypes::th3index(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // th3index -> text
+    RegisterScalarCast(loader, TJsonbTypes::tjsonb(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tjsonb -> text
+    RegisterScalarCast(loader, NpointTypes::tnpoint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tnpoint -> text
+    RegisterScalarCast(loader, TPcpointTypes::tpcpoint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tpcpoint -> text
+    RegisterScalarCast(loader, TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tpcpatch -> text
+    RegisterScalarCast(loader, PoseTypes::tpose(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tpose -> text
+    RegisterScalarCast(loader, PosechainTypes::tposechain(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tposechain -> text
+    RegisterScalarCast(loader, QuadbinTypes::tquadbin(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tquadbin -> text
+    RegisterScalarCast(loader, S2cellTypes::ts2cell(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // ts2cell -> text
+    RegisterScalarCast(loader, TemporalTypes::tbool(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tbool -> text
+    RegisterScalarCast(loader, TemporalTypes::tint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tint -> text
+    RegisterScalarCast(loader, TemporalTypes::tbigint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tbigint -> text
+    RegisterScalarCast(loader, TemporalTypes::tfloat(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // tfloat -> text
+    RegisterScalarCast(loader, TemporalTypes::ttext(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_temporal_out_15));  // ttext -> text
+    RegisterScalarCast(loader, StboxType::stbox(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_stbox_out_15));  // stbox -> text
+    RegisterScalarCast(loader, CbufferTypes::cbuffer(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_cbuffer_out_15));  // cbuffer -> text
+    RegisterScalarCast(loader, NpointTypes::npoint(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_npoint_out_15));  // npoint -> text
+    RegisterScalarCast(loader, NpointTypes::nsegment(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_nsegment_out_15));  // nsegment -> text
+    RegisterScalarCast(loader, TpcboxType::tpcbox(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_tpcbox_out_15));  // tpcbox -> text
+    RegisterScalarCast(loader, PoseTypes::pose(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_pose_out_15));  // pose -> text
+    RegisterScalarCast(loader, PosechainTypes::posechain(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_posechain_out_15));  // posechain -> text
+    RegisterScalarCast(loader, QuadbinTypes::quadbin(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_quadbin_out));  // quadbin -> text
+    RegisterScalarCast(loader, RaquetTypes::raquet(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_raquet_out));  // raquet -> text
+    RegisterScalarCast(loader, TrgeometryTypes::trgeometry(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_trgeometry_out_15));  // trgeometry -> text
+    RegisterScalarCast(loader, S2cellTypes::s2cell(), LogicalType::VARCHAR, FollowingSessionTimezone(Gen_cast_out_s2cell_out));  // s2cell -> text
 }
 
 } // namespace duckdb

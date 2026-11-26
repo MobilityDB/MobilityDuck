@@ -109,8 +109,8 @@ LogicalType TPcpointTypes::tpcpoint() {
 /* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
  * generated (return the pcpoint base value, rendered via the pcpoint->VARCHAR cast). */
 
-/* Base pcpoint value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
- * sibling's Cbuffer_out_cast. The generated startValue/endValue return the pcpoint
+/* Base pcpoint value (BLOB-alias) -> VARCHAR render cast, by hand since the catalog
+ * states no output function of pcpoint (RegisterGeneratedOutputCasts). The generated startValue/endValue return the pcpoint
  * base value; DuckDB renders it through this cast via the schema-free pcpoint_hex_out
  * (hex-WKB text), the same form the retired hand accessors produced. */
 bool TpcpointFunctions::Pcpoint_in_cast(

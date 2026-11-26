@@ -60,12 +60,4 @@ struct PosechainTypes {
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
-struct PosechainFunctions {
-    /* In/out — static posechain value */
-    static bool Posechain_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* In/out — tposechain temporal value */
-    static bool Tposechain_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-};
-
 } // namespace duckdb

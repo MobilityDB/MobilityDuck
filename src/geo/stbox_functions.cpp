@@ -96,42 +96,6 @@ inline void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
     }
 }
 
-bool StboxFunctions::Stbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    bool success = true;
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t data_size = input_blob.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid stbox data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            STBox *stbox = reinterpret_cast<STBox*>(data_copy);
-            if (!stbox) {
-                free(data_copy);
-                throw InternalException("Failure in Stbox_out_cast: unable to cast binary to stbox");
-            }
-            char *ret = stbox_out(stbox, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            if (!ret) {
-                free(data_copy);
-                throw InternalException("Failure in Stbox_out_cast: unable to cast binary to stbox");
-            }
-            std::string ret_str(ret);
-            free(ret);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_str);
-
-            free(stbox);
-            return stored_data;
-        }
-    );
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-    return success;
-}
-
 /* ***************************************************
  * Conversion functions + cast functions: [TYPE] -> stbox
  ****************************************************/

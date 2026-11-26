@@ -58,8 +58,6 @@ struct TpcboxType {
 struct TpcboxFunctions {
     static bool Tpcbox_in_cast(Vector &source, Vector &result, idx_t count,
                                CastParameters &parameters);
-    static bool Tpcbox_out_cast(Vector &source, Vector &result, idx_t count,
-                                CastParameters &parameters);
 };
 
 } // namespace duckdb

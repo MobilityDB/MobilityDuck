@@ -13,19 +13,19 @@ require mobilityduck
 query I
 SELECT pose 'Pose(Point(1 1),0.5)';
 ----
-Pose(POINT(1 1),0.5)
+POSE (0101000000000000000000F03F000000000000F03F, 0.5)
 
 # tpose instant round-trip
 query I
 SELECT tpose 'Pose(Point(1 1),0.5)@2000-01-01';
 ----
-Pose(POINT(1 1),0.5)@2000-01-01 00:00:00+01
+POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-01 00:00:00+01
 
 # tpose discrete sequence round-trip
 query I
 SELECT tpose '{Pose(Point(1 1), 0.3)@2000-01-01, Pose(Point(1 1), 0.5)@2000-01-02}';
 ----
-{Pose(POINT(1 1),0.3)@2000-01-01 00:00:00+01, Pose(POINT(1 1),0.5)@2000-01-02 00:00:00+01}
+{POSE (0101000000000000000000F03F000000000000F03F, 0.3)@2000-01-01 00:00:00+01, POSE (0101000000000000000000F03F000000000000F03F, 0.5)@2000-01-02 00:00:00+01}
 
 # ---------------------------------------------------------------------------
 # Catalog-generated operation surface (accessors, conversions, restrictions,

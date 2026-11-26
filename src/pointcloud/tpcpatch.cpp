@@ -110,8 +110,8 @@ LogicalType TPcpatchTypes::tpcpatch() {
 /* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
  * generated (return the pcpatch base value, rendered via the pcpatch->VARCHAR cast). */
 
-/* Base pcpatch value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
- * sibling's Cbuffer_out_cast. The generated startValue/endValue return the pcpatch
+/* Base pcpatch value (BLOB-alias) -> VARCHAR render cast, by hand since the catalog
+ * states no output function of pcpatch (RegisterGeneratedOutputCasts). The generated startValue/endValue return the pcpatch
  * base value; DuckDB renders it through this cast via the schema-free pcpatch_hex_out
  * (hex-WKB text), the same form the retired hand accessors produced. */
 bool TpcpatchFunctions::Pcpatch_in_cast(

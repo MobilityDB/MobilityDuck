@@ -48,36 +48,6 @@ extern "C" {
 namespace duckdb {
 
 
-// --- Cast to text ---
-bool SpansetFunctions::Spanset_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    source.Flatten(count);
-    auto result_data = FlatVector::GetData<string_t>(result); 
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(source, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        Value val = source.GetValue(i);
-        const string_t &blob = StringValue::Get(val);
-        const uint8_t *data = (const uint8_t *)(blob.GetData());
-        size_t size = blob.GetSize();
-
-        SpanSet *s = (SpanSet*)malloc(size);
-        memcpy(s, data, size);        
-
-        char *cstr = spanset_out(s, 15, UnreadSize());  
-        result_data[i] = StringVector::AddString(result, cstr);
-
-        free(cstr);
-        free(s);
-    }
-
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-    return true;
-}
-
 // --- Conversion: base type -> spanset ---
 
 static inline void Write_spanset(Vector &result, idx_t row, SpanSet *s) {

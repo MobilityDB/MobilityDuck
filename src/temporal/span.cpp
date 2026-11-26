@@ -58,17 +58,6 @@ namespace duckdb {
 // GetChildType) is generated from the catalog MeosType enum into
 // src/generated/generated_type_registration.cpp.
 
-// Register all cast functions
-void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    for (const auto &span_type : SpanTypes::AllTypes()) {
-        RegisterMeosCastFunction(loader, 
-            span_type,                      
-            LogicalType::VARCHAR,   
-            SpanFunctions::Span_to_text   
-        ); // Blob to text
-    }
-}
-
 } // namespace duckdb
 
 #ifndef MOBILITYDUCK_EXTENSION_TYPES

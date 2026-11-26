@@ -48,7 +48,6 @@ struct SpanTypes {
 
 #include "generated/span_accessors.hpp"
     static void RegisterTypes(ExtensionLoader &loader);
-    static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
 

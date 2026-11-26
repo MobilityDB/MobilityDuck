@@ -77,30 +77,9 @@ bool TpcboxFunctions::Tpcbox_in_cast(Vector &source, Vector &result, idx_t count
     return true;
 }
 
-bool TpcboxFunctions::Tpcbox_out_cast(Vector &source, Vector &result, idx_t count,
-                                      CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            if (blob.GetSize() < sizeof(TPCBox))
-                throw InvalidInputException("Invalid tpcbox value: insufficient size");
-            TPCBox box;
-            memcpy(&box, blob.GetData(), sizeof(TPCBox));
-            char *str = tpcbox_out(&box, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            if (!str)
-                throw InternalException("Failure in Tpcbox_out: tpcbox_out returned null");
-            std::string s(str);
-            free(str);
-            return StringVector::AddString(result, s);
-        });
-    return true;
-}
-
 void TpcboxType::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tpcbox(),
                              TpcboxFunctions::Tpcbox_in_cast);
-    RegisterMeosCastFunction(loader, tpcbox(), LogicalType::VARCHAR,
-                             TpcboxFunctions::Tpcbox_out_cast);
 }
 
 } // namespace duckdb

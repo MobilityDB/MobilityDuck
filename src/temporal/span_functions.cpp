@@ -57,28 +57,6 @@ extern "C" {
 
 namespace duckdb {
 
-// --- Cast From String ---
-bool SpanFunctions::Span_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-   UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            // Convert binary string_t back to span using direct memory access
-            const uint8_t *span_data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t span_size = input_blob.GetSize();
-            
-            // Cast directly to Span*
-            const Span *s = reinterpret_cast<const Span*>(span_data);
-            
-            char *cstr = span_out(s, 15, UnreadSize());
-            std::string output(cstr);
-            free(cstr);
-            
-            return StringVector::AddString(result, output);
-        });
-
-    return true;
-}
-
 // --- Span binary constructor ---
 
 

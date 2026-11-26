@@ -48,26 +48,7 @@ extern "C" {
 
 namespace duckdb {
 
-bool TjsonbFunctions::TjsonbToString(Vector &source, Vector &result, idx_t count,
-                                      CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            Temporal *temp = BlobToTemporal(input_blob);
-            char *str = temporal_out(temp, 0, UnreadSize());
-            free(temp);
-            if (!str)
-                throw InvalidInputException("Failed to serialize tjsonb to string");
-            string_t stored = StringVector::AddString(result, str);
-            free(str);
-            return stored;
-        });
-    return true;
-}
-
 void TJsonbTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, TJsonbTypes::tjsonb(), LogicalType::VARCHAR,
-                             TjsonbFunctions::TjsonbToString);
     // Base jsonb value render cast (mirrors cbuffer()->VARCHAR): renders the
     // generated startValue/endValue jsonb base value as canonical JSON text.
     RegisterMeosCastFunction(loader, TJsonbTypes::jsonb(), LogicalType::VARCHAR,

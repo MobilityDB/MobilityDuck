@@ -93,31 +93,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-bool TrgeometryFunctions::Trgeometry_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            /* trgeometry_as_text, not temporal_out: the generic form walks
-             * the pose skeleton alone and loses the reference geometry. */
-            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
 
 void TrgeometryTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, trgeometry(), LogicalType::VARCHAR,
-        TrgeometryFunctions::Trgeometry_out_cast);
 }
 
 } // namespace duckdb

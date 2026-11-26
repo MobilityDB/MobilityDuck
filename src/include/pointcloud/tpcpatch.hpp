@@ -49,7 +49,6 @@ struct TPcpatchTypes {
 };
 
 struct TpcpatchFunctions {
-    static bool TpcpatchToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // Base pcpatch value (BLOB-alias) -> VARCHAR render cast (pcpatch_hex_out), so the
     // generated startValue/endValue base value renders as hex-WKB text (cbuffer sibling).
     static bool Pcpatch_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);

@@ -52,12 +52,4 @@ struct CbufferTypes {
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
-struct CbufferFunctions {
-    /* In/out — static cbuffer value */
-    static bool Cbuffer_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* In/out — tcbuffer temporal value */
-    static bool Tcbuffer_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-};
-
 } // namespace duckdb

@@ -48,52 +48,7 @@ namespace duckdb {
 // The text form of a tpcpatch is read by tpcpatch_in and written by temporal_out through the
 // VARCHAR <-> tpcpatch cast below; its I/O functions are generated from the catalog.
 
-bool TpcpatchFunctions::TpcpatchToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t data_size = input_blob.GetSize();
-
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid tpcpatch data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for tpcpatch deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-            if (!temp) {
-                free(data_copy);
-                throw InvalidInputException("Invalid tpcpatch data: null pointer");
-            }
-
-            char *str = temporal_out(temp, 15, UnreadSize());
-            if (!str) {
-                free(data_copy);
-                throw InvalidInputException("Failed to convert tpcpatch to string");
-            }
-
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-
-            free(str);
-            free(data_copy);
-
-            return stored_result;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-    return true;
-}
-
 void TPcpatchTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::TpcpatchToString);
     // Base pcpatch value render cast: generated startValue/endValue return the pcpatch
     // base value, rendered as hex-WKB text via pcpatch_hex_out (cbuffer sibling pattern).
     RegisterMeosCastFunction(loader, TPcpatchTypes::pcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::Pcpatch_out_cast);

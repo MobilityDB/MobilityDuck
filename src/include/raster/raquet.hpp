@@ -54,7 +54,6 @@ struct RaquetTypes {
 struct RaquetFunctions {
     /* In/out */
     static bool Raquet_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Raquet_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 
 } // namespace duckdb

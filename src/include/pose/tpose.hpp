@@ -55,10 +55,6 @@ struct PoseTypes {
 struct PoseFunctions {
     /* In/out — static pose value */
     static bool Pose_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Pose_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-
-    /* In/out — tpose temporal value */
-    static bool Tpose_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 
 } // namespace duckdb

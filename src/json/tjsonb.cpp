@@ -121,8 +121,8 @@ void TJsonbTypes::RegisterTypes(ExtensionLoader &loader) {
     loader.RegisterType("tjsonb", TJsonbTypes::tjsonb());
 }
 
-/* Base jsonb value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer
- * sibling's Cbuffer_out_cast. The generated startValue/endValue return the jsonb
+/* Base jsonb value (BLOB-alias) -> VARCHAR render cast, by hand since the catalog
+ * states no output function of jsonb (RegisterGeneratedOutputCasts). The generated startValue/endValue return the jsonb
  * base value as a BLOB; DuckDB renders it through this cast (jsonb_out). */
 bool TjsonbFunctions::Jsonb_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
