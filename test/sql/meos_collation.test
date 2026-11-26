@@ -271,3 +271,42 @@ query I
 SELECT COUNT(p) FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
 ----
 2
+
+# A DISTINCT aggregate compares the values it reads, windowed or not, so it is
+# refused too; the equal paths '$.a' and '$."a"' would otherwise count once
+# through their stored bytes and the others apart by theirs
+
+statement error
+SELECT COUNT(DISTINCT p) FROM (VALUES ('$.a'::jsonpath), ('$."a"'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+has no order or equality
+
+statement error
+SELECT list(DISTINCT p) FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+has no order or equality
+
+statement error
+SELECT array_agg(DISTINCT p) FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+has no order or equality
+
+statement error
+SELECT COUNT(DISTINCT p) OVER () FROM (VALUES ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+has no order or equality
+
+statement error
+SELECT k FROM (SELECT 1 AS k) s
+WHERE k IN (SELECT COUNT(DISTINCT p) FROM (VALUES ('$.a'::jsonpath)) t(p));
+----
+has no order or equality
+
+# A DISTINCT aggregate over the text of a JSON path compares text, and one
+# over a type MEOS compares reads its key
+query II
+SELECT COUNT(DISTINCT p::VARCHAR),
+  (SELECT COUNT(DISTINCT s) FROM (VALUES (intset '{1, 2}'), (intset '{2, 1}'), (intset '{3}')) u(s))
+FROM (VALUES ('$.a'::jsonpath), ('$.a'::jsonpath), ('$.b'::jsonpath)) t(p);
+----
+2	2
