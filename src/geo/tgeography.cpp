@@ -51,52 +51,19 @@ extern "C" {
     #include <meos_internal_geo.h>
 }
 
-
 namespace duckdb {
-
-LogicalType TGeographyTypes::tgeography() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tgeography");
-    return type;
-}
 
 /*
  * Constructors
 */
 
-
-
-
-
-
-
-
 /*
  * Accessor Functions
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void TGeographyTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // timeSpan(tgeography), tgeographyInst(tgeography) and shiftScaleTime(tgeography, interval,
     // interval) are generated from the catalog (meos_temporal_conversion, meos_temporal_transf).
 }
-
-void TGeographyTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "tgeography", TGeographyTypes::tgeography());
-}
-
 
 }

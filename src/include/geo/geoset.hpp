@@ -38,10 +38,8 @@
 namespace duckdb {
 
 struct SpatialSetType{    
-    static LogicalType geomset();     
-    static LogicalType geogset();   
+    #include "generated/spatial_set_type_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

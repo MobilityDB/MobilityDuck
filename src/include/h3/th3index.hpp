@@ -46,10 +46,8 @@ namespace duckdb {
  * These type registrations are the justified hand layer (like QUADBIN /
  * TQUADBIN); the H3 function surface is generated from the MEOS-API catalog. */
 struct H3indexTypes {
-    static LogicalType h3index();
-    static LogicalType th3index();
+    #include "generated/h3index_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

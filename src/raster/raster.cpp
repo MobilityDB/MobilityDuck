@@ -55,16 +55,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType RasterTypes::raster() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("raster");
-    return type;
-}
-
-void RasterTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("raster", raster());
-}
-
 namespace {
 
 inline Raster *BlobToRaster(string_t blob) {

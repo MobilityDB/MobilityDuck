@@ -60,16 +60,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType RaquetTypes::raquet() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("raquet");
-    return type;
-}
-
-void RaquetTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("raquet", raquet());
-}
-
 namespace {
 
 /* A tile is stored as its memory image (raquet_copy / raquet_mem_size), as the

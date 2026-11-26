@@ -45,10 +45,8 @@ namespace duckdb {
  * (constructors, accessors, predicates, distance, …) is generated from the
  * MEOS-API catalog into src/generated/. */
 struct CbufferTypes {
-    static LogicalType cbuffer();
-    static LogicalType tcbuffer();
+    #include "generated/cbuffer_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

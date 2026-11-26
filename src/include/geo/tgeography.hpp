@@ -44,8 +44,7 @@ namespace duckdb {
 // MEOS C functions reached here are subtype-agnostic and shared between
 // the two types.
 struct TGeographyTypes {
-    static LogicalType tgeography();
-    static void RegisterTypes(ExtensionLoader &loader);
+    #include "generated/tgeography_types_accessors.hpp"
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };

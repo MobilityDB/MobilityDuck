@@ -61,19 +61,7 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TgeogpointType::tgeogpoint() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("tgeogpoint");
-    return type;
-}
-
-void TgeogpointType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType("tgeogpoint", tgeogpoint());
-}
-
 void TgeogpointType::RegisterCastFunctions(ExtensionLoader &loader) {
-
-
 
 }
 

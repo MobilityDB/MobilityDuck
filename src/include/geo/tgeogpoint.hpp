@@ -47,9 +47,8 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct TgeogpointType {
-    static LogicalType tgeogpoint();
+    #include "generated/tgeogpoint_type_accessors.hpp"
 
-    static void RegisterType(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
 };

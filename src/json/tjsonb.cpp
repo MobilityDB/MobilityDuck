@@ -57,20 +57,8 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TJsonbTypes::jsonb() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("jsonb");
-    return type;
-}
-
 /* JsonPath is a varlena (`int32 vl_len_; uint32 header; char data[]`), so the blob holds
  * the value whole and VARSIZE reads its length — the same marshalling jsonb uses. */
-LogicalType TJsonbTypes::jsonpath() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("jsonpath");
-    return type;
-}
-
 bool TjsonbFunctions::Jsonpath_in_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -107,18 +95,6 @@ bool TjsonbFunctions::Jsonpath_out_cast(
             return StringVector::AddString(result, out);
         });
     return true;
-}
-
-LogicalType TJsonbTypes::tjsonb() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tjsonb");
-    return type;
-}
-
-void TJsonbTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("jsonb", TJsonbTypes::jsonb());
-    loader.RegisterType("jsonpath", TJsonbTypes::jsonpath());
-    loader.RegisterType("tjsonb", TJsonbTypes::tjsonb());
 }
 
 /* Base jsonb value (BLOB-alias) -> VARCHAR render cast, by hand since the catalog

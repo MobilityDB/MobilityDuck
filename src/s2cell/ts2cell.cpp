@@ -53,23 +53,6 @@
 
 namespace duckdb {
 
-LogicalType S2cellTypes::s2cell() {
-    LogicalType type = LogicalType::UBIGINT;
-    type.SetAlias("s2cell");
-    return type;
-}
-
-LogicalType S2cellTypes::ts2cell() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("ts2cell");
-    return type;
-}
-
-void S2cellTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("s2cell",  s2cell());
-    loader.RegisterType("ts2cell", ts2cell());
-}
-
 void S2cellTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, s2cell(), LogicalType::BIGINT,
         S2cellFunctions::S2cell_to_bigint_cast);

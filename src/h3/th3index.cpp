@@ -60,23 +60,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType H3indexTypes::h3index() {
-    LogicalType type = LogicalType::UBIGINT;
-    type.SetAlias("h3index");
-    return type;
-}
-
-LogicalType H3indexTypes::th3index() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("th3index");
-    return type;
-}
-
-void H3indexTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("h3index",     h3index());
-    loader.RegisterType("th3index",    th3index());
-}
-
 void H3indexTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, h3index(),
         H3indexFunctions::H3index_in_cast);

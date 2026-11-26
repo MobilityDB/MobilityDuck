@@ -45,10 +45,8 @@ namespace duckdb {
  * TH3INDEX; its text form is the S2 hex token (47c3c3), which s2cell_in and
  * s2cell_out own. */
 struct S2cellTypes {
-    static LogicalType s2cell();
-    static LogicalType ts2cell();
+    #include "generated/s2cell_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

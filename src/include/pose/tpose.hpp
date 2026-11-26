@@ -45,10 +45,8 @@ namespace duckdb {
  * boundary; the operation surface (constructors, accessors, predicates,
  * distance, …) is generated from the MEOS-API catalog into src/generated/. */
 struct PoseTypes {
-    static LogicalType pose();
-    static LogicalType tpose();
+    #include "generated/pose_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

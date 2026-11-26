@@ -48,23 +48,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType SpatialSetType::geomset() {
-    auto type = LogicalType(LogicalTypeId::BLOB);     
-    type.SetAlias("geomset");
-    return type;
-}
-
-LogicalType SpatialSetType::geogset() {
-    auto type = LogicalType(LogicalTypeId::BLOB);     
-    type.SetAlias("geogset");
-    return type;
-}
-
-void SpatialSetType::RegisterTypes(ExtensionLoader &loader){
-    loader.RegisterType( "geomset", geomset());
-    loader.RegisterType( "geogset", geogset());
-}
-
 void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {        
     // A geometry set writes its text as every spatial set does: its WKT, through
     // spatialset_as_text

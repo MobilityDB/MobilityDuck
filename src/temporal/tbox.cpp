@@ -45,18 +45,7 @@
 
 namespace duckdb {
 
-LogicalType TboxType::tbox() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("tbox");
-    return type;
-}
-
-void TboxType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType( "tbox", tbox());
-}
-
 void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-
 
 }
 

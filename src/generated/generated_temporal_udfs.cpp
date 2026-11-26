@@ -1123,4 +1123,46 @@ void RegisterGeneratedCasts(ExtensionLoader &loader) {
     RegisterCatalogCast(loader, TemporalTypes::ttext(), SpanTypes::tstzspan(), "timeSpan");  // ttext -> tstzspan
 }
 
+void RegisterGeneratedTypes(ExtensionLoader &loader) {
+    loader.RegisterType("cbuffer", CbufferTypes::cbuffer());
+    loader.RegisterType("geogset", SpatialSetType::geogset());
+    loader.RegisterType("geomset", SpatialSetType::geomset());
+    loader.RegisterType("h3index", H3indexTypes::h3index());
+    loader.RegisterType("jsonb", TJsonbTypes::jsonb());
+    loader.RegisterType("jsonpath", TJsonbTypes::jsonpath());
+    loader.RegisterType("npoint", NpointTypes::npoint());
+    loader.RegisterType("nsegment", NpointTypes::nsegment());
+    loader.RegisterType("pcpatch", TPcpatchTypes::pcpatch());
+    loader.RegisterType("pcpoint", TPcpointTypes::pcpoint());
+    loader.RegisterType("pose", PoseTypes::pose());
+    loader.RegisterType("posechain", PosechainTypes::posechain());
+    loader.RegisterType("quadbin", QuadbinTypes::quadbin());
+    loader.RegisterType("raquet", RaquetTypes::raquet());
+    loader.RegisterType("raster", RasterTypes::raster());
+    loader.RegisterType("s2cell", S2cellTypes::s2cell());
+    loader.RegisterType("stbox", StboxType::stbox());
+    loader.RegisterType("tbigint", TemporalTypes::tbigint());
+    loader.RegisterType("tbool", TemporalTypes::tbool());
+    loader.RegisterType("tbox", TboxType::tbox());
+    loader.RegisterType("tcbuffer", CbufferTypes::tcbuffer());
+    loader.RegisterType("tfloat", TemporalTypes::tfloat());
+    loader.RegisterType("tgeogpoint", TgeogpointType::tgeogpoint());
+    loader.RegisterType("tgeography", TGeographyTypes::tgeography());
+    loader.RegisterType("tgeometry", TGeometryTypes::tgeometry());
+    loader.RegisterType("tgeompoint", TgeompointType::tgeompoint());
+    loader.RegisterType("th3index", H3indexTypes::th3index());
+    loader.RegisterType("tint", TemporalTypes::tint());
+    loader.RegisterType("tjsonb", TJsonbTypes::tjsonb());
+    loader.RegisterType("tnpoint", NpointTypes::tnpoint());
+    loader.RegisterType("tpcbox", TpcboxType::tpcbox());
+    loader.RegisterType("tpcpatch", TPcpatchTypes::tpcpatch());
+    loader.RegisterType("tpcpoint", TPcpointTypes::tpcpoint());
+    loader.RegisterType("tpose", PoseTypes::tpose());
+    loader.RegisterType("tposechain", PosechainTypes::tposechain());
+    loader.RegisterType("tquadbin", QuadbinTypes::tquadbin());
+    loader.RegisterType("trgeometry", TrgeometryTypes::trgeometry());
+    loader.RegisterType("ts2cell", S2cellTypes::ts2cell());
+    loader.RegisterType("ttext", TemporalTypes::ttext());
+}
+
 } // namespace duckdb

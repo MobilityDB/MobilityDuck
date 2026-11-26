@@ -49,9 +49,8 @@ namespace duckdb {
  * src/generated/.
  */
 struct TpcboxType {
-    static LogicalType tpcbox();
+    #include "generated/tpcbox_type_accessors.hpp"
 
-    static void RegisterType(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
