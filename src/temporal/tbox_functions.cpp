@@ -138,19 +138,6 @@ void TboxFunctions::NumberToTboxExecutor(Vector &value, MeosType basetype, Vecto
     }
 }
 
-bool TboxFunctions::Number_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    const auto &source_type = source.GetType();
-    
-    if (source_type.id() == LogicalTypeId::INTEGER) {
-        NumberToTboxExecutor<int32_t>(source, T_INT4, result, count);
-    } else if (source_type.id() == LogicalTypeId::DOUBLE) {
-        NumberToTboxExecutor<double>(source, T_FLOAT8, result, count);
-    } else {
-        throw InternalException("Number_to_tbox_cast: source must be integer, float, or decimal");
-    }
-    return true;
-}
-
 void TboxFunctions::TimestamptzToTboxExecutor(Vector &value, Vector &result, idx_t count) {
     UnaryExecutor::Execute<timestamp_tz_t, string_t>(
         value, result, count,
@@ -167,11 +154,6 @@ void TboxFunctions::TimestamptzToTboxExecutor(Vector &value, Vector &result, idx
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-}
-
-bool TboxFunctions::Timestamptz_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::TimestamptzToTboxExecutor(source, result, count);
-    return true;
 }
 
 void TboxFunctions::SetToTboxExecutor(Vector &value, Vector &result, idx_t count) {
@@ -200,11 +182,6 @@ void TboxFunctions::SetToTboxExecutor(Vector &value, Vector &result, idx_t count
     }
 }
 
-bool TboxFunctions::Set_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::SetToTboxExecutor(source, result, count);
-    return true;
-}
-
 void TboxFunctions::SpanToTboxExecutor(Vector &value, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         value, result, count,
@@ -229,11 +206,6 @@ void TboxFunctions::SpanToTboxExecutor(Vector &value, Vector &result, idx_t coun
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-}
-
-bool TboxFunctions::Span_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::SpanToTboxExecutor(source, result, count);
-    return true;
 }
 
 void TboxFunctions::TboxToIntspanExecutor(Vector &value, Vector &result, idx_t count) {
@@ -262,11 +234,6 @@ void TboxFunctions::TboxToIntspanExecutor(Vector &value, Vector &result, idx_t c
     }
 }
 
-bool TboxFunctions::Tbox_to_intspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::TboxToIntspanExecutor(source, result, count);
-    return true;
-}
-
 void TboxFunctions::TboxToFloatspanExecutor(Vector &value, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         value, result, count,
@@ -291,11 +258,6 @@ void TboxFunctions::TboxToFloatspanExecutor(Vector &value, Vector &result, idx_t
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-}
-
-bool TboxFunctions::Tbox_to_floatspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::TboxToFloatspanExecutor(source, result, count);
-    return true;
 }
 
 void TboxFunctions::TboxToTstzspanExecutor(Vector &value, Vector &result, idx_t count) {
@@ -324,11 +286,6 @@ void TboxFunctions::TboxToTstzspanExecutor(Vector &value, Vector &result, idx_t 
     }
 }
 
-bool TboxFunctions::Tbox_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::TboxToTstzspanExecutor(source, result, count);
-    return true;
-}
-
 void TboxFunctions::SpansetToTboxExecutor(Vector &value, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         value, result, count,
@@ -353,11 +310,6 @@ void TboxFunctions::SpansetToTboxExecutor(Vector &value, Vector &result, idx_t c
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-}
-
-bool TboxFunctions::Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    TboxFunctions::SpansetToTboxExecutor(source, result, count);
-    return true;
 }
 
 /* ***************************************************

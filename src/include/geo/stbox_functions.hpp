@@ -53,11 +53,6 @@ struct StboxFunctions {
      * Conversion functions + cast functions: [TYPE] -> stbox
      ****************************************************/
     static void Geo_to_stbox_common(Vector &source, Vector &result, idx_t count);
-    static bool Geo_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Timestamptz_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tstzset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tstzspan_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tstzspanset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
      * TODO: Selectively functions for operators 

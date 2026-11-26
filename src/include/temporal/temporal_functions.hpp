@@ -71,10 +71,6 @@ struct TemporalFunctions {
     /* ***************************************************
      * Conversion functions: [TYPE] -> Temporal
      ****************************************************/
-    static bool Tbool_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tint_to_tfloat_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tfloat_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tnumber_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
      * Accessor functions
      ****************************************************/

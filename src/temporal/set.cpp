@@ -69,35 +69,10 @@ void SetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         ); // text to blob
         
         auto base_type = SetTypeMapping::GetChildType(set_type);
-        RegisterMeosCastFunction(loader, 
-            base_type,
-            set_type,
-            SetFunctions::Value_to_set_cast // set from base type
-        );
 
-        RegisterMeosCastFunction(loader, 
-            SetTypes::intset(),
-            SetTypes::floatset(),
-            SetFunctions::Intset_to_floatset_cast // intset -> floatset 
-        );
 
-        RegisterMeosCastFunction(loader, 
-            SetTypes::floatset(),
-            SetTypes::intset(),
-            SetFunctions::Floatset_to_intset_cast // floatset --> intset
-        );
         
-        RegisterMeosCastFunction(loader, 
-            SetTypes::dateset(),
-            SetTypes::tstzset(),
-            SetFunctions::Dateset_to_tstzset_cast // dateset -> tstzset
-        );
         
-        RegisterMeosCastFunction(loader, 
-            SetTypes::tstzset(),
-            SetTypes::dateset(),
-            SetFunctions::Tstzset_to_dateset_cast // tstz -> dateset 
-        );
 
     }
 }

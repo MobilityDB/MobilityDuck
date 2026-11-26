@@ -75,17 +75,7 @@ void TgeompointType::RegisterCastFunctions(ExtensionLoader &loader) {
         TemporalFunctions::Temporal_out
     );
 
-    RegisterMeosCastFunction(loader, 
-        tgeompoint(),
-        StboxType::stbox(),
-        TgeompointFunctions::Tspatial_to_stbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        tgeompoint(),
-        SpanTypes::tstzspan(),
-        TgeompointFunctions::Temporal_to_tstzspan_cast
-    );
 }
 
 void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {

@@ -199,13 +199,6 @@ static void Value_to_span_core(Vector &source, Vector &result, idx_t count, Meos
     }
 }
 
-bool SpanFunctions::Value_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    MeosType span_type = SpanTypeMapping::GetMeosTypeFromAlias(result.GetType().GetAlias());
-    MeosType base_type = spantype_basetype(span_type);
-    Value_to_span_core(source, result, count, base_type);
-    return true;
-}
-
 static void Set_to_span_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -228,11 +221,6 @@ static void Set_to_span_common(Vector &source, Vector &result, idx_t count) {
     );
 }
 // --- CAST: set -> span ---
-
-bool SpanFunctions::Set_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Set_to_span_common(source, result, count);
-    return true;
-}
 
 // spans(<set_type>) is generated from the catalog (set_spans) in generated_temporal_udfs.cpp.
 
@@ -279,16 +267,6 @@ static void Floatspan_to_intspan_common(Vector &source, Vector &result, idx_t co
     );
 }
 
-bool SpanFunctions::Intspan_to_floatspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Intspan_to_floatspan_common(source, result, count);
-    return true;    
-}
-
-bool SpanFunctions::Floatspan_to_intspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Floatspan_to_intspan_common(source, result, count);
-    return true;
-}
-
 // --- Conversion: tstzspan <-> datespan ---
 
 // datespan -> tstzspan
@@ -333,18 +311,6 @@ static void Tstzspan_to_datespan_common(Vector &source, Vector &result, idx_t co
             return out;
         }
     );
-}
-
-// --- CAST: datespan -> tstzspan ---
-bool SpanFunctions::Datespan_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Datespan_to_tstzspan_common(source, result, count);
-    return true;
-}
-
-// --- CAST: tstzspan -> datespan ---
-bool SpanFunctions::Tstzspan_to_datespan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzspan_to_datespan_common(source, result, count);
-    return true;
 }
 
 }

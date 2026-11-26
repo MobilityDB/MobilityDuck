@@ -67,54 +67,14 @@ void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         ); // text to blob
         
         auto base_type = SpansetTypeMapping::GetBaseType(spanset_type);
-        RegisterMeosCastFunction(loader, 
-            base_type,
-            spanset_type,
-            SpansetFunctions::Value_to_spanset_cast
-        );
 
         auto set_type = SpansetTypeMapping::GetSetType(spanset_type);        
-        RegisterMeosCastFunction(loader, 
-            set_type,
-            spanset_type,
-            SpansetFunctions::Set_to_spanset_cast
-        );
         auto child_type = SpansetTypeMapping::GetChildType(spanset_type); // span
-        RegisterMeosCastFunction(loader, 
-            child_type,
-            spanset_type,
-            SpansetFunctions::Span_to_spanset_cast
-        );
 
-        RegisterMeosCastFunction(loader, 
-            spanset_type,
-            child_type,
-            SpansetFunctions::Spanset_to_span_cast
-        );
 
-        RegisterMeosCastFunction(loader, 
-            SpansetTypes::intspanset(),
-            SpansetTypes::floatspanset(),
-            SpansetFunctions::Intspanset_to_floatspanset_cast
-        );
 
-        RegisterMeosCastFunction(loader, 
-            SpansetTypes::floatspanset(),
-            SpansetTypes::intspanset(),
-            SpansetFunctions::Floatspanset_to_intspanset_cast
-        );
 
-        RegisterMeosCastFunction(loader, 
-            SpansetTypes::datespanset(),
-            SpansetTypes::tstzspanset(),
-            SpansetFunctions::Datespanset_to_tstzspanset_cast
-        );
 
-        RegisterMeosCastFunction(loader, 
-            SpansetTypes::tstzspanset(),
-            SpansetTypes::datespanset(),
-            SpansetFunctions::Tstzspanset_to_datespanset_cast
-        );
     }
 }
 

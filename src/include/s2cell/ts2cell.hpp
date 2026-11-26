@@ -59,7 +59,6 @@ struct S2cellFunctions {
 
     /* Bigint casts — the 64 bits read signed, and a validated cell from a bigint */
     static bool S2cell_to_bigint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Bigint_to_s2cell_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* In/out — TS2CELL temporal value */
     static bool Ts2cell_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);

@@ -109,35 +109,10 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         TemporalFunctions::Blob_to_tstzspanset
     );
 
-    RegisterMeosCastFunction(loader, 
-        TemporalTypes::tbool(),
-        TemporalTypes::tint(),
-        TemporalFunctions::Tbool_to_tint_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        TemporalTypes::tint(),
-        TemporalTypes::tfloat(),
-        TemporalFunctions::Tint_to_tfloat_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        TemporalTypes::tfloat(),
-        TemporalTypes::tint(),
-        TemporalFunctions::Tfloat_to_tint_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        TemporalTypes::tint(),
-        TboxType::tbox(),
-        TemporalFunctions::Tnumber_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        TemporalTypes::tfloat(),
-        TboxType::tbox(),
-        TemporalFunctions::Tnumber_to_tbox_cast
-    );
 
 }
 }

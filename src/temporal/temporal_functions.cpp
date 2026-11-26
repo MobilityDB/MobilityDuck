@@ -181,16 +181,6 @@ static string_t Tbool_to_tint_common(string_t input, Vector &result) {
     return stored_data;
 }
 
-bool TemporalFunctions::Tbool_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input) {
-            return Tbool_to_tint_common(input, result);
-        }
-    );
-    return true;
-}
-
 static inline string_t Tint_to_tfloat_common(string_t input, Vector &result) {
     const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
     size_t data_size = input.GetSize();
@@ -218,15 +208,6 @@ static inline string_t Tint_to_tfloat_common(string_t input, Vector &result) {
     free(ret);
     free(data_copy);
     return stored_data;
-}
-bool TemporalFunctions::Tint_to_tfloat_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input) {
-            return Tint_to_tfloat_common(input, result);
-        }
-    );
-    return true;
 }
 static inline string_t Tfloat_to_tint_common(string_t input, Vector &result) {
     const uint8_t *data = reinterpret_cast<const uint8_t*>(input.GetData());
@@ -256,16 +237,6 @@ static inline string_t Tfloat_to_tint_common(string_t input, Vector &result) {
     free(data_copy);
     return stored_data;
 }
-bool TemporalFunctions::Tfloat_to_tint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input) {
-            return Tfloat_to_tint_common(input, result);
-        }
-    );
-    return true;
-}
-
 static inline string_t Tnumber_to_tbox_common(Datum datum, MeosType basetype, Vector &result) {
     TBox *tbox = number_tbox(datum, basetype);
     size_t tbox_size = sizeof(TBox);
@@ -305,36 +276,6 @@ static string_t Tnumber_temporal_to_tbox_common(string_t input, Vector &result) 
     return stored_data;
 }
 
-bool TemporalFunctions::Tnumber_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    if (source.GetType().id() == LogicalTypeId::BLOB) {
-        UnaryExecutor::Execute<string_t, string_t>(
-            source, result, count,
-            [&](string_t input) {
-                return Tnumber_temporal_to_tbox_common(input, result);
-            }
-        );
-    } else if (source.GetType().id() == LogicalTypeId::DOUBLE) {
-        MeosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
-        UnaryExecutor::Execute<double, string_t>(
-            source, result, count,
-            [&](double value) {
-                return Tnumber_to_tbox_common(Float8GetDatum(value), basetype, result);
-            }
-        );
-    } else if (source.GetType().id() == LogicalTypeId::INTEGER || source.GetType().id() == LogicalTypeId::BIGINT ||
-               source.GetType().id() == LogicalTypeId::SMALLINT || source.GetType().id() == LogicalTypeId::TINYINT) {
-        MeosType basetype = TemporalHelpers::GetTemptypeFromAlias(source.GetType().GetAlias().c_str());
-        UnaryExecutor::Execute<int64_t, string_t>(
-            source, result, count,
-            [&](int64_t value) {
-                return Tnumber_to_tbox_common((Datum)value, basetype, result);
-            }
-        );
-    } else {
-        throw InvalidInputException("Invalid argument type for Tnumber_to_tbox_cast: " + source.GetType().ToString());
-    }
-    return true;
-}
 /****************************************************
  * Special Cast
 ****************************************************/

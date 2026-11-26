@@ -40,6 +40,13 @@
 #include "duckdb/function/cast/default_casts.hpp"
 #include "duckdb/function/scalar_function.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
+#include "duckdb/catalog/catalog.hpp"
+#include "duckdb/catalog/catalog_entry/scalar_function_catalog_entry.hpp"
+#include "duckdb/catalog/catalog_entry/schema_catalog_entry.hpp"
+#include "duckdb/common/vector_operations/vector_operations.hpp"
+#include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/execution/expression_executor_state.hpp"
+#include "duckdb/planner/expression/bound_constant_expression.hpp"
 
 #include "mobilityduck/meos_thread.hpp"
 
@@ -177,33 +184,109 @@ inline void RegisterMeosCastFunction(ExtensionLoader &loader, const LogicalType 
 }
 
 /**
- * The BIGINT -> cell cast, `bigint AS <cell> WITH FUNCTION <cell>(bigint)` of MobilityDB, over
- * the MEOS conversion that raises when the integer encodes no cell of the grid
- * (bigint_to_quadbin, bigint_to_s2cell), registered through #RegisterMeosCastFunction. A TRY
- * cast, and the optimizer folding a constant into the cell type (`CAST(cell AS BIGINT) < 0`),
- * pass an error slot: there a value encoding no cell is a failed row carrying MEOS's own
- * message, as DuckDB's own casts report one (HandleCastError::AssignError), and anywhere else
- * the MEOS error stands.
+ * A cast MobilityDB declares with CREATE CAST runs the SQL function it names, which the
+ * generated surface registers as a scalar function under the same name over the source type,
+ * so the cast keeps that scalar function, as #MeosCastData keeps a cast function, and runs it
+ * over the source column, with the context of the query from which it reads the time zone.
  */
-template <class CONVERT>
-inline bool BigintToCellCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters,
-                             CONVERT convert) {
+struct MeosCatalogCastData : BoundCastData {
+	explicit MeosCatalogCastData(scalar_function_t function_p) : function(std::move(function_p)) {
+	}
+	scalar_function_t function;
+	unique_ptr<BoundCastData> Copy() const override {
+		return make_uniq<MeosCatalogCastData>(function);
+	}
+};
+
+/* The local state of a catalog cast: an expression executor over the context of the query,
+ * through which the scalar function it runs reads the session's time zone, as
+ * #FollowingSessionTimezone reads it for a call */
+struct MeosCatalogCastLocalState : FunctionLocalState {
+	explicit MeosCatalogCastLocalState(ClientContext &context) : executor(context) {
+	}
+	ExpressionExecutor executor;
+};
+
+inline unique_ptr<FunctionLocalState> MeosCatalogCastInitLocal(CastLocalStateParameters &parameters) {
+	if (!parameters.context) {
+		return nullptr;
+	}
+	return make_uniq<MeosCatalogCastLocalState>(*parameters.context);
+}
+
+inline bool MeosCatalogCast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
+	if (!parameters.local_state) {
+		throw InternalException("A cast MobilityDB declares runs with the context of its query");
+	}
+	auto &data = parameters.cast_data->Cast<MeosCatalogCastData>();
+	/* The scalar function reads the context of its state, its arguments being the column */
+	BoundConstantExpression expr(Value(result.GetType()));
+	ExpressionExecutorState root;
+	root.executor = &parameters.local_state->Cast<MeosCatalogCastLocalState>().executor;
+	ExpressionState state(expr, root);
+	DataChunk args;
+	args.InitializeEmpty({source.GetType()});
+	if (!parameters.error_message) {
+		args.data[0].Reference(source);
+		args.SetCardinality(count);
+		data.function(args, state, result);
+		return true;
+	}
+	/* A TRY cast, and the optimizer folding a constant (`CAST(cell AS BIGINT) < 0`), pass an
+	 * error slot: a row MEOS refuses, an integer encoding no cell, is then a failed row carrying
+	 * MEOS's own message, as DuckDB's own casts report one (HandleCastError::AssignError), so
+	 * the rows run one at a time; anywhere else the MEOS error stands */
+	result.SetVectorType(VectorType::FLAT_VECTOR);
 	bool all_converted = true;
-	UnaryExecutor::ExecuteWithNulls<int64_t, uint64_t>(
-	    source, result, count, [&](int64_t v, ValidityMask &mask, idx_t idx) -> uint64_t {
-		    if (!parameters.error_message) {
-			    return convert(v);
-		    }
-		    try {
-			    return convert(v);
-		    } catch (std::exception &ex) {
-			    HandleCastError::AssignError(ErrorData(ex).RawMessage(), parameters);
-			    mask.SetInvalid(idx);
-			    all_converted = false;
-			    return 0;
-		    }
-	    });
+	for (idx_t i = 0; i < count; i++) {
+		SelectionVector sel(1);
+		sel.set_index(0, i);
+		DataChunk row;
+		row.InitializeEmpty({source.GetType()});
+		row.data[0].Slice(source, sel, 1);
+		row.SetCardinality(1);
+		try {
+			Vector one(result.GetType(), 1);
+			data.function(row, state, one);
+			VectorOperations::Copy(one, result, 1, 0, i);
+		} catch (std::exception &ex) {
+			HandleCastError::AssignError(ErrorData(ex).RawMessage(), parameters);
+			FlatVector::SetNull(result, i, true);
+			all_converted = false;
+		}
+	}
 	return all_converted;
+}
+
+/**
+ * Register the cast from source to target that MobilityDB declares through the SQL function
+ * of the given name: the scalar overload of that name registered over the source type and
+ * answering the target type. A cast whose function the surface does not register is not
+ * registered either; answers whether it was.
+ */
+inline bool RegisterCatalogCast(ExtensionLoader &loader, const LogicalType &source, const LogicalType &target,
+                                const string &name) {
+	auto &db = loader.GetDatabaseInstance();
+	auto transaction = CatalogTransaction::GetSystemTransaction(db);
+	auto &schema = Catalog::GetSystemCatalog(db).GetSchema(transaction, DEFAULT_SCHEMA);
+	auto entry = schema.GetEntry(transaction, CatalogType::SCALAR_FUNCTION_ENTRY, name);
+	if (!entry) {
+		return false;
+	}
+	auto &set = entry->Cast<ScalarFunctionCatalogEntry>().functions;
+	for (idx_t i = 0; i < set.Size(); i++) {
+		auto function = set.GetFunctionByOffset(i);
+		if (function.arguments.size() == 1 && function.arguments[0] == source && function.return_type == target &&
+		    function.HasFunctionCallback()) {
+			loader.RegisterCastFunction(source, target,
+			                            BoundCastInfo(MeosCatalogCast,
+			                                          make_uniq<MeosCatalogCastData>(function.GetFunctionCallback()),
+			                                          MeosCatalogCastInitLocal),
+			                            -1);
+			return true;
+		}
+	}
+	return false;
 }
 
 } // namespace duckdb

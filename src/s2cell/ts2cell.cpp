@@ -77,8 +77,6 @@ void S2cellTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         S2cellFunctions::S2cell_out_cast);
     RegisterMeosCastFunction(loader, s2cell(), LogicalType::BIGINT,
         S2cellFunctions::S2cell_to_bigint_cast);
-    RegisterMeosCastFunction(loader, LogicalType::BIGINT, s2cell(),
-        S2cellFunctions::Bigint_to_s2cell_cast);
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, ts2cell(),
         S2cellFunctions::Ts2cell_in_cast);
     RegisterMeosCastFunction(loader, ts2cell(), LogicalType::VARCHAR,
@@ -149,12 +147,6 @@ bool S2cellFunctions::S2cell_to_bigint_cast(
         source, result, count,
         [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
     return true;
-}
-
-bool S2cellFunctions::Bigint_to_s2cell_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    return BigintToCellCast(source, result, count, parameters, bigint_to_s2cell);
 }
 
 /* =====================================================================

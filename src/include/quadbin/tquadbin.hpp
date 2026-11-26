@@ -57,7 +57,6 @@ struct QuadbinFunctions {
 
     /* Bigint casts — the 64 bits read signed, and a validated cell from a bigint */
     static bool Quadbin_to_bigint_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Bigint_to_quadbin_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* In/out — TQUADBIN temporal value */
     static bool Tquadbin_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);

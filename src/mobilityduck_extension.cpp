@@ -317,6 +317,8 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 
 // Defined in the catalog-generated src/generated/generated_temporal_udfs.cpp.
 void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader);
+// Defined in the same file: the casts MobilityDB declares, over the functions it registers.
+void RegisterGeneratedCasts(ExtensionLoader &loader);
 // Defined in the catalog-generated src/generated/generated_aggregates.cpp.
 void RegisterGeneratedAggregates(ExtensionLoader &loader);
 
@@ -508,6 +510,9 @@ static void LoadInternal(ExtensionLoader &loader) {
 	// Catalog-driven scalar UDFs generated from the MEOS-API catalog, organized by
 	// doxygen @ingroup group. Registered last, after every type accessor exists.
 	RegisterGeneratedTemporalUdfs(loader);
+	// The casts MobilityDB declares, each running the scalar function just registered under
+	// its SQL function.
+	RegisterGeneratedCasts(loader);
 	// The aggregates of the MEOS catalog, over the same types.
 	RegisterGeneratedAggregates(loader);
 	// TemporalParquet footer helper for COPY ... TO '*.parquet' KV_METADATA.
