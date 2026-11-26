@@ -3332,6 +3332,18 @@ static void Gen_text_to_set(DataChunk &args, ExpressionState &, Vector &result) 
         });
 }
 
+static void Gen_dateset_origins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, string_t, string_t>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t a, string_t a2, ValidityMask &mask, idx_t idx) -> string_t {
+            Set *s = BlobToSet(a);
+            text *t2 = MakeText(a2);
+            Set *r = dateset_origins(s, t2);
+            free(t2); free(s);
+            return SetToBlobN(result, r, mask, idx);
+        });
+}
+
 static void Gen_dateset_to_tstzset(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -4153,6 +4165,7 @@ void RegisterGenerated_meos_setspan_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("span", {LogicalType::TIMESTAMP_TZ}, SpanTypes::tstzspan(), Gen_timestamptz_to_span));
     RegisterMeosFunction(loader, ScalarFunction("spanset", {LogicalType::TIMESTAMP_TZ}, SpansetTypes::tstzspanset(), Gen_timestamptz_to_spanset));
     RegisterMeosFunction(loader, ScalarFunction("set", {LogicalType::VARCHAR}, SetTypes::textset(), Gen_text_to_set));
+    RegisterMeosFunction(loader, ScalarFunction("origins", {SetTypes::dateset(), LogicalType::VARCHAR}, SetTypes::tstzset(), Gen_dateset_origins));
     RegisterMeosFunction(loader, ScalarFunction("tstzset", {SetTypes::dateset()}, SetTypes::tstzset(), Gen_dateset_to_tstzset));
     RegisterMeosFunction(loader, ScalarFunction("intset", {SetTypes::floatset()}, SetTypes::intset(), Gen_floatset_to_intset));
     RegisterMeosFunction(loader, ScalarFunction("floatset", {SetTypes::intset()}, SetTypes::floatset(), Gen_intset_to_floatset));

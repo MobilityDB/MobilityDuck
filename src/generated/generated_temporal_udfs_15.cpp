@@ -6252,6 +6252,110 @@ static TableFunction Unnest_ttext_unnestTable(const LogicalType &type) {
     return fn;
 }
 
+static void Gen_temporal_occurrence(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    TernaryExecutor::ExecuteWithNulls<string_t, timestamp_tz_t, timestamp_tz_t, string_t>(args.data[0], args.data[1], args.data[2], result, args.size(),
+        [&](string_t in, timestamp_tz_t a2, timestamp_tz_t a3, ValidityMask &mask, idx_t idx) -> string_t {
+            Temporal *t = BlobToTemporal(in);
+            Temporal *r = temporal_occurrence(t, DuckDBToMeosTimestamp(a2).value, DuckDBToMeosTimestamp(a3).value);
+            free(t);
+            return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+struct Split_temporal_occurrences_0Info : public TableFunctionInfo {
+    Split_temporal_occurrences_0Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+    LogicalType ttype;
+    vector<string> names;
+};
+struct Split_temporal_occurrences_0State : public LocalTableFunctionState {
+    Temporal **parts = nullptr; int count = 0; int idx = 0;
+    TimestampTz *b0 = nullptr;
+    idx_t row = 0; bool loaded = false;
+    void Release() {
+        for (int k = idx; k < count; k++) {
+            free(parts[k]);
+        }
+        free(parts); free(b0);
+        parts = nullptr; b0 = nullptr; count = 0; idx = 0;
+    }
+    ~Split_temporal_occurrences_0State() { Release(); }
+};
+static unique_ptr<FunctionData> Split_temporal_occurrences_0BindFn(ClientContext &, TableFunctionBindInput &input,
+                                          vector<LogicalType> &types, vector<string> &names) {
+    auto &info = input.info->Cast<Split_temporal_occurrences_0Info>();
+    types = {LogicalType::TIMESTAMP_TZ, info.ttype};
+    names = info.names;
+    return make_uniq<TableFunctionData>();
+}
+static unique_ptr<LocalTableFunctionState> Split_temporal_occurrences_0InitFn(ExecutionContext &context, TableFunctionInitInput &,
+                                          GlobalTableFunctionState *) {
+    EnsureMeosThreadInitialized(context.client);
+    return make_uniq<Split_temporal_occurrences_0State>();
+}
+static OperatorResultType Split_temporal_occurrences_0InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+                                          DataChunk &output) {
+    auto &st = data.local_state->Cast<Split_temporal_occurrences_0State>();
+    idx_t i = 0;
+    while (i < STANDARD_VECTOR_SIZE) {
+        if (!st.loaded) {
+            if (st.row >= input.size()) {
+                if (i > 0) {
+                    output.SetCardinality(i);
+                    return OperatorResultType::HAVE_MORE_OUTPUT;
+                }
+                st.row = 0;
+                return OperatorResultType::NEED_MORE_INPUT;
+            }
+            const idx_t k = input.ColumnCount();
+            UnifiedVectorFormat u[4];
+            idx_t r[4];
+            bool valid = true;
+            for (idx_t c = 0; c < k; c++) {
+                input.data[c].ToUnifiedFormat(input.size(), u[c]);
+                r[c] = u[c].sel->get_index(st.row);
+                valid = valid && u[c].validity.RowIsValid(r[c]);
+            }
+            if (valid) {
+                Temporal *t = BlobToTemporal(UnifiedVectorFormat::GetData<string_t>(u[0])[r[0]]);
+                auto *g2 = BlobToSet(UnifiedVectorFormat::GetData<string_t>(u[2])[r[2]]);
+                auto *g3 = BlobToSpan(UnifiedVectorFormat::GetData<string_t>(u[3])[r[3]]);
+                st.parts = temporal_occurrences(t, DuckDBToMeosTimestamp(UnifiedVectorFormat::GetData<timestamp_tz_t>(u[1])[r[1]]).value, g2, g3, &st.b0, &st.count);
+                free(t); free(g2); free(g3);
+                if (!st.parts) st.count = 0;
+            }
+            st.loaded = true;
+        }
+        if (st.idx >= st.count) {
+            st.Release();
+            st.loaded = false;
+            st.row++;
+            continue;
+        }
+        {
+            auto &v = output.data[0];
+            TimestampTz x = st.b0[st.idx];
+            FlatVector::GetData<timestamp_tz_t>(v)[i] = TakeTimestamp(x);
+        }
+        {
+            auto &v = output.data[1];
+            Temporal *x = st.parts[st.idx];
+            FlatVector::GetData<string_t>(v)[i] = StringVector::AddStringOrBlob(v, (const char *) x, temporal_mem_size(x));
+            free(x);
+        }
+        st.idx++; i++;
+    }
+    output.SetCardinality(i);
+    return OperatorResultType::HAVE_MORE_OUTPUT;
+}
+static TableFunction Split_temporal_occurrences_0Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_temporal_occurrences_0BindFn;
+    fn.init_local = Split_temporal_occurrences_0InitFn;
+    fn.in_out_function = Split_temporal_occurrences_0InOutFn;
+    fn.function_info = make_shared_ptr<Split_temporal_occurrences_0Info>(t, std::move(names));
+    return fn;
+}
+
 static void Gen_temporal_round(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
     BinaryExecutor::ExecuteWithNulls<string_t, int32_t, string_t>(args.data[0], args.data[1], result, args.size(),
@@ -6525,6 +6629,566 @@ static void Gen_float_degrees_d(DataChunk &args, ExpressionState &, Vector &resu
             double r = float_degrees(a0, false);
             return (double) r;
         });
+}
+
+static void Gen_temporal_occurrence_origins(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v9(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v10(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v11(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v12(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v13(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v14(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v16(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v17(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v18(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temporal_occurrence_origins_v19(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 4; c++) args.data[c].Flatten(rows);
+    auto in0 = FlatVector::GetData<string_t>(args.data[0]);
+    auto in1 = FlatVector::GetData<timestamp_tz_t>(args.data[1]);
+    auto in2 = FlatVector::GetData<string_t>(args.data[2]);
+    auto in3 = FlatVector::GetData<string_t>(args.data[3]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[2]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[3]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        Temporal *p0 = BlobToTemporal(in0[i]);
+        Set *p2 = BlobToSet(in2[i]);
+        Span *p3 = BlobToSpan(in3[i]);
+        Set *r = temporal_occurrence_origins(p0, DuckDBToMeosTimestamp(in1[i]).value, p2, p3);
+        free(p0);
+        free(p2);
+        free(p3);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = SetToBlob(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 } // anonymous
@@ -7036,6 +7700,46 @@ void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     loader.RegisterFunction(Unnest_tint_unnestTable(TemporalTypes::tint()));
     loader.RegisterFunction(Unnest_tbigint_unnestTable(TemporalTypes::tbigint()));
     loader.RegisterFunction(Unnest_ttext_unnestTable(TemporalTypes::ttext()));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tint(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbigint(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tbool(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TemporalTypes::tfloat(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TemporalTypes::ttext(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TgeompointType::tgeompoint(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TgeogpointType::tgeogpoint(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TGeometryTypes::tgeometry(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TGeographyTypes::tgeography(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, CbufferTypes::tcbuffer(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, H3indexTypes::th3index(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, QuadbinTypes::tquadbin(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, S2cellTypes::ts2cell(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TJsonbTypes::tjsonb(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TPcpointTypes::tpcpoint(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TPcpatchTypes::tpcpatch(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, NpointTypes::tnpoint(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, PoseTypes::tpose(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, TrgeometryTypes::trgeometry(), Gen_temporal_occurrence));
+    RegisterMeosFunction(loader, ScalarFunction("occurrence", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ}, PosechainTypes::tposechain(), Gen_temporal_occurrence));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), CbufferTypes::tcbuffer(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TGeometryTypes::tgeometry(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TGeographyTypes::tgeography(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TgeompointType::tgeompoint(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TgeogpointType::tgeogpoint(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), H3indexTypes::th3index(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TJsonbTypes::tjsonb(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), NpointTypes::tnpoint(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TPcpointTypes::tpcpoint(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TPcpatchTypes::tpcpatch(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), PoseTypes::tpose(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), PosechainTypes::tposechain(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), QuadbinTypes::tquadbin(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TrgeometryTypes::trgeometry(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), S2cellTypes::ts2cell(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TemporalTypes::tbool(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TemporalTypes::tint(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TemporalTypes::tbigint(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TemporalTypes::tfloat(), {"origin", "occurrence"}));
+    loader.RegisterFunction(Split_temporal_occurrences_0Table(TableFunction("occurrences", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, nullptr), TemporalTypes::ttext(), {"origin", "occurrence"}));
     RegisterMeosFunction(loader, ScalarFunction("round", {TemporalTypes::tfloat(), LogicalType::INTEGER}, TemporalTypes::tfloat(), Gen_temporal_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {TgeompointType::tgeompoint(), LogicalType::INTEGER}, TgeompointType::tgeompoint(), Gen_temporal_round));
     RegisterMeosFunction(loader, ScalarFunction("round", {TgeogpointType::tgeogpoint(), LogicalType::INTEGER}, TgeogpointType::tgeogpoint(), Gen_temporal_round));
@@ -7240,6 +7944,26 @@ void RegisterGenerated_meos_temporal_transf(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("shiftValue", {TemporalTypes::tbigint(), LogicalType::BIGINT}, TemporalTypes::tbigint(), Gen_tbigint_shift_value));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {LogicalType::DOUBLE, LogicalType::BOOLEAN}, LogicalType::DOUBLE, Gen_float_degrees));
     RegisterMeosFunction(loader, ScalarFunction("degrees", {LogicalType::DOUBLE}, LogicalType::DOUBLE, Gen_float_degrees_d));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {CbufferTypes::tcbuffer(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TGeometryTypes::tgeometry(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v1));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TGeographyTypes::tgeography(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v2));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TgeompointType::tgeompoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v3));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TgeogpointType::tgeogpoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v4));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {H3indexTypes::th3index(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v5));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TJsonbTypes::tjsonb(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v6));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {NpointTypes::tnpoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v7));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TPcpointTypes::tpcpoint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v8));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TPcpatchTypes::tpcpatch(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v9));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {PoseTypes::tpose(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v10));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {PosechainTypes::tposechain(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v11));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {QuadbinTypes::tquadbin(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v12));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TrgeometryTypes::trgeometry(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v13));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {S2cellTypes::ts2cell(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v14));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TemporalTypes::tbool(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v15));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TemporalTypes::tint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v16));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TemporalTypes::tbigint(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v17));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TemporalTypes::tfloat(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v18));
+    RegisterMeosFunction(loader, ScalarFunction("occurrenceOrigins", {TemporalTypes::ttext(), LogicalType::TIMESTAMP_TZ, SetTypes::tstzset(), SpanTypes::tstzspan()}, SetTypes::tstzset(), Gen_temporal_occurrence_origins_v19));
 }
 
 } // namespace duckdb

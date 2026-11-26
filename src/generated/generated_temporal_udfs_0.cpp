@@ -3942,12 +3942,12 @@ static void Gen_overlaps_spanset_spanset(DataChunk &args, ExpressionState &, Vec
 
 
 // ===== @ingroup meos_temporal_analytics_tile =====
-struct Split_temporal_time_split_0Info : public TableFunctionInfo {
-    Split_temporal_time_split_0Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_temporal_time_split_1Info : public TableFunctionInfo {
+    Split_temporal_time_split_1Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_temporal_time_split_0State : public LocalTableFunctionState {
+struct Split_temporal_time_split_1State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     TimestampTz *b0 = nullptr;
     idx_t row = 0; bool loaded = false;
@@ -3958,23 +3958,23 @@ struct Split_temporal_time_split_0State : public LocalTableFunctionState {
         free(parts); free(b0);
         parts = nullptr; b0 = nullptr; count = 0; idx = 0;
     }
-    ~Split_temporal_time_split_0State() { Release(); }
+    ~Split_temporal_time_split_1State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_temporal_time_split_0BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_temporal_time_split_1BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_temporal_time_split_0Info>();
+    auto &info = input.info->Cast<Split_temporal_time_split_1Info>();
     types = {LogicalType::TIMESTAMP_TZ, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_temporal_time_split_0InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_temporal_time_split_1InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_temporal_time_split_0State>();
+    return make_uniq<Split_temporal_time_split_1State>();
 }
-static OperatorResultType Split_temporal_time_split_0InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_temporal_time_split_1InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_temporal_time_split_0State>();
+    auto &st = data.local_state->Cast<Split_temporal_time_split_1State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -4025,20 +4025,20 @@ static OperatorResultType Split_temporal_time_split_0InOutFn(ExecutionContext &,
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_temporal_time_split_0Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_temporal_time_split_0BindFn;
-    fn.init_local = Split_temporal_time_split_0InitFn;
-    fn.in_out_function = Split_temporal_time_split_0InOutFn;
-    fn.function_info = make_shared_ptr<Split_temporal_time_split_0Info>(t, std::move(names));
+static TableFunction Split_temporal_time_split_1Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_temporal_time_split_1BindFn;
+    fn.init_local = Split_temporal_time_split_1InitFn;
+    fn.in_out_function = Split_temporal_time_split_1InOutFn;
+    fn.function_info = make_shared_ptr<Split_temporal_time_split_1Info>(t, std::move(names));
     return fn;
 }
 
-struct Split_tbigint_value_split_1Info : public TableFunctionInfo {
-    Split_tbigint_value_split_1Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_tbigint_value_split_2Info : public TableFunctionInfo {
+    Split_tbigint_value_split_2Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_tbigint_value_split_1State : public LocalTableFunctionState {
+struct Split_tbigint_value_split_2State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     int64_t *b0 = nullptr;
     idx_t row = 0; bool loaded = false;
@@ -4049,23 +4049,23 @@ struct Split_tbigint_value_split_1State : public LocalTableFunctionState {
         free(parts); free(b0);
         parts = nullptr; b0 = nullptr; count = 0; idx = 0;
     }
-    ~Split_tbigint_value_split_1State() { Release(); }
+    ~Split_tbigint_value_split_2State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_tbigint_value_split_1BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_tbigint_value_split_2BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_tbigint_value_split_1Info>();
+    auto &info = input.info->Cast<Split_tbigint_value_split_2Info>();
     types = {LogicalType::BIGINT, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_tbigint_value_split_1InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_tbigint_value_split_2InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_tbigint_value_split_1State>();
+    return make_uniq<Split_tbigint_value_split_2State>();
 }
-static OperatorResultType Split_tbigint_value_split_1InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_tbigint_value_split_2InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_tbigint_value_split_1State>();
+    auto &st = data.local_state->Cast<Split_tbigint_value_split_2State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -4116,20 +4116,20 @@ static OperatorResultType Split_tbigint_value_split_1InOutFn(ExecutionContext &,
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_tbigint_value_split_1Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_tbigint_value_split_1BindFn;
-    fn.init_local = Split_tbigint_value_split_1InitFn;
-    fn.in_out_function = Split_tbigint_value_split_1InOutFn;
-    fn.function_info = make_shared_ptr<Split_tbigint_value_split_1Info>(t, std::move(names));
+static TableFunction Split_tbigint_value_split_2Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tbigint_value_split_2BindFn;
+    fn.init_local = Split_tbigint_value_split_2InitFn;
+    fn.in_out_function = Split_tbigint_value_split_2InOutFn;
+    fn.function_info = make_shared_ptr<Split_tbigint_value_split_2Info>(t, std::move(names));
     return fn;
 }
 
-struct Split_tbigint_value_time_split_2Info : public TableFunctionInfo {
-    Split_tbigint_value_time_split_2Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_tbigint_value_time_split_3Info : public TableFunctionInfo {
+    Split_tbigint_value_time_split_3Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_tbigint_value_time_split_2State : public LocalTableFunctionState {
+struct Split_tbigint_value_time_split_3State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     int64_t *b0 = nullptr;
     TimestampTz *b1 = nullptr;
@@ -4141,23 +4141,23 @@ struct Split_tbigint_value_time_split_2State : public LocalTableFunctionState {
         free(parts); free(b0); free(b1);
         parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
     }
-    ~Split_tbigint_value_time_split_2State() { Release(); }
+    ~Split_tbigint_value_time_split_3State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_tbigint_value_time_split_2BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_tbigint_value_time_split_3BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_tbigint_value_time_split_2Info>();
+    auto &info = input.info->Cast<Split_tbigint_value_time_split_3Info>();
     types = {LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_tbigint_value_time_split_2InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_tbigint_value_time_split_3InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_tbigint_value_time_split_2State>();
+    return make_uniq<Split_tbigint_value_time_split_3State>();
 }
-static OperatorResultType Split_tbigint_value_time_split_2InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_tbigint_value_time_split_3InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_tbigint_value_time_split_2State>();
+    auto &st = data.local_state->Cast<Split_tbigint_value_time_split_3State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -4213,11 +4213,11 @@ static OperatorResultType Split_tbigint_value_time_split_2InOutFn(ExecutionConte
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_tbigint_value_time_split_2Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_tbigint_value_time_split_2BindFn;
-    fn.init_local = Split_tbigint_value_time_split_2InitFn;
-    fn.in_out_function = Split_tbigint_value_time_split_2InOutFn;
-    fn.function_info = make_shared_ptr<Split_tbigint_value_time_split_2Info>(t, std::move(names));
+static TableFunction Split_tbigint_value_time_split_3Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tbigint_value_time_split_3BindFn;
+    fn.init_local = Split_tbigint_value_time_split_3InitFn;
+    fn.in_out_function = Split_tbigint_value_time_split_3InOutFn;
+    fn.function_info = make_shared_ptr<Split_tbigint_value_time_split_3Info>(t, std::move(names));
     return fn;
 }
 
@@ -4771,12 +4771,12 @@ static void Tiles_tbox_time_tiles_s0_a2ExecFn(ClientContext &, TableFunctionInpu
     output.SetCardinality(rows);
 }
 
-struct Split_tfloat_value_split_3Info : public TableFunctionInfo {
-    Split_tfloat_value_split_3Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_tfloat_value_split_4Info : public TableFunctionInfo {
+    Split_tfloat_value_split_4Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_tfloat_value_split_3State : public LocalTableFunctionState {
+struct Split_tfloat_value_split_4State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     double *b0 = nullptr;
     idx_t row = 0; bool loaded = false;
@@ -4787,23 +4787,23 @@ struct Split_tfloat_value_split_3State : public LocalTableFunctionState {
         free(parts); free(b0);
         parts = nullptr; b0 = nullptr; count = 0; idx = 0;
     }
-    ~Split_tfloat_value_split_3State() { Release(); }
+    ~Split_tfloat_value_split_4State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_tfloat_value_split_3BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_tfloat_value_split_4BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_tfloat_value_split_3Info>();
+    auto &info = input.info->Cast<Split_tfloat_value_split_4Info>();
     types = {LogicalType::DOUBLE, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_tfloat_value_split_3InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_tfloat_value_split_4InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_tfloat_value_split_3State>();
+    return make_uniq<Split_tfloat_value_split_4State>();
 }
-static OperatorResultType Split_tfloat_value_split_3InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_tfloat_value_split_4InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_tfloat_value_split_3State>();
+    auto &st = data.local_state->Cast<Split_tfloat_value_split_4State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -4854,20 +4854,20 @@ static OperatorResultType Split_tfloat_value_split_3InOutFn(ExecutionContext &, 
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_tfloat_value_split_3Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_tfloat_value_split_3BindFn;
-    fn.init_local = Split_tfloat_value_split_3InitFn;
-    fn.in_out_function = Split_tfloat_value_split_3InOutFn;
-    fn.function_info = make_shared_ptr<Split_tfloat_value_split_3Info>(t, std::move(names));
+static TableFunction Split_tfloat_value_split_4Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tfloat_value_split_4BindFn;
+    fn.init_local = Split_tfloat_value_split_4InitFn;
+    fn.in_out_function = Split_tfloat_value_split_4InOutFn;
+    fn.function_info = make_shared_ptr<Split_tfloat_value_split_4Info>(t, std::move(names));
     return fn;
 }
 
-struct Split_tfloat_value_time_split_4Info : public TableFunctionInfo {
-    Split_tfloat_value_time_split_4Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_tfloat_value_time_split_5Info : public TableFunctionInfo {
+    Split_tfloat_value_time_split_5Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_tfloat_value_time_split_4State : public LocalTableFunctionState {
+struct Split_tfloat_value_time_split_5State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     double *b0 = nullptr;
     TimestampTz *b1 = nullptr;
@@ -4879,23 +4879,23 @@ struct Split_tfloat_value_time_split_4State : public LocalTableFunctionState {
         free(parts); free(b0); free(b1);
         parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
     }
-    ~Split_tfloat_value_time_split_4State() { Release(); }
+    ~Split_tfloat_value_time_split_5State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_tfloat_value_time_split_4BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_tfloat_value_time_split_5BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_tfloat_value_time_split_4Info>();
+    auto &info = input.info->Cast<Split_tfloat_value_time_split_5Info>();
     types = {LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_tfloat_value_time_split_4InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_tfloat_value_time_split_5InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_tfloat_value_time_split_4State>();
+    return make_uniq<Split_tfloat_value_time_split_5State>();
 }
-static OperatorResultType Split_tfloat_value_time_split_4InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_tfloat_value_time_split_5InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_tfloat_value_time_split_4State>();
+    auto &st = data.local_state->Cast<Split_tfloat_value_time_split_5State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -4951,11 +4951,11 @@ static OperatorResultType Split_tfloat_value_time_split_4InOutFn(ExecutionContex
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_tfloat_value_time_split_4Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_tfloat_value_time_split_4BindFn;
-    fn.init_local = Split_tfloat_value_time_split_4InitFn;
-    fn.in_out_function = Split_tfloat_value_time_split_4InOutFn;
-    fn.function_info = make_shared_ptr<Split_tfloat_value_time_split_4Info>(t, std::move(names));
+static TableFunction Split_tfloat_value_time_split_5Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tfloat_value_time_split_5BindFn;
+    fn.init_local = Split_tfloat_value_time_split_5InitFn;
+    fn.in_out_function = Split_tfloat_value_time_split_5InOutFn;
+    fn.function_info = make_shared_ptr<Split_tfloat_value_time_split_5Info>(t, std::move(names));
     return fn;
 }
 
@@ -5245,12 +5245,12 @@ static void Tiles_tfloatbox_value_time_tiles_s0_a3ExecFn(ClientContext &, TableF
     output.SetCardinality(rows);
 }
 
-struct Split_tint_value_split_5Info : public TableFunctionInfo {
-    Split_tint_value_split_5Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_tint_value_split_6Info : public TableFunctionInfo {
+    Split_tint_value_split_6Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_tint_value_split_5State : public LocalTableFunctionState {
+struct Split_tint_value_split_6State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     int *b0 = nullptr;
     idx_t row = 0; bool loaded = false;
@@ -5261,23 +5261,23 @@ struct Split_tint_value_split_5State : public LocalTableFunctionState {
         free(parts); free(b0);
         parts = nullptr; b0 = nullptr; count = 0; idx = 0;
     }
-    ~Split_tint_value_split_5State() { Release(); }
+    ~Split_tint_value_split_6State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_tint_value_split_5BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_tint_value_split_6BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_tint_value_split_5Info>();
+    auto &info = input.info->Cast<Split_tint_value_split_6Info>();
     types = {LogicalType::INTEGER, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_tint_value_split_5InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_tint_value_split_6InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_tint_value_split_5State>();
+    return make_uniq<Split_tint_value_split_6State>();
 }
-static OperatorResultType Split_tint_value_split_5InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_tint_value_split_6InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_tint_value_split_5State>();
+    auto &st = data.local_state->Cast<Split_tint_value_split_6State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -5328,20 +5328,20 @@ static OperatorResultType Split_tint_value_split_5InOutFn(ExecutionContext &, Ta
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_tint_value_split_5Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_tint_value_split_5BindFn;
-    fn.init_local = Split_tint_value_split_5InitFn;
-    fn.in_out_function = Split_tint_value_split_5InOutFn;
-    fn.function_info = make_shared_ptr<Split_tint_value_split_5Info>(t, std::move(names));
+static TableFunction Split_tint_value_split_6Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tint_value_split_6BindFn;
+    fn.init_local = Split_tint_value_split_6InitFn;
+    fn.in_out_function = Split_tint_value_split_6InOutFn;
+    fn.function_info = make_shared_ptr<Split_tint_value_split_6Info>(t, std::move(names));
     return fn;
 }
 
-struct Split_tint_value_time_split_6Info : public TableFunctionInfo {
-    Split_tint_value_time_split_6Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
+struct Split_tint_value_time_split_7Info : public TableFunctionInfo {
+    Split_tint_value_time_split_7Info(LogicalType t, vector<string> n) : ttype(std::move(t)), names(std::move(n)) {}
     LogicalType ttype;
     vector<string> names;
 };
-struct Split_tint_value_time_split_6State : public LocalTableFunctionState {
+struct Split_tint_value_time_split_7State : public LocalTableFunctionState {
     Temporal **parts = nullptr; int count = 0; int idx = 0;
     int *b0 = nullptr;
     TimestampTz *b1 = nullptr;
@@ -5353,23 +5353,23 @@ struct Split_tint_value_time_split_6State : public LocalTableFunctionState {
         free(parts); free(b0); free(b1);
         parts = nullptr; b0 = nullptr; b1 = nullptr; count = 0; idx = 0;
     }
-    ~Split_tint_value_time_split_6State() { Release(); }
+    ~Split_tint_value_time_split_7State() { Release(); }
 };
-static unique_ptr<FunctionData> Split_tint_value_time_split_6BindFn(ClientContext &, TableFunctionBindInput &input,
+static unique_ptr<FunctionData> Split_tint_value_time_split_7BindFn(ClientContext &, TableFunctionBindInput &input,
                                           vector<LogicalType> &types, vector<string> &names) {
-    auto &info = input.info->Cast<Split_tint_value_time_split_6Info>();
+    auto &info = input.info->Cast<Split_tint_value_time_split_7Info>();
     types = {LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, info.ttype};
     names = info.names;
     return make_uniq<TableFunctionData>();
 }
-static unique_ptr<LocalTableFunctionState> Split_tint_value_time_split_6InitFn(ExecutionContext &context, TableFunctionInitInput &,
+static unique_ptr<LocalTableFunctionState> Split_tint_value_time_split_7InitFn(ExecutionContext &context, TableFunctionInitInput &,
                                           GlobalTableFunctionState *) {
     EnsureMeosThreadInitialized(context.client);
-    return make_uniq<Split_tint_value_time_split_6State>();
+    return make_uniq<Split_tint_value_time_split_7State>();
 }
-static OperatorResultType Split_tint_value_time_split_6InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
+static OperatorResultType Split_tint_value_time_split_7InOutFn(ExecutionContext &, TableFunctionInput &data, DataChunk &input,
                                           DataChunk &output) {
-    auto &st = data.local_state->Cast<Split_tint_value_time_split_6State>();
+    auto &st = data.local_state->Cast<Split_tint_value_time_split_7State>();
     idx_t i = 0;
     while (i < STANDARD_VECTOR_SIZE) {
         if (!st.loaded) {
@@ -5425,11 +5425,11 @@ static OperatorResultType Split_tint_value_time_split_6InOutFn(ExecutionContext 
     output.SetCardinality(i);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
-static TableFunction Split_tint_value_time_split_6Table(TableFunction fn, const LogicalType &t, vector<string> names) {
-    fn.bind = Split_tint_value_time_split_6BindFn;
-    fn.init_local = Split_tint_value_time_split_6InitFn;
-    fn.in_out_function = Split_tint_value_time_split_6InOutFn;
-    fn.function_info = make_shared_ptr<Split_tint_value_time_split_6Info>(t, std::move(names));
+static TableFunction Split_tint_value_time_split_7Table(TableFunction fn, const LogicalType &t, vector<string> names) {
+    fn.bind = Split_tint_value_time_split_7BindFn;
+    fn.init_local = Split_tint_value_time_split_7InitFn;
+    fn.in_out_function = Split_tint_value_time_split_7InOutFn;
+    fn.function_info = make_shared_ptr<Split_tint_value_time_split_7Info>(t, std::move(names));
     return fn;
 }
 
@@ -7306,73 +7306,73 @@ void RegisterGenerated_meos_setspan_topo(ExtensionLoader &loader) {
 }
 
 void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
-    loader.RegisterFunction(Split_temporal_time_split_0Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
-    loader.RegisterFunction(Split_tbigint_value_split_1Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tbigint_value_split_1Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tbigint_value_split_1Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tbigint_value_time_split_2Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {CbufferTypes::tcbuffer(), LogicalType::INTERVAL}, nullptr), CbufferTypes::tcbuffer(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TGeometryTypes::tgeometry(), LogicalType::INTERVAL}, nullptr), TGeometryTypes::tgeometry(), {"time", "tgeom"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TGeographyTypes::tgeography(), LogicalType::INTERVAL}, nullptr), TGeographyTypes::tgeography(), {"time", "tgeog"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TgeompointType::tgeompoint(), LogicalType::INTERVAL}, nullptr), TgeompointType::tgeompoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TgeogpointType::tgeogpoint(), LogicalType::INTERVAL}, nullptr), TgeogpointType::tgeogpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {H3indexTypes::th3index(), LogicalType::INTERVAL}, nullptr), H3indexTypes::th3index(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TJsonbTypes::tjsonb(), LogicalType::INTERVAL}, nullptr), TJsonbTypes::tjsonb(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {NpointTypes::tnpoint(), LogicalType::INTERVAL}, nullptr), NpointTypes::tnpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TPcpointTypes::tpcpoint(), LogicalType::INTERVAL}, nullptr), TPcpointTypes::tpcpoint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TPcpatchTypes::tpcpatch(), LogicalType::INTERVAL}, nullptr), TPcpatchTypes::tpcpatch(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {PoseTypes::tpose(), LogicalType::INTERVAL}, nullptr), PoseTypes::tpose(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {PosechainTypes::tposechain(), LogicalType::INTERVAL}, nullptr), PosechainTypes::tposechain(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {QuadbinTypes::tquadbin(), LogicalType::INTERVAL}, nullptr), QuadbinTypes::tquadbin(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TrgeometryTypes::trgeometry(), LogicalType::INTERVAL}, nullptr), TrgeometryTypes::trgeometry(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {S2cellTypes::ts2cell(), LogicalType::INTERVAL}, nullptr), S2cellTypes::ts2cell(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tbool(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tbool(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tint(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tbigint(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tbigint(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::tfloat(), LogicalType::INTERVAL}, nullptr), TemporalTypes::tfloat(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
+    loader.RegisterFunction(Split_temporal_time_split_1Table(TableFunction("timeSplit", {TemporalTypes::ttext(), LogicalType::INTERVAL}, nullptr), TemporalTypes::ttext(), {"time", "temp"}));
+    loader.RegisterFunction(Split_tbigint_value_split_2Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_split_2Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_split_2Table(TableFunction("valueSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_3Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_3Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_3Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL, LogicalType::BIGINT}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tbigint_value_time_split_3Table(TableFunction("valueTimeSplit", {TemporalTypes::tbigint(), LogicalType::BIGINT, LogicalType::INTERVAL}, nullptr), TemporalTypes::tbigint(), {"number", "time", "tnumber"}));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BOOLEAN}, Tiles_tbigintbox_value_tiles_s0_a4ExecFn, Tiles_tbigintbox_value_tiles_s0_a4BindFn, Tiles_tbigintbox_value_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT, LogicalType::BIGINT}, Tiles_tbigintbox_value_tiles_s0_a3ExecFn, Tiles_tbigintbox_value_tiles_s0_a3BindFn, Tiles_tbigintbox_value_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::BIGINT}, Tiles_tbigintbox_value_tiles_s0_a2ExecFn, Tiles_tbigintbox_value_tiles_s0_a2BindFn, Tiles_tbigintbox_value_tiles_s0_a2InitFn));
@@ -7390,13 +7390,13 @@ void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, Tiles_tbox_time_tiles_s0_a4ExecFn, Tiles_tbox_time_tiles_s0_a4BindFn, Tiles_tbox_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL, LogicalType::TIMESTAMP_TZ}, Tiles_tbox_time_tiles_s0_a3ExecFn, Tiles_tbox_time_tiles_s0_a3BindFn, Tiles_tbox_time_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("timeTiles", {TboxType::tbox(), LogicalType::INTERVAL}, Tiles_tbox_time_tiles_s0_a2ExecFn, Tiles_tbox_time_tiles_s0_a2BindFn, Tiles_tbox_time_tiles_s0_a2InitFn));
-    loader.RegisterFunction(Split_tfloat_value_split_3Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tfloat_value_split_3Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tfloat_value_split_3Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tfloat_value_time_split_4Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_split_4Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_split_4Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_split_4Table(TableFunction("valueSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_5Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_5Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_5Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tfloat_value_time_split_5Table(TableFunction("valueTimeSplit", {TemporalTypes::tfloat(), LogicalType::DOUBLE, LogicalType::INTERVAL}, nullptr), TemporalTypes::tfloat(), {"number", "time", "tnumber"}));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE, LogicalType::BOOLEAN}, Tiles_tfloatbox_value_tiles_s0_a4ExecFn, Tiles_tfloatbox_value_tiles_s0_a4BindFn, Tiles_tfloatbox_value_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::DOUBLE}, Tiles_tfloatbox_value_tiles_s0_a3ExecFn, Tiles_tfloatbox_value_tiles_s0_a3BindFn, Tiles_tfloatbox_value_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::DOUBLE}, Tiles_tfloatbox_value_tiles_s0_a2ExecFn, Tiles_tfloatbox_value_tiles_s0_a2BindFn, Tiles_tfloatbox_value_tiles_s0_a2InitFn));
@@ -7404,13 +7404,13 @@ void RegisterGenerated_meos_temporal_analytics_tile(ExtensionLoader &loader) {
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE, LogicalType::TIMESTAMP_TZ}, Tiles_tfloatbox_value_time_tiles_s0_a5ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a5BindFn, Tiles_tfloatbox_value_time_tiles_s0_a5InitFn));
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL, LogicalType::DOUBLE}, Tiles_tfloatbox_value_time_tiles_s0_a4ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a4BindFn, Tiles_tfloatbox_value_time_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTimeTiles", {TboxType::tbox(), LogicalType::DOUBLE, LogicalType::INTERVAL}, Tiles_tfloatbox_value_time_tiles_s0_a3ExecFn, Tiles_tfloatbox_value_time_tiles_s0_a3BindFn, Tiles_tfloatbox_value_time_tiles_s0_a3InitFn));
-    loader.RegisterFunction(Split_tint_value_split_5Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tint_value_split_5Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tint_value_split_5Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
-    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
-    loader.RegisterFunction(Split_tint_value_time_split_6Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_split_6Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_split_6Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_split_6Table(TableFunction("valueSplit", {TemporalTypes::tint(), LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_7Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ, LogicalType::BOOLEAN}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_7Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER, LogicalType::TIMESTAMP_TZ}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_7Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL, LogicalType::INTEGER}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
+    loader.RegisterFunction(Split_tint_value_time_split_7Table(TableFunction("valueTimeSplit", {TemporalTypes::tint(), LogicalType::INTEGER, LogicalType::INTERVAL}, nullptr), TemporalTypes::tint(), {"number", "time", "tnumber"}));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER, LogicalType::BOOLEAN}, Tiles_tintbox_value_tiles_s0_a4ExecFn, Tiles_tintbox_value_tiles_s0_a4BindFn, Tiles_tintbox_value_tiles_s0_a4InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER, LogicalType::INTEGER}, Tiles_tintbox_value_tiles_s0_a3ExecFn, Tiles_tintbox_value_tiles_s0_a3BindFn, Tiles_tintbox_value_tiles_s0_a3InitFn));
     loader.RegisterFunction(TableFunction("valueTiles", {TboxType::tbox(), LogicalType::INTEGER}, Tiles_tintbox_value_tiles_s0_a2ExecFn, Tiles_tintbox_value_tiles_s0_a2BindFn, Tiles_tintbox_value_tiles_s0_a2InitFn));
