@@ -49,12 +49,10 @@ struct TgeompointFunctions {
     // Out function: overload Temporal_out
     static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
-    static bool Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
      * Conversion functions
      ****************************************************/
-    static bool Temporal_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
      * Accessor functions

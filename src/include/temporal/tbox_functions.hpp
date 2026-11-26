@@ -56,32 +56,24 @@ struct TboxFunctions {
      ****************************************************/
     template <typename TA>
     static void NumberToTboxExecutor(Vector &value, MeosType basetype, Vector &result, idx_t count);
-    static bool Number_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // TODO: what is duckdb equivalent of numeric?
 
     static void TimestamptzToTboxExecutor(Vector &value, Vector &result, idx_t count);
-    static bool Timestamptz_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void SetToTboxExecutor(Vector &value, Vector &result, idx_t count);
-    static bool Set_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void SpanToTboxExecutor(Vector &value, Vector &result, idx_t count);
-    static bool Span_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void SpansetToTboxExecutor(Vector &value, Vector &result, idx_t count); 
-    static bool Spanset_to_tbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     /* ***************************************************
      * Conversion functions + cast functions: tbox -> [TYPE]
      ****************************************************/
     static void TboxToIntspanExecutor(Vector &value, Vector &result, idx_t count);
-    static bool Tbox_to_intspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void TboxToFloatspanExecutor(Vector &value, Vector &result, idx_t count);
-    static bool Tbox_to_floatspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     static void TboxToTstzspanExecutor(Vector &value, Vector &result, idx_t count);
-    static bool Tbox_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // TODO: Selectivity functions
     

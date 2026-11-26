@@ -48,12 +48,6 @@ struct SpanFunctions {
     // for cast
     static bool Span_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Text_to_span(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Value_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Intspan_to_floatspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Floatspan_to_intspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Datespan_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tstzspan_to_datespan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Set_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // TODO (Type Range): static bool Range_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // TODO (Type Range): static bool Span_to_range_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // scalar functions

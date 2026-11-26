@@ -211,15 +211,6 @@ static inline void Value_to_set_core(Vector &source, Vector &result, idx_t count
 
 // --- CAST (conversion: base -> set) ----
 
-bool SetFunctions::Value_to_set_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    auto target_type = result.GetType();
-    MeosType set_type  = SetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    MeosType base_type = settype_basetype(set_type);
-
-    Value_to_set_core(source, result, count, base_type);
-    return true;
-}
-
 // --- Conversion: intset <-> floatset ---
 static void Intset_to_floatset_common(Vector &source, Vector &result, idx_t count) {
             UnaryExecutor::Execute<string_t, string_t>(
@@ -247,16 +238,6 @@ static void Floatset_to_intset_common(Vector &source, Vector &result, idx_t coun
     );
 }
 
-
-bool SetFunctions::Intset_to_floatset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Intset_to_floatset_common(source, result, count);
-    return true;    
-}
-
-bool SetFunctions::Floatset_to_intset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Floatset_to_intset_common(source, result, count);
-    return true;
-}
 
 // --- Conversion: tstzset <-> dateset ---
 
@@ -286,18 +267,6 @@ static void Tstzset_to_dateset_common(Vector &source, Vector &result, idx_t coun
             return out;
         }
     );
-}
-
-// --- CAST: dateset -> tstzset ---
-bool SetFunctions::Dateset_to_tstzset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Dateset_to_tstzset_common(source, result, count);
-    return true;
-}
-
-// --- CAST: tstzset -> dateset ---
-bool SetFunctions::Tstzset_to_dateset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzset_to_dateset_common(source, result, count);
-    return true;
 }
 
 // floor/ceil/round/degrees/radians on floatset are generated from the catalog

@@ -68,35 +68,10 @@ void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
         StboxFunctions::Stbox_out_cast
     );
 
-    RegisterMeosCastFunction(loader, 
-        MobilityDuckGeometryType(),
-        stbox(),
-        StboxFunctions::Geo_to_stbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        LogicalType::TIMESTAMP_TZ,
-        stbox(),
-        StboxFunctions::Timestamptz_to_stbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SetTypes::tstzset(),
-        stbox(),
-        StboxFunctions::Tstzset_to_stbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpanTypes::tstzspan(),
-        stbox(),
-        StboxFunctions::Tstzspan_to_stbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpansetTypes::tstzspanset(),
-        stbox(),
-        StboxFunctions::Tstzspanset_to_stbox_cast
-    );
 }
 
 void StboxType::RegisterScalarFunctions(ExtensionLoader &loader) {

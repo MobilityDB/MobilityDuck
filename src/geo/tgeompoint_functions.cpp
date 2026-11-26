@@ -259,11 +259,6 @@ inline void Tspatial_to_stbox_common(Vector &source, Vector &result, idx_t count
     }
 }
 
-bool TgeompointFunctions::Tspatial_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tspatial_to_stbox_common(source, result, count);
-    return true;
-}
-
 /* ***************************************************
  * Conversion functions
  ****************************************************/
@@ -301,11 +296,6 @@ inline void Temporal_to_tstzspan_common(Vector &source, Vector &result, idx_t co
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-}
-
-bool TgeompointFunctions::Temporal_to_tstzspan_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Temporal_to_tstzspan_common(source, result, count);
-    return true;
 }
 
 /* ***************************************************

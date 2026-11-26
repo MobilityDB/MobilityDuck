@@ -68,95 +68,20 @@ void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
         TboxFunctions::Tbox_out_cast
     );
 
-    RegisterMeosCastFunction(loader, 
-        LogicalType::INTEGER,
-        tbox(),
-        TboxFunctions::Number_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        LogicalType::DOUBLE,
-        tbox(),
-        TboxFunctions::Number_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        LogicalType::TIMESTAMP_TZ,
-        tbox(),
-        TboxFunctions::Timestamptz_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SetTypes::intset(),
-        tbox(),
-        TboxFunctions::Set_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SetTypes::floatset(),
-        tbox(),
-        TboxFunctions::Set_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SetTypes::tstzset(),
-        tbox(),
-        TboxFunctions::Set_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpanTypes::intspan(),
-        tbox(),
-        TboxFunctions::Span_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpanTypes::floatspan(),
-        tbox(),
-        TboxFunctions::Span_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpanTypes::tstzspan(),
-        tbox(),
-        TboxFunctions::Span_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        tbox(),
-        SpanTypes::intspan(),
-        TboxFunctions::Tbox_to_intspan_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        tbox(),
-        SpanTypes::floatspan(),
-        TboxFunctions::Tbox_to_floatspan_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        tbox(),
-        SpanTypes::tstzspan(),
-        TboxFunctions::Tbox_to_tstzspan_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpansetTypes::intspanset(),
-        tbox(),
-        TboxFunctions::Spanset_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpansetTypes::floatspanset(),
-        tbox(),
-        TboxFunctions::Spanset_to_tbox_cast
-    );
 
-    RegisterMeosCastFunction(loader, 
-        SpansetTypes::tstzspanset(),
-        tbox(),
-        TboxFunctions::Spanset_to_tbox_cast
-    );
 }
 
 void TboxType::RegisterScalarFunctions(ExtensionLoader &loader) {

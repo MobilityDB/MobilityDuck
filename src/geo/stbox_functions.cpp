@@ -180,11 +180,6 @@ void StboxFunctions::Geo_to_stbox_common(Vector &source, Vector &result, idx_t c
     }
 }
 
-bool StboxFunctions::Geo_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Geo_to_stbox_common(source, result, count);
-    return true;
-}
-
 static void Timestamptz_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<timestamp_tz_t, string_t>(
         source, result, count,
@@ -211,11 +206,6 @@ static void Timestamptz_to_stbox_common(Vector &source, Vector &result, idx_t co
     if (count == 1) {
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
-}
-
-bool StboxFunctions::Timestamptz_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Timestamptz_to_stbox_common(source, result, count);
-    return true;
 }
 
 static void Tstzset_to_stbox_common(Vector &source, Vector &result, idx_t count) {
@@ -262,11 +252,6 @@ static void Tstzset_to_stbox_common(Vector &source, Vector &result, idx_t count)
     }
 }
 
-bool StboxFunctions::Tstzset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzset_to_stbox_common(source, result, count);
-    return true;
-}
-
 static void Tstzspan_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -309,10 +294,7 @@ static void Tstzspan_to_stbox_common(Vector &source, Vector &result, idx_t count
     }
 }
 
-bool StboxFunctions::Tstzspan_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzspan_to_stbox_common(source, result, count);
-    return true;
-}   
+   
 
 static void Tstzspanset_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(
@@ -352,11 +334,6 @@ static void Tstzspanset_to_stbox_common(Vector &source, Vector &result, idx_t co
             return stored_data;
         }
     );
-}
-
-bool StboxFunctions::Tstzspanset_to_stbox_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzspanset_to_stbox_common(source, result, count);
-    return true;
 }
 
 /* ***************************************************

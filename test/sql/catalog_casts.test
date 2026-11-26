@@ -1,0 +1,66 @@
+# name: test/sql/catalog_casts.test
+# description: The casts MobilityDB declares with CREATE CAST, registered from the catalog's
+#              sqlCasts: each runs the scalar function of its SQL function
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'UTC';
+
+# ── casts between the numbers, sets, spans and span sets ─────────────────────
+
+query IIII
+SELECT CAST(1::INTEGER AS intspan), CAST(3::INTEGER AS intset),
+  CAST(intset '{1, 2}' AS floatset), CAST(intspanset '{[1, 2], [4, 5]}' AS intspan);
+----
+[1, 2)	{3}	{1, 2}	[1, 6)
+
+query II
+SELECT CAST(tstzset '{2026-01-01, 2026-01-03}' AS tstzspan),
+  CAST(datespan '[2026-01-01, 2026-01-03]' AS tstzspan);
+----
+[2026-01-01 00:00:00+00, 2026-01-03 00:00:00+00]	[2026-01-01 00:00:00+00, 2026-01-04 00:00:00+00)
+
+# ── casts between temporal values and to their boxes ─────────────────────────
+
+query II
+SELECT CAST(tfloat 'Interp=Step;[1.5@2026-01-01, 2.5@2026-01-02]' AS tint),
+  CAST(tbigint '[1@2026-01-01, 2@2026-01-02]' AS tint);
+----
+[1@2026-01-01 00:00:00+00, 2@2026-01-02 00:00:00+00]	[1@2026-01-01 00:00:00+00, 2@2026-01-02 00:00:00+00]
+
+query II
+SELECT CAST(tpose '[Pose(Point(1 1),0.5)@2026-01-01, Pose(Point(2 2),0.5)@2026-01-02]' AS tgeompoint),
+  CAST(tgeompoint '[Point(1 1)@2026-01-01, Point(2 2)@2026-01-02]' AS stbox);
+----
+[POINT(1 1)@2026-01-01 00:00:00+00, POINT(2 2)@2026-01-02 00:00:00+00]	STBOX XT(((1,1),(2,2)),[2026-01-01 00:00:00+00, 2026-01-02 00:00:00+00])
+
+# ── a value MEOS refuses ─────────────────────────────────────────────────────
+
+# A cast raises MEOS's error, and a TRY cast answers NULL for the row
+statement error
+SELECT CAST(tfloat '[1.5@2026-01-01, 2.5@2026-01-02]' AS tint);
+----
+Cannot cast temporal float with linear interpolation to temporal integer
+
+query II
+SELECT TRY_CAST(tfloat '[1.5@2026-01-01, 2.5@2026-01-02]' AS tint),
+  TRY_CAST((-1)::BIGINT AS quadbin);
+----
+NULL	NULL
+
+statement error
+SELECT CAST(5::BIGINT AS quadbin);
+----
+does not encode a valid quadbin index
+
+# A TRY cast over a column answers NULL for each refused row alone
+query II
+SELECT i, TRY_CAST(v AS tint) IS NULL
+FROM (VALUES (1, tfloat 'Interp=Step;[1.5@2026-01-01, 2.5@2026-01-02]'),
+             (2, tfloat '[1.5@2026-01-01, 2.5@2026-01-02]')) t(i, v)
+ORDER BY i;
+----
+1	false
+2	true

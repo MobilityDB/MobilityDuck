@@ -85,8 +85,6 @@ void QuadbinTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         QuadbinFunctions::Quadbin_out_cast);
     RegisterMeosCastFunction(loader, quadbin(), LogicalType::BIGINT,
         QuadbinFunctions::Quadbin_to_bigint_cast);
-    RegisterMeosCastFunction(loader, LogicalType::BIGINT, quadbin(),
-        QuadbinFunctions::Bigint_to_quadbin_cast);
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tquadbin(),
         QuadbinFunctions::Tquadbin_in_cast);
     RegisterMeosCastFunction(loader, tquadbin(), LogicalType::VARCHAR,
@@ -159,12 +157,6 @@ bool QuadbinFunctions::Quadbin_to_bigint_cast(
         source, result, count,
         [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
     return true;
-}
-
-bool QuadbinFunctions::Bigint_to_quadbin_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    return BigintToCellCast(source, result, count, parameters, bigint_to_quadbin);
 }
 
 /* =====================================================================

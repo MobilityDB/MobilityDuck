@@ -47,14 +47,6 @@ struct SpansetFunctions{
     // for cast
     static bool Spanset_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Text_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Value_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Set_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Span_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Spanset_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Intspanset_to_floatspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Floatspanset_to_intspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Datespanset_to_tstzspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Tstzspanset_to_datespanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // TODO: Multirange functions
 

@@ -169,17 +169,6 @@ static inline void Value_to_spanset_core(Vector &source, Vector &result, idx_t c
     }
 }
 
-// --- CAST (conversion: base -> spanset) ----
-bool SpansetFunctions::Value_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    auto target_type   = result.GetType();
-    MeosType spanset_t = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-    MeosType span_t    = spansettype_spantype(spanset_t);
-    MeosType base_t    = spantype_basetype(span_t);
-
-    Value_to_spanset_core(source, result, count, base_t);
-    return true;
-}
-
 // --- Conversion: set -> spanset ---
 static void Set_to_spanset_common(Vector &source, Vector &result, idx_t count) {
     source.Flatten(count);
@@ -205,13 +194,6 @@ static void Set_to_spanset_common(Vector &source, Vector &result, idx_t count) {
     );
 }
 
-// --- CAST (conversion: set -> spanset) ----
-bool SpansetFunctions::Set_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
-    Set_to_spanset_common(source, result, count);
-    return true;
-}
-
-
 // --- Conversion: span -> spanset ---
 static inline void Span_to_spanset_common (Vector &source, Vector &result, idx_t count){
     source.Flatten(count);
@@ -235,12 +217,6 @@ static inline void Span_to_spanset_common (Vector &source, Vector &result, idx_t
             return result_blob;
         }
     );
-}
-
-// --- CAST (conversion: span -> spanset) ----
-bool SpansetFunctions::Span_to_spanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {    
-    Span_to_spanset_common(source, result, count);
-    return true;
 }
 
 // --- Conversion: spanset -> span ---
@@ -268,13 +244,6 @@ static inline void Spanset_to_span_common(Vector &source, Vector &result, idx_t 
         }
     );
 }
-
-// --- CAST (conversion: spanset -> span) ----
-bool SpansetFunctions::Spanset_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Spanset_to_span_common(source, result, count);
-    return true;
-}
-
 
 // --- Conversion: intspanset <-> floatspanset ---
 static inline void Intspanset_to_floatspanset_common(Vector &source, Vector &result, idx_t count) {
@@ -325,18 +294,6 @@ static inline void Floatspanset_to_intspanset_common(Vector &source, Vector &res
     );
 }
 
-// --- CAST (conversion: intspanset -> floatspanset) ----
-bool SpansetFunctions::Intspanset_to_floatspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Intspanset_to_floatspanset_common(source, result, count);
-    return true;
-}
-
-// --- CAST (conversion: floatspanset -> intspanset) ----
-bool SpansetFunctions::Floatspanset_to_intspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Floatspanset_to_intspanset_common(source, result, count);
-    return true;
-}
-
 // --- Conversion: datespanset <-> tstzspanset ----
 static inline void Datespanset_to_tstzspanset_common(Vector &source, Vector &result, idx_t count) {
     source.Flatten(count);
@@ -384,17 +341,6 @@ static inline void Tstzspanset_to_datespanset_common(Vector &source, Vector &res
             return result_blob;
         }
     );
-}
-
-// --- CAST (conversion: datespanset -> tstzspanset) ----
-bool SpansetFunctions::Datespanset_to_tstzspanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Datespanset_to_tstzspanset_common(source, result, count);
-    return true;
-}
-// --- CAST (conversion: tstzspanset -> datespanset) ----
-bool SpansetFunctions::Tstzspanset_to_datespanset_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Tstzspanset_to_datespanset_common(source, result, count);
-    return true;
 }
 
 // floor/ceil/round/degrees/radians on floatspanset are generated from the catalog

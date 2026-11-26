@@ -5031,6 +5031,39 @@ SQL_BASE_TO_DUCK = {
     "tpcbox": "TpcboxType::tpcbox()", "nsegment": "NpointTypes::nsegment()",
 }
 
+# The DuckDB type of each SQL type a cast of the catalog names: those of #SQL_BASE_TO_DUCK, the
+# temporal, set and span set types, the base values of #BASE_LOGICAL under their SQL names, and
+# the geometry. A SQL type DuckDB carries in no type of its own (geography, box2d, box3d,
+# PostgreSQL's ranges) is absent, and so are the casts naming it.
+CAST_TYPE = {
+    **SQL_BASE_TO_DUCK, **TO_TYPE, **SET_SQL_TO_ACC, **SPANSET_TYPES,
+    **{{"int": "integer", "tstz": "timestamptz"}.get(b, b): acc for b, acc in BASE_LOGICAL.items()},
+    "geometry": "MobilityDuckGeometryType()",
+}
+
+def catalog_casts():
+    """[(source accessor, target accessor, SQL function, source, target)] of every cast of the
+    catalog's sqlCasts that runs a MEOS function, in its order: a cast taking the type modifier,
+    which a DuckDB column does not carry, and a cast over a type #CAST_TYPE does not name are left
+    out, and of two casts DuckDB would hold as one pair the first is kept."""
+    out, seen = [], set()
+    for c in CATALOG.get("sqlCasts") or []:
+        if "function" not in c or c.get("typmod"):
+            continue
+        s, t = CAST_TYPE.get(c["source"]), CAST_TYPE.get(c["target"])
+        if not s or not t or (s, t) in seen:
+            continue
+        seen.add((s, t))
+        out.append((s, t, c["sqlFunction"]["name"], c["source"], c["target"]))
+    return out
+
+def catalog_casts_text():
+    """RegisterGeneratedCasts: each cast of #catalog_casts through #RegisterCatalogCast, which
+    runs the scalar function the generated surface registers under the cast's SQL function"""
+    lines = "".join('    RegisterCatalogCast(loader, %s, %s, "%s");  // %s -> %s\n' % c
+                    for c in catalog_casts())
+    return ("void RegisterGeneratedCasts(ExtensionLoader &loader) {\n" + lines + "}\n")
+
 def array_ret_duck(f, acc, tail=()):
     """The DuckDB LIST return type for this array-return on input accessor `acc`, from the catalog
     sqlSignature (e.g. spans(intset)->intspan[] -> LIST(SpanTypes::intspan())). None if not an
@@ -9922,7 +9955,7 @@ def gen_cpp(fns, out_path, aliases=None):
               + "\nvoid RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {\n"
               + "\n".join("    RegisterGenerated_%s(loader);" % re.sub(r"[^A-Za-z0-9_]", "_", g)
                            for g in reg_groups)
-              + "\n}\n\n} // namespace duckdb\n")
+              + "\n}\n\n" + catalog_casts_text() + "\n} // namespace duckdb\n")
     open(out_path, "w").write(MDB_LICENSE + sized_calls(master))
     GENERATED_TEXT.append(master + "".join(chunk_texts))
     n_reg = (len(generic_regs) + len(specific_regs) + len(set_generic_regs)
