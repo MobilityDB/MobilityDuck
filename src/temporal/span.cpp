@@ -66,18 +66,6 @@ void SpanTypes::RegisterCastFunctions(ExtensionLoader &loader) {
             LogicalType::VARCHAR,   
             SpanFunctions::Span_to_text   
         ); // Blob to text
-        RegisterMeosCastFunction(loader, 
-            LogicalType::VARCHAR, 
-            span_type,                                    
-            SpanFunctions::Text_to_span   
-        ); // text to blob
-        
-
-        
-        
-
-
-        // Scalar value -> span casts
     }
 }
 

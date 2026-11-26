@@ -51,7 +51,6 @@ struct TGeographyTypes {
 };
 
 struct TgeographyFunctions {
-    static bool StringToTgeography(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TgeographyToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

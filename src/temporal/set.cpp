@@ -62,18 +62,13 @@ void SetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
             LogicalType::VARCHAR,   
             SetFunctions::Set_to_text   
         ); // Blob to text
-        RegisterMeosCastFunction(loader, 
-            LogicalType::VARCHAR, 
-            set_type,                                    
-            SetFunctions::Text_to_set   
-        ); // text to blob
-        
-        auto base_type = SetTypeMapping::GetChildType(set_type);
-
-
-        
-        
-
+    }
+    /* The cast from text to a set runs its portable reader (RegisterGeneratedCasts), except for
+     * the H3 cell set, whose reader the surface does not register, and the text set, which reads
+     * a braced text as a set and any other text as the set of it, as MobilityDB reads an untyped
+     * literal and casts a text (set(text)) */
+    for (const auto &set_type : {SetTypes::h3indexset(), SetTypes::textset()}) {
+        RegisterMeosCastFunction(loader, LogicalType::VARCHAR, set_type, SetFunctions::Text_to_set);
     }
 }
 

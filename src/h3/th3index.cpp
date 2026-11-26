@@ -82,8 +82,6 @@ void H3indexTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         H3indexFunctions::H3index_in_cast);
     RegisterMeosCastFunction(loader, h3index(), LogicalType::VARCHAR,
         H3indexFunctions::H3index_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, th3index(),
-        H3indexFunctions::Th3index_in_cast);
     RegisterMeosCastFunction(loader, th3index(), LogicalType::VARCHAR,
         H3indexFunctions::Th3index_out_cast);
 }
@@ -136,23 +134,6 @@ bool H3indexFunctions::H3index_out_cast(
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-/* =====================================================================
- * In / out — TH3INDEX temporal value
- * ===================================================================== */
-
-bool H3indexFunctions::Th3index_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = th3index_in(str.c_str());
-            return TempToBlob(result, t);
         });
     return true;
 }

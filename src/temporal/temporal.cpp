@@ -91,11 +91,6 @@ const std::vector<LogicalType> &TemporalTypes::AllTypes() {
 
 void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     for (auto &type : TemporalTypes::AllTypes()) {
-        RegisterMeosCastFunction(loader, 
-            LogicalType::VARCHAR,
-            type,
-            TemporalFunctions::Temporal_in
-        );
 
         RegisterMeosCastFunction(loader, 
             type,
@@ -108,11 +103,6 @@ void TemporalTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         SpansetTypes::tstzspanset(),
         TemporalFunctions::Blob_to_tstzspanset
     );
-
-
-
-
-
 
 }
 }

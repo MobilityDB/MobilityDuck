@@ -68,38 +68,6 @@ MeosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
     throw InternalException("Unknown alias: " + std::string(alias));
 }
 
-/* ***************************************************
- * In/out functions: VARCHAR <-> Temporal
- ****************************************************/
-
-bool TemporalFunctions::Temporal_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    auto &target_type = result.GetType();
-    MeosType temptype = TemporalHelpers::GetTemptypeFromAlias(target_type.GetAlias().c_str());
-    bool success = true;
-    UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_string, ValidityMask &mask, idx_t idx) {
-            std::string input_str = input_string.GetString();
-            Temporal *temp = temporal_in(input_str.c_str(), temptype);
-            if (!temp) {
-                throw InternalException("Failure in Temporal_in: unable to cast string to temporal");
-                success = false;
-                return string_t();
-            }
-            size_t temp_size = temporal_mem_size(temp);
-            uint8_t *temp_data = (uint8_t*)malloc(temp_size);
-            memcpy(temp_data, temp, temp_size);
-            string_t output(reinterpret_cast<char*>(temp_data), temp_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, output);
-
-            free(temp_data);
-            free(temp);
-            return stored_data;
-        }
-    );
-    return success;
-}
-
 bool TemporalFunctions::Temporal_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(

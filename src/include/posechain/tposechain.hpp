@@ -62,11 +62,9 @@ struct PosechainTypes {
 
 struct PosechainFunctions {
     /* In/out — static posechain value */
-    static bool Posechain_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Posechain_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* In/out — tposechain temporal value */
-    static bool Tposechain_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tposechain_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

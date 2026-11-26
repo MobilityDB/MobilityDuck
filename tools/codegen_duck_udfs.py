@@ -75,6 +75,18 @@ for _f in CATALOG["functions"]:
         if _s.get("typeSupport") == "input" and _s["ret"] not in INPUT_OF.get(_f["name"], []):
             INPUT_OF.setdefault(_f["name"], []).append(_s["ret"])
 
+# The portable reader of each SQL type: the SQL name the type's input function (a signature's
+# typeSupport `input`) takes over text in its other signature (intset_in as intsetFromText), read
+# from the catalog as loaded, as #INPUT_OF is. The cast from text to the type runs it.
+TEXT_READER = {}
+for _f in CATALOG["functions"]:
+    _sigs = _f.get("sqlSignatures") or []
+    for _t in {_s["ret"] for _s in _sigs if _s.get("typeSupport") == "input"}:
+        for _s in _sigs:
+            if (not _s.get("typeSupport") and _s.get("ret") == _t and _s.get("args") == ["text"]
+                    and _s.get("sqlName")):
+                TEXT_READER.setdefault(_t, _s["sqlName"])
+
 def type_support_name(name):
     """Whether the SQL name `name` is the name of a type support function (#TYPE_SUPPORT_NAMES)."""
     return name in TYPE_SUPPORT_NAMES
@@ -5042,11 +5054,28 @@ CAST_TYPE = {
 }
 
 def catalog_casts():
-    """[(source accessor, target accessor, SQL function, source, target)] of every cast of the
-    catalog's sqlCasts that runs a MEOS function, in its order: a cast taking the type modifier,
-    which a DuckDB column does not carry, and a cast over a type #CAST_TYPE does not name are left
-    out, and of two casts DuckDB would hold as one pair the first is kept."""
+    """[(source accessor, target accessor, SQL function, source, target)] of the casts DuckDB
+    registers: first the cast from text to each type, through the type's input function
+    (#TEXT_READER), then every cast of the catalog's sqlCasts that runs a MEOS function, in its
+    order. A cast taking the type modifier, which a DuckDB column does not carry, and a cast over a
+    type #CAST_TYPE does not name are left out, and of two casts DuckDB would hold as one pair the
+    first is kept. DuckDB types a quoted literal as text, where PostgreSQL leaves it unknown and
+    reads it with the type's input function, so the input function takes the pair from text, over
+    a cast MobilityDB declares from text (set(text), a set of the one value). A type MobilityDB
+    casts text to through another function than its reader takes neither: the binding reconciles
+    the two by hand (textset reads a braced text as a set and any other text as a set of it)."""
     out, seen = [], set()
+    from_text = {c["target"]: c["sqlFunction"]["name"] for c in CATALOG.get("sqlCasts") or []
+                 if c["source"] == "text" and "sqlFunction" in c}
+    for typ in sorted(TEXT_READER):
+        s, t = CAST_TYPE["text"], CAST_TYPE.get(typ)
+        if from_text.get(typ, TEXT_READER[typ]) != TEXT_READER[typ]:
+            seen.add((s, t))
+            continue
+        if not t or (s, t) in seen:
+            continue
+        seen.add((s, t))
+        out.append((s, t, TEXT_READER[typ], "text", typ))
     for c in CATALOG.get("sqlCasts") or []:
         if "function" not in c or c.get("typmod"):
             continue

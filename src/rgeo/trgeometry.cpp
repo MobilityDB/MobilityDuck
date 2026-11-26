@@ -93,23 +93,6 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-/* =====================================================================
- * In / out — trgeometry temporal value
- * ===================================================================== */
-
-bool TrgeometryFunctions::Trgeometry_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = trgeometry_in(str.c_str());
-            return TempToBlob(result, t);
-        });
-    return true;
-}
-
 bool TrgeometryFunctions::Trgeometry_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -133,8 +116,6 @@ bool TrgeometryFunctions::Trgeometry_out_cast(
  * ===================================================================== */
 
 void TrgeometryTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, trgeometry(),
-        TrgeometryFunctions::Trgeometry_in_cast);
     RegisterMeosCastFunction(loader, trgeometry(), LogicalType::VARCHAR,
         TrgeometryFunctions::Trgeometry_out_cast);
 }

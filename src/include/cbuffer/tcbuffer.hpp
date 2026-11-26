@@ -54,11 +54,9 @@ struct CbufferTypes {
 
 struct CbufferFunctions {
     /* In/out — static cbuffer value */
-    static bool Cbuffer_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Cbuffer_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* In/out — tcbuffer temporal value */
-    static bool Tcbuffer_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tcbuffer_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

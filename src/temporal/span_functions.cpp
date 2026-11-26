@@ -79,47 +79,6 @@ bool SpanFunctions::Span_to_text(Vector &source, Vector &result, idx_t count, Ca
     return true;
 }
 
-bool SpanFunctions::Text_to_span(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    auto &result_type = result.GetType();
-    std::string type_alias = result_type.GetAlias();
-    
-    // Map the alias to the correct MEOS type
-    MeosType target_meos_type = SpanTypeMapping::GetMeosTypeFromAlias(type_alias);
-    
-    if (target_meos_type == T_UNKNOWN) {
-        throw InvalidInputException("Unknown span type: " + type_alias);
-    }
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string input = input_str.GetString();
-            
-            // Use the correct MEOS type for parsing
-            Span *span = span_in(input.c_str(), target_meos_type);
-            
-            if (span == NULL) {
-                throw InvalidInputException("Invalid " + type_alias + " format: " + input);
-            }
-
-            // Use memcpy instead of WKB format
-            size_t span_size = sizeof(*span);
-            uint8_t *span_buffer = (uint8_t*) malloc(span_size);
-            memcpy(span_buffer, span, span_size);
-
-            // Create string_t from binary data and add to result vector
-            string_t span_string_t(reinterpret_cast<const char*>(span_buffer), span_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, span_string_t);
-            
-            free(span_buffer);
-            free(span);
-            
-            return stored_data;
-        });
-
-    return true;
-}
-
 // --- Span binary constructor ---
 
 

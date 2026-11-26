@@ -49,7 +49,6 @@ struct TPcpointTypes {
 };
 
 struct TpcpointFunctions {
-    static bool StringToTpcpoint(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool TpcpointToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // Base pcpoint value (BLOB-alias) -> VARCHAR render cast (pcpoint_hex_out), so the
     // generated startValue/endValue base value renders as hex-WKB text (cbuffer sibling).

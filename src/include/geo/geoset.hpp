@@ -47,7 +47,6 @@ struct SpatialSetType{
 
 struct SpatialSetFunctions{
     //cast
-    static bool Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };   
 
 } // namespace duckdb

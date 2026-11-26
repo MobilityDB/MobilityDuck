@@ -60,21 +60,6 @@ void SpansetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
             LogicalType::VARCHAR,   
             SpansetFunctions::Spanset_to_text   
         ); // Blob to text
-        RegisterMeosCastFunction(loader, 
-            LogicalType::VARCHAR, 
-            spanset_type,                                    
-            SpansetFunctions::Text_to_spanset   
-        ); // text to blob
-        
-        auto base_type = SpansetTypeMapping::GetBaseType(spanset_type);
-
-        auto set_type = SpansetTypeMapping::GetSetType(spanset_type);        
-        auto child_type = SpansetTypeMapping::GetChildType(spanset_type); // span
-
-
-
-
-
     }
 }
 

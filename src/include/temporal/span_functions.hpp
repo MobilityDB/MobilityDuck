@@ -47,7 +47,6 @@ namespace duckdb {
 struct SpanFunctions {
     // for cast
     static bool Span_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-    static bool Text_to_span(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // TODO (Type Range): static bool Range_to_span_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // TODO (Type Range): static bool Span_to_range_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // scalar functions

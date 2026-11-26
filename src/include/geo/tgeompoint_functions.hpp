@@ -45,7 +45,6 @@ struct TgeompointFunctions {
     /* ***************************************************
      * In/out functions
      ****************************************************/
-    static bool Tpoint_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     // Out function: overload Temporal_out
     static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
     static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);

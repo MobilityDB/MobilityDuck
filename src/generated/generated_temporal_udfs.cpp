@@ -846,6 +846,62 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
 }
 
 void RegisterGeneratedCasts(ExtensionLoader &loader) {
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::bigintset(), "bigintsetFromText");  // text -> bigintset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpanTypes::bigintspan(), "bigintspanFromText");  // text -> bigintspan
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpansetTypes::bigintspanset(), "bigintspansetFromText");  // text -> bigintspanset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, CbufferTypes::cbuffer(), "cbufferFromText");  // text -> cbuffer
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::cbufferset(), "cbuffersetFromText");  // text -> cbufferset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::dateset(), "datesetFromText");  // text -> dateset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpanTypes::datespan(), "datespanFromText");  // text -> datespan
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpansetTypes::datespanset(), "datespansetFromText");  // text -> datespanset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::floatset(), "floatsetFromText");  // text -> floatset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpanTypes::floatspan(), "floatspanFromText");  // text -> floatspan
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpansetTypes::floatspanset(), "floatspansetFromText");  // text -> floatspanset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpatialSetType::geogset(), "geogsetFromText");  // text -> geogset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpatialSetType::geomset(), "geomsetFromText");  // text -> geomset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::h3indexset(), "h3indexsetFromText");  // text -> h3indexset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::intset(), "intsetFromText");  // text -> intset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpanTypes::intspan(), "intspanFromText");  // text -> intspan
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpansetTypes::intspanset(), "intspansetFromText");  // text -> intspanset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::jsonbset(), "jsonbsetFromText");  // text -> jsonbset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, NpointTypes::npoint(), "npointFromText");  // text -> npoint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::npointset(), "npointsetFromText");  // text -> npointset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, NpointTypes::nsegment(), "nsegmentFromText");  // text -> nsegment
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::pcpatchset(), "pcpatchsetFromText");  // text -> pcpatchset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::pcpointset(), "pcpointsetFromText");  // text -> pcpointset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, PosechainTypes::posechain(), "posechainFromText");  // text -> posechain
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::posechainset(), "posechainsetFromText");  // text -> posechainset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::poseset(), "posesetFromText");  // text -> poseset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, QuadbinTypes::quadbin(), "quadbinFromText");  // text -> quadbin
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::quadbinset(), "quadbinsetFromText");  // text -> quadbinset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, S2cellTypes::s2cell(), "s2cellFromText");  // text -> s2cell
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::s2cellset(), "s2cellsetFromText");  // text -> s2cellset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, StboxType::stbox(), "stboxFromText");  // text -> stbox
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TemporalTypes::tbigint(), "tbigintFromText");  // text -> tbigint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TemporalTypes::tbool(), "tboolFromText");  // text -> tbool
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TboxType::tbox(), "tboxFromText");  // text -> tbox
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, CbufferTypes::tcbuffer(), "tcbufferFromText");  // text -> tcbuffer
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TemporalTypes::tfloat(), "tfloatFromText");  // text -> tfloat
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TgeogpointType::tgeogpoint(), "tgeogpointFromText");  // text -> tgeogpoint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TGeographyTypes::tgeography(), "tgeographyFromText");  // text -> tgeography
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TGeometryTypes::tgeometry(), "tgeometryFromText");  // text -> tgeometry
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TgeompointType::tgeompoint(), "tgeompointFromText");  // text -> tgeompoint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, H3indexTypes::th3index(), "th3indexFromText");  // text -> th3index
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TemporalTypes::tint(), "tintFromText");  // text -> tint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TJsonbTypes::tjsonb(), "tjsonbFromText");  // text -> tjsonb
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, NpointTypes::tnpoint(), "tnpointFromText");  // text -> tnpoint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TpcboxType::tpcbox(), "tpcboxFromText");  // text -> tpcbox
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TPcpatchTypes::tpcpatch(), "tpcpatchFromText");  // text -> tpcpatch
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TPcpointTypes::tpcpoint(), "tpcpointFromText");  // text -> tpcpoint
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, PoseTypes::tpose(), "tposeFromText");  // text -> tpose
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, PosechainTypes::tposechain(), "tposechainFromText");  // text -> tposechain
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, QuadbinTypes::tquadbin(), "tquadbinFromText");  // text -> tquadbin
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TrgeometryTypes::trgeometry(), "trgeometryFromText");  // text -> trgeometry
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, S2cellTypes::ts2cell(), "ts2cellFromText");  // text -> ts2cell
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::tstzset(), "tstzsetFromText");  // text -> tstzset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpanTypes::tstzspan(), "tstzspanFromText");  // text -> tstzspan
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, SpansetTypes::tstzspanset(), "tstzspansetFromText");  // text -> tstzspanset
+    RegisterCatalogCast(loader, LogicalType::VARCHAR, TemporalTypes::ttext(), "ttextFromText");  // text -> ttext
     RegisterCatalogCast(loader, LogicalType::BIGINT, SetTypes::bigintset(), "set");  // bigint -> bigintset
     RegisterCatalogCast(loader, LogicalType::BIGINT, SpanTypes::bigintspan(), "span");  // bigint -> bigintspan
     RegisterCatalogCast(loader, LogicalType::BIGINT, SpansetTypes::bigintspanset(), "spanset");  // bigint -> bigintspanset
@@ -965,7 +1021,6 @@ void RegisterGeneratedCasts(ExtensionLoader &loader) {
     RegisterCatalogCast(loader, CbufferTypes::tcbuffer(), TgeogpointType::tgeogpoint(), "tgeogpoint");  // tcbuffer -> tgeogpoint
     RegisterCatalogCast(loader, CbufferTypes::tcbuffer(), TgeompointType::tgeompoint(), "tgeompoint");  // tcbuffer -> tgeompoint
     RegisterCatalogCast(loader, CbufferTypes::tcbuffer(), SpanTypes::tstzspan(), "timeSpan");  // tcbuffer -> tstzspan
-    RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::textset(), "set");  // text -> textset
     RegisterCatalogCast(loader, SetTypes::textset(), SetTypes::jsonbset(), "jsonbset");  // textset -> jsonbset
     RegisterCatalogCast(loader, TemporalTypes::tfloat(), SpanTypes::floatspan(), "valueSpan");  // tfloat -> floatspan
     RegisterCatalogCast(loader, TemporalTypes::tfloat(), TemporalTypes::tbigint(), "tbigint");  // tfloat -> tbigint

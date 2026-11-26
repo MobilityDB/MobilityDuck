@@ -42,7 +42,6 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct TgeogpointFunctions {
-    static bool Tpoint_in(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 
 } // namespace duckdb
