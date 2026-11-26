@@ -1,0 +1,53 @@
+# name: test/sql/output_casts.test
+# description: The cast of each type to text runs the type's output function, as PostgreSQL's
+#              cast to text does: hex EWKB for the geometries, where asText writes their WKT
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone = 'UTC';
+
+# ── the temporal numbers, sets, spans, span sets and boxes ───────────────────
+
+query II
+SELECT CAST(tint '[1@2026-01-01, 2@2026-01-02]' AS VARCHAR),
+  CAST(tfloat '[1.123456789@2026-01-01, 2@2026-01-02]' AS VARCHAR);
+----
+[1@2026-01-01 00:00:00+00, 2@2026-01-02 00:00:00+00]	[1.123456789@2026-01-01 00:00:00+00, 2@2026-01-02 00:00:00+00]
+
+query III
+SELECT CAST(intset '{1, 2}' AS VARCHAR), CAST(floatspan '[1.5, 2.5]' AS VARCHAR),
+  CAST(tstzspanset '{[2026-01-01, 2026-01-02]}' AS VARCHAR);
+----
+{1, 2}	[1.5, 2.5]	{[2026-01-01 00:00:00+00, 2026-01-02 00:00:00+00]}
+
+query II
+SELECT CAST(tbox 'TBOXFLOAT XT([1.5, 2.5],[2026-01-01, 2026-01-02])' AS VARCHAR),
+  CAST(stbox 'SRID=4326;STBOX XT(((1,1),(2,2)),[2026-01-01, 2026-01-02])' AS VARCHAR);
+----
+TBOXFLOAT XT([1.5, 2.5],[2026-01-01 00:00:00+00, 2026-01-02 00:00:00+00])	SRID=4326;STBOX XT(((1,1),(2,2)),[2026-01-01 00:00:00+00, 2026-01-02 00:00:00+00])
+
+# ── the geometries: hex EWKB, the SRID kept; asText writes the WKT ───────────
+
+query I
+SELECT CAST(tgeompoint 'SRID=4326;[Point(1 1)@2026-01-01, Point(2 2)@2026-01-02]' AS VARCHAR);
+----
+[0101000020E6100000000000000000F03F000000000000F03F@2026-01-01 00:00:00+00, 0101000020E610000000000000000000400000000000000040@2026-01-02 00:00:00+00]
+
+query I
+SELECT CAST(geomset '{"SRID=3812;Point(1 1)", "SRID=3812;Point(2 2)"}' AS VARCHAR);
+----
+{"0101000020E40E0000000000000000F03F000000000000F03F", "0101000020E40E000000000000000000400000000000000040"}
+
+query I
+SELECT asText(tgeompoint 'SRID=4326;[Point(1 1)@2026-01-01, Point(2 2)@2026-01-02]');
+----
+[POINT(1 1)@2026-01-01 00:00:00+00, POINT(2 2)@2026-01-02 00:00:00+00]
+
+# ── a NULL value casts to NULL ───────────────────────────────────────────────
+
+query I
+SELECT CAST(NULL::tint AS VARCHAR) IS NULL;
+----
+true

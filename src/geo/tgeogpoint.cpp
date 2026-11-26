@@ -73,11 +73,6 @@ void TgeogpointType::RegisterType(ExtensionLoader &loader) {
 
 void TgeogpointType::RegisterCastFunctions(ExtensionLoader &loader) {
 
-    RegisterMeosCastFunction(loader, 
-        tgeogpoint(),
-        LogicalType::VARCHAR,
-        TemporalFunctions::Temporal_out
-    );
 
 
 }

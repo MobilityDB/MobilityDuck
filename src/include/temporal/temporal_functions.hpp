@@ -51,10 +51,6 @@ struct TemporalHelpers {
 };
 
 struct TemporalFunctions {
-    /* ***************************************************
-     * In/out functions: VARCHAR <-> Temporal
-     ****************************************************/
-    static bool Temporal_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Blob_to_tstzspanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************

@@ -115,47 +115,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-bool CbufferFunctions::Cbuffer_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Cbuffer *cb = BlobToCbuffer(blob);
-            char *str = cbuffer_as_text(cb, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(cb);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-bool CbufferFunctions::Tcbuffer_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
 
 void CbufferTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, cbuffer(), LogicalType::VARCHAR,
-        CbufferFunctions::Cbuffer_out_cast);
-    RegisterMeosCastFunction(loader, tcbuffer(), LogicalType::VARCHAR,
-        CbufferFunctions::Tcbuffer_out_cast);
 }
 
 } // namespace duckdb

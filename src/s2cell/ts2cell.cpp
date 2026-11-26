@@ -71,12 +71,8 @@ void S2cellTypes::RegisterTypes(ExtensionLoader &loader) {
 }
 
 void S2cellTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, s2cell(), LogicalType::VARCHAR,
-        S2cellFunctions::S2cell_out_cast);
     RegisterMeosCastFunction(loader, s2cell(), LogicalType::BIGINT,
         S2cellFunctions::S2cell_to_bigint_cast);
-    RegisterMeosCastFunction(loader, ts2cell(), LogicalType::VARCHAR,
-        S2cellFunctions::Ts2cell_out_cast);
 }
 
 namespace {
@@ -99,25 +95,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-bool S2cellFunctions::S2cell_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<uint64_t, string_t>(
-        source, result, count,
-        [&](uint64_t v) -> string_t {
-            char *str = s2cell_out(v, UnreadSize());
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Bigint casts — the two MobilityDB declares (s2cell/600_s2cell.in.sql):
  * s2cell AS bigint WITHOUT FUNCTION, the same 64 bits read signed, and
  * bigint AS s2cell WITH FUNCTION s2cell(bigint), which raises when the
- * integer encodes no cell. Built as #S2cellFunctions::S2cell_out_cast is.
+ * integer encodes no cell.
  * ===================================================================== */
 
 bool S2cellFunctions::S2cell_to_bigint_cast(
@@ -126,22 +108,6 @@ bool S2cellFunctions::S2cell_to_bigint_cast(
     UnaryExecutor::Execute<uint64_t, int64_t>(
         source, result, count,
         [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
-    return true;
-}
-
-bool S2cellFunctions::Ts2cell_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
     return true;
 }
 

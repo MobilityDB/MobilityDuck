@@ -45,10 +45,6 @@ class ExtensionLoader;
 #define Int32GetDatum(X) ((Datum) (X))
 
 struct TboxFunctions {
-    /* ***************************************************
-     * In/out functions: VARCHAR <-> tbox
-     ****************************************************/
-    static bool Tbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************
      * Conversion functions + cast functions: [TYPE] -> tbox

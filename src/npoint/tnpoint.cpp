@@ -152,65 +152,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-bool NpointFunctions::Npoint_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Npoint *np = BlobToNpoint(blob);
-            char *str = npoint_as_text(np, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(np);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-bool NpointFunctions::Nsegment_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Nsegment *ns = BlobToNsegment(blob);
-            char *str = nsegment_as_text(ns, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(ns);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-bool NpointFunctions::Tnpoint_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            char *str = TemporalAsText(t, OUT_DEFAULT_DECIMAL_DIGITS);
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
 
 void NpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, npoint(), LogicalType::VARCHAR,
-        NpointFunctions::Npoint_out_cast);
-    RegisterMeosCastFunction(loader, nsegment(), LogicalType::VARCHAR,
-        NpointFunctions::Nsegment_out_cast);
-    RegisterMeosCastFunction(loader, tnpoint(), LogicalType::VARCHAR,
-        NpointFunctions::Tnpoint_out_cast);
 }
 
 } // namespace duckdb

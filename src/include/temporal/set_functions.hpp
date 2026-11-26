@@ -45,9 +45,6 @@ namespace duckdb {
 
 struct SetFunctions {
     static void RegisterScalarFunctions(ExtensionLoader &loader);
-
-    // for cast
-    static bool Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     // scalar functions

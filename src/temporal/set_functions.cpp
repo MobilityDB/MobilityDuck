@@ -43,36 +43,6 @@ extern "C" {
 
 namespace duckdb {
 
-// --- Cast From String ---
-bool SetFunctions::Set_to_text(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    source.Flatten(count);
-    auto result_data = FlatVector::GetData<string_t>(result); 
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(source, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        Value val = source.GetValue(i);
-        const string_t &blob = StringValue::Get(val);
-        const uint8_t *data = (const uint8_t *)(blob.GetData());
-        size_t size = blob.GetSize();
-
-        Set *s = (Set*)malloc(size);                
-
-        memcpy(s, data, size);             
-        char *cstr = SetAsText(s, 15);  
-        result_data[i] = StringVector::AddString(result, cstr);
-
-        free(cstr);
-        free(s);
-    }
-
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-    return true;
-}
-
 bool SetFunctions::Text_to_set(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     source.Flatten(count);
     result.SetVectorType(VectorType::FLAT_VECTOR);

@@ -50,8 +50,4 @@ struct TGeographyTypes {
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
-struct TgeographyFunctions {
-    static bool TgeographyToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-};
-
 } // namespace duckdb

@@ -47,9 +47,5 @@ struct TGeometryTypes {
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
-struct TgeometryFunctions {
-    static bool TgeometryToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
-};
-
 
 } // namespace duckdb

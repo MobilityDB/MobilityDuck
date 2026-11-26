@@ -49,7 +49,6 @@ struct SpansetTypes {
     static const std::vector<LogicalType> &AllTypes();
 
     static void RegisterTypes(ExtensionLoader &loader);
-    static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 
 struct SpansetTypeMapping {

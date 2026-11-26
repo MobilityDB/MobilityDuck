@@ -79,12 +79,8 @@ void QuadbinTypes::RegisterTypes(ExtensionLoader &loader) {
 }
 
 void QuadbinTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, quadbin(), LogicalType::VARCHAR,
-        QuadbinFunctions::Quadbin_out_cast);
     RegisterMeosCastFunction(loader, quadbin(), LogicalType::BIGINT,
         QuadbinFunctions::Quadbin_to_bigint_cast);
-    RegisterMeosCastFunction(loader, tquadbin(), LogicalType::VARCHAR,
-        QuadbinFunctions::Tquadbin_out_cast);
 }
 
 namespace {
@@ -107,25 +103,11 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-bool QuadbinFunctions::Quadbin_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<uint64_t, string_t>(
-        source, result, count,
-        [&](uint64_t v) -> string_t {
-            char *str = quadbin_index_to_string(v, UnreadSize());
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Bigint casts — the two MobilityDB declares (quadbin/350_quadbin.in.sql):
  * quadbin AS bigint WITHOUT FUNCTION, the same 64 bits read signed, and
  * bigint AS quadbin WITH FUNCTION quadbin(bigint), which raises when the
- * integer encodes no cell. Built as #QuadbinFunctions::Quadbin_out_cast is.
+ * integer encodes no cell.
  * ===================================================================== */
 
 bool QuadbinFunctions::Quadbin_to_bigint_cast(
@@ -134,22 +116,6 @@ bool QuadbinFunctions::Quadbin_to_bigint_cast(
     UnaryExecutor::Execute<uint64_t, int64_t>(
         source, result, count,
         [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
-    return true;
-}
-
-bool QuadbinFunctions::Tquadbin_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Temporal *t = BlobToTemp(blob);
-            char *str = temporal_out(t, OUT_DEFAULT_DECIMAL_DIGITS, UnreadSize());
-            free(t);
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
     return true;
 }
 

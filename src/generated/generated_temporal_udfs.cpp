@@ -845,7 +845,10 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_temporal_transf(loader);
 }
 
+void RegisterGeneratedOutputCasts(ExtensionLoader &loader);
+
 void RegisterGeneratedCasts(ExtensionLoader &loader) {
+    RegisterGeneratedOutputCasts(loader);
     RegisterCatalogCast(loader, LogicalType::VARCHAR, SetTypes::bigintset(), "bigintsetFromText");  // text -> bigintset
     RegisterCatalogCast(loader, LogicalType::VARCHAR, SpanTypes::bigintspan(), "bigintspanFromText");  // text -> bigintspan
     RegisterCatalogCast(loader, LogicalType::VARCHAR, SpansetTypes::bigintspanset(), "bigintspansetFromText");  // text -> bigintspanset

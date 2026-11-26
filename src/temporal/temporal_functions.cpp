@@ -68,40 +68,6 @@ MeosType TemporalHelpers::GetTemptypeFromAlias(const char *alias) {
     throw InternalException("Unknown alias: " + std::string(alias));
 }
 
-bool TemporalFunctions::Temporal_out(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    bool success = true;
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t data_size = input_blob.GetSize();
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("[Temporal_out] Invalid Temporal data: insufficient size");
-            }
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            memcpy(data_copy, data, data_size);
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-            if (!temp) {
-                free(data_copy);
-                throw InvalidInputException("Invalid Temporal input: " + input_blob.GetString());
-            }
-
-            char *ret = TemporalAsText(temp, OUT_DEFAULT_DECIMAL_DIGITS);
-            if (!ret) {
-                free(data_copy);
-                throw InternalException("Failure in Temporal_out: unable to cast temporal to string");
-            }
-            std::string ret_string(ret);
-            string_t stored_data = StringVector::AddStringOrBlob(result, ret_string);
-
-            free(ret);
-            free(temp);
-            return stored_data;
-        }
-    );
-    return success;
-}
-
 bool TemporalFunctions::Blob_to_tstzspanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(

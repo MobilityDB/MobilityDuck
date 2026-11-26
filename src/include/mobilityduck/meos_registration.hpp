@@ -90,16 +90,19 @@ inline unique_ptr<FunctionData> BindGeometryArgumentTypes(ClientContext &, Scala
  * session's zone in its own init, which DuckDB may run on any worker thread: the
  * tiles read their default time origin and divide time by a duration there.
  */
+inline scalar_function_t FollowingSessionTimezone(scalar_function_t orig) {
+	return [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
+		EnsureMeosThreadInitialized(state.GetContext());
+		orig(args, state, result);
+	};
+}
+
 inline ScalarFunction FollowingSessionTimezone(ScalarFunction sf) {
 	if (!sf.HasBindCallback() &&
 	    std::any_of(sf.arguments.begin(), sf.arguments.end(), IsGeometryOrGeometryList)) {
 		sf.SetBindCallback(BindGeometryArgumentTypes);
 	}
-	scalar_function_t orig = std::move(sf.function);
-	sf.function = [orig = std::move(orig)](DataChunk &args, ExpressionState &state, Vector &result) {
-		EnsureMeosThreadInitialized(state.GetContext());
-		orig(args, state, result);
-	};
+	sf.function = FollowingSessionTimezone(std::move(sf.function));
 	return sf;
 }
 
@@ -259,6 +262,18 @@ inline bool MeosCatalogCast(Vector &source, Vector &result, idx_t count, CastPar
 }
 
 /**
+ * Register the cast from source to target that runs the given scalar function over the source
+ * column, as #MeosCatalogCast runs it
+ */
+inline void RegisterScalarCast(ExtensionLoader &loader, const LogicalType &source, const LogicalType &target,
+                               scalar_function_t function) {
+	loader.RegisterCastFunction(
+	    source, target,
+	    BoundCastInfo(MeosCatalogCast, make_uniq<MeosCatalogCastData>(std::move(function)), MeosCatalogCastInitLocal),
+	    -1);
+}
+
+/**
  * Register the cast from source to target that MobilityDB declares through the SQL function
  * of the given name: the scalar overload of that name registered over the source type and
  * answering the target type. A cast whose function the surface does not register is not
@@ -278,11 +293,7 @@ inline bool RegisterCatalogCast(ExtensionLoader &loader, const LogicalType &sour
 		auto function = set.GetFunctionByOffset(i);
 		if (function.arguments.size() == 1 && function.arguments[0] == source && function.return_type == target &&
 		    function.HasFunctionCallback()) {
-			loader.RegisterCastFunction(source, target,
-			                            BoundCastInfo(MeosCatalogCast,
-			                                          make_uniq<MeosCatalogCastData>(function.GetFunctionCallback()),
-			                                          MeosCatalogCastInitLocal),
-			                            -1);
+			RegisterScalarCast(loader, source, target, function.GetFunctionCallback());
 			return true;
 		}
 	}

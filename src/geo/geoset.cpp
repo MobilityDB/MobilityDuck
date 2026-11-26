@@ -68,16 +68,6 @@ void SpatialSetType::RegisterTypes(ExtensionLoader &loader){
 void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {        
     // A geometry set writes its text as every spatial set does: its WKT, through
     // spatialset_as_text
-    RegisterMeosCastFunction(loader,
-        SpatialSetType::geomset(),
-        LogicalType::VARCHAR,
-        SetFunctions::Set_to_text
-    );
-    RegisterMeosCastFunction(loader,
-        SpatialSetType::geogset(),
-        LogicalType::VARCHAR,
-        SetFunctions::Set_to_text
-    );
 }
 
 } // namespace duckdb

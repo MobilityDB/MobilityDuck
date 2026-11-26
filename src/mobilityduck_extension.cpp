@@ -406,7 +406,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	StboxType::RegisterScalarFunctions(loader);
 
 	SpanTypes::RegisterTypes(loader);
-	SpanTypes::RegisterCastFunctions(loader);
 
 	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
@@ -491,7 +490,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	PosechainTypes::RegisterCastFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
-	SpansetTypes::RegisterCastFunctions(loader);
 
 	TJsonbTypes::RegisterTypes(loader);
 	TJsonbTypes::RegisterCastFunctions(loader);

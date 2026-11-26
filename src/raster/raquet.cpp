@@ -111,23 +111,6 @@ bool RaquetFunctions::Raquet_in_cast(
     return true;
 }
 
-bool RaquetFunctions::Raquet_out_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t blob) -> string_t {
-            Raquet *rq = BlobToRaquet(blob);
-            char *str = raquet_out(rq, UnreadSize());
-            free(rq);
-            if (!str) throw InvalidInputException("raquet_out: invalid tile");
-            std::string copy(str);
-            free(str);
-            return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
 /* =====================================================================
  * Registration
  * ===================================================================== */
@@ -135,8 +118,6 @@ bool RaquetFunctions::Raquet_out_cast(
 void RaquetTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, LogicalType::VARCHAR, raquet(),
         RaquetFunctions::Raquet_in_cast);
-    RegisterMeosCastFunction(loader, raquet(), LogicalType::VARCHAR,
-        RaquetFunctions::Raquet_out_cast);
 }
 
 } // namespace duckdb

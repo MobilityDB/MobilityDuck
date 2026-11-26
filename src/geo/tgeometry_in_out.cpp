@@ -45,52 +45,7 @@ extern "C" {
 
 namespace duckdb {
 
-bool TgeometryFunctions::TgeometryToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_blob) -> string_t {
-            const uint8_t *data = reinterpret_cast<const uint8_t*>(input_blob.GetData());
-            size_t data_size = input_blob.GetSize();
-            
-            if (data_size < sizeof(void*)) {
-                throw InvalidInputException("Invalid tgeometry data: insufficient size");
-            }
-
-            uint8_t *data_copy = (uint8_t*)malloc(data_size);
-            if (!data_copy) {
-                throw InvalidInputException("Failed to allocate memory for tgeometry deserialization");
-            }
-            memcpy(data_copy, data, data_size);
-            
-            Temporal *temp = reinterpret_cast<Temporal*>(data_copy);
-            if (!temp) {
-                free(data_copy);
-                throw InvalidInputException("Invalid tgeometry data: null pointer");
-            }
-            
-            char *str = TemporalAsText(temp, 15);
-            if (!str) {
-                free(data_copy);
-                throw InvalidInputException("Failed to convert tgeometry to string");
-            }
-            
-            std::string output(str);
-            string_t stored_result = StringVector::AddString(result, output);
-            
-            free(str);
-            free(data_copy);
-            
-            return stored_result;
-        });
-        
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-    return true;   
-}
-
 void TGeometryTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader,  TGeometryTypes::tgeometry(), LogicalType::VARCHAR, TgeometryFunctions::TgeometryToString);
 }
 
 }
