@@ -53,7 +53,11 @@
  * those bytes, which no reference states for a raster, has no meaning. A type
  * MEOS does not compare, the JSON path, for which PostgreSQL states neither an
  * order nor an equality, is refused by every such operation, MIN and MAX
- * included.
+ * included, and by every DISTINCT aggregate, which a check of the plan
+ * refuses before it is optimized. A COUNT of its values, which compares none,
+ * answers. The scalar functions of DuckDB that compare the elements of a list,
+ * such as list_distinct, and approx_count_distinct read the stored bytes,
+ * since neither the collation nor the check of the plan reaches them.
  */
 
 #include "meos_wrapper_simple.hpp"
@@ -69,6 +73,12 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/planner/collation_binding.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "duckdb/main/config.hpp"
+#include "duckdb/optimizer/optimizer_extension.hpp"
+#include "duckdb/planner/expression/bound_aggregate_expression.hpp"
+#include "duckdb/planner/expression/bound_window_expression.hpp"
+#include "duckdb/planner/expression_iterator.hpp"
+#include "duckdb/planner/logical_operator.hpp"
 
 namespace duckdb {
 
@@ -275,6 +285,57 @@ BindMeosCount(ClientContext &context, AggregateFunction &function,
     BindMeosCount);
 }
 
+/* Raise the error of #PushMeosCollation if an argument of a DISTINCT
+ * aggregate is of a type MEOS does not compare */
+void
+RefuseUncomparedArguments(const vector<unique_ptr<Expression>> &children)
+{
+  for (auto &child : children)
+  {
+    const LogicalType &sql_type = child->return_type;
+    if (sql_type.id() != LogicalTypeId::BLOB || ! sql_type.HasAlias())
+      continue;
+    const string name = sql_type.GetAlias();
+    MeosType type = meostype_from_string(name.c_str());
+    if (type != T_UNKNOWN && meos_key_kind(type) == MeosKeyKind::NONE)
+      throw NotImplementedException("Type %s has no order or equality: it "
+        "cannot be compared, ordered, grouped or made distinct", name);
+  }
+}
+
+/* Refuse every DISTINCT aggregate of a plan, windowed or not, over a type
+ * MEOS does not compare. The binder pushes no collation on the arguments of
+ * a DISTINCT aggregate (`bind_aggregate_expression.cpp` pushes one on its
+ * ORDER BY only), and binds the aggregate before it states whether it is
+ * DISTINCT, so neither the collation nor an overload of the aggregate sees
+ * it: COUNT(DISTINCT x) would count the distinct stored bytes */
+void
+RefuseUncomparedDistinct(LogicalOperator &op)
+{
+  for (auto &expr : op.expressions)
+  {
+    ExpressionIterator::VisitExpression<BoundAggregateExpression>(*expr,
+      [](const BoundAggregateExpression &aggr) {
+        if (aggr.IsDistinct())
+          RefuseUncomparedArguments(aggr.children);
+      });
+    ExpressionIterator::VisitExpression<BoundWindowExpression>(*expr,
+      [](const BoundWindowExpression &window) {
+        if (window.distinct)
+          RefuseUncomparedArguments(window.children);
+      });
+  }
+  for (auto &child : op.children)
+    RefuseUncomparedDistinct(*child);
+}
+
+void
+RefuseUncomparedDistinctPlan(OptimizerExtensionInput &,
+  unique_ptr<LogicalOperator> &plan)
+{
+  RefuseUncomparedDistinct(*plan);
+}
+
 } // namespace
 
 /* The collation is registered as #CollationBinding registers that of TIME
@@ -285,6 +346,12 @@ RegisterMeosCollation(ExtensionLoader &loader)
   auto &db = loader.GetDatabaseInstance();
   CollationBinding::Get(db).RegisterCollation(
     CollationCallback(PushMeosCollation));
+
+  /* The DISTINCT aggregates, which the collation does not reach, are
+   * refused over a type MEOS does not compare before the plan is optimized */
+  OptimizerExtension distinct_check;
+  distinct_check.pre_optimize_function = RefuseUncomparedDistinctPlan;
+  OptimizerExtension::Register(DBConfig::GetConfig(db), distinct_check);
 
   /* MIN, MAX and COUNT, which the collation does not reach, over each MEOS
    * type the extension registers as a BLOB. MIN and MAX read the key of a type
