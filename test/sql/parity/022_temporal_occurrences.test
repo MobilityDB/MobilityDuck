@@ -1,0 +1,113 @@
+# name: test/sql/parity/022_temporal_occurrences.test
+# description: The occurrences of a template at its origins, as MobilityDB's 022_temporal answers
+#              them: the origins of service days in a time zone, the occurrence at one origin,
+#              the origins whose occurrence meets a period, and the table function of the
+#              occurrences meeting a period.
+# group: [sql]
+
+require mobilityduck
+
+statement ok
+SET TimeZone='UTC'
+
+# The origins of the days around the daylight-saving changes of Europe/Zurich: noon minus twelve
+# hours, 23:00 on the clock of the day before on the day of the spring change
+
+query T
+SELECT origins(dateset '{2026-03-28, 2026-03-29, 2026-03-30}', 'Europe/Zurich');
+----
+{"2026-03-27 23:00:00+00", "2026-03-28 22:00:00+00", "2026-03-29 22:00:00+00"}
+
+query T
+SELECT origins(dateset '{2026-10-24, 2026-10-25, 2026-10-26}', 'Europe/Zurich');
+----
+{"2026-10-23 22:00:00+00", "2026-10-24 23:00:00+00", "2026-10-25 23:00:00+00"}
+
+# The occurrence at an origin keeps every instant at its distance from the origin
+
+query T
+SELECT occurrence(tint '[1@2026-01-14 23:30:00+00, 2@2026-01-15 00:30:00+00]',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00', TIMESTAMPTZ '2026-03-28 22:00:00+00');
+----
+[1@2026-03-28 22:30:00+00, 2@2026-03-28 23:30:00+00]
+
+query T
+SELECT occurrence(ttext '{AAA@2026-01-14 23:30:00+00, BBB@2026-01-15 00:30:00+00}',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00', TIMESTAMPTZ '2026-01-15 23:00:00+00');
+----
+{"AAA"@2026-01-15 23:30:00+00, "BBB"@2026-01-16 00:30:00+00}
+
+# A period ending at the first instant of the second occurrence meets it when closed only
+
+query T
+SELECT occurrenceOrigins(tint '[1@2026-01-14 23:30:00+00, 2@2026-01-15 00:30:00+00]',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00',
+  tstzset '{2026-01-14 23:00:00+00, 2026-01-15 23:00:00+00, 2026-01-16 23:00:00+00}',
+  tstzspan '[2026-01-15 23:00:00+00, 2026-01-15 23:30:00+00]');
+----
+{"2026-01-15 23:00:00+00"}
+
+query T
+SELECT occurrenceOrigins(tint '[1@2026-01-14 23:30:00+00, 2@2026-01-15 00:30:00+00]',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00',
+  tstzset '{2026-01-14 23:00:00+00, 2026-01-15 23:00:00+00, 2026-01-16 23:00:00+00}',
+  tstzspan '[2026-01-15 23:00:00+00, 2026-01-15 23:30:00+00)');
+----
+NULL
+
+# The occurrences meeting a period, with their origins
+
+query TT
+SELECT origin, occurrence FROM occurrences(
+  tint '[1@2026-01-14 23:30:00+00, 2@2026-01-15 00:30:00+00]',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00',
+  tstzset '{2026-01-14 23:00:00+00, 2026-01-15 23:00:00+00, 2026-01-16 23:00:00+00}',
+  tstzspan '[2026-01-15 00:00:00+00, 2026-01-16 00:00:00+00]') ORDER BY origin;
+----
+2026-01-14 23:00:00+00	[1@2026-01-14 23:30:00+00, 2@2026-01-15 00:30:00+00]
+2026-01-15 23:00:00+00	[1@2026-01-15 23:30:00+00, 2@2026-01-16 00:30:00+00]
+
+# A trip built for the service day 2026-03-27 occurs on the service day of the spring change at
+# the same distance from the origin of the day
+
+query TT
+SELECT origin, occurrence FROM occurrences(
+  tfloat '[1@2026-03-26 23:30:00+00, 2@2026-03-27 00:30:00+00]',
+  startValue(origins(dateset '{2026-03-27}', 'Europe/Zurich')),
+  origins(dateset '{2026-03-27, 2026-03-29}', 'Europe/Zurich'),
+  tstzspan '[2026-03-01 00:00:00+00, 2026-04-01 00:00:00+00]') ORDER BY origin;
+----
+2026-03-26 23:00:00+00	[1@2026-03-26 23:30:00+00, 2@2026-03-27 00:30:00+00]
+2026-03-28 22:00:00+00	[1@2026-03-28 22:30:00+00, 2@2026-03-28 23:30:00+00]
+
+# No occurrence meets the period
+
+query I
+SELECT count(*) FROM occurrences(
+  tint '[1@2026-01-14 23:30:00+00, 2@2026-01-15 00:30:00+00]',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00', tstzset '{2026-01-14 23:00:00+00}',
+  tstzspan '[2025-01-01 00:00:00+00, 2025-01-02 00:00:00+00]');
+----
+0
+
+# A temporal point occurs like any other temporal value
+
+query I
+SELECT count(*) FROM occurrences(
+  tgeompoint '[Point(0 0)@2026-01-14 23:30:00+00, Point(1 1)@2026-01-15 00:30:00+00]',
+  TIMESTAMPTZ '2026-01-14 23:00:00+00',
+  tstzset '{2026-01-14 23:00:00+00, 2026-01-15 23:00:00+00}',
+  tstzspan '[2026-01-14 00:00:00+00, 2026-01-17 00:00:00+00]');
+----
+2
+
+statement error
+SELECT origins(dateset '{2026-07-15}', 'Not/AZone');
+----
+time zone "Not/AZone" not recognized
+
+statement error
+SELECT occurrence(tint '1@2026-01-14 23:30:00+00', TIMESTAMPTZ '-infinity',
+  TIMESTAMPTZ '2026-01-15 23:00:00+00');
+----
+The timestamp must be finite
