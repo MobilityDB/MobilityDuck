@@ -152,23 +152,6 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-/* =====================================================================
- * In / out — static npoint value
- * ===================================================================== */
-
-bool NpointFunctions::Npoint_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Npoint *np = npoint_in(str.c_str());
-            return NpointToBlob(result, np);
-        });
-    return true;
-}
-
 bool NpointFunctions::Npoint_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -185,23 +168,6 @@ bool NpointFunctions::Npoint_out_cast(
     return true;
 }
 
-/* =====================================================================
- * In / out — static nsegment value
- * ===================================================================== */
-
-bool NpointFunctions::Nsegment_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Nsegment *ns = nsegment_in(str.c_str());
-            return NsegmentToBlob(result, ns);
-        });
-    return true;
-}
-
 bool NpointFunctions::Nsegment_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -214,23 +180,6 @@ bool NpointFunctions::Nsegment_out_cast(
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-/* =====================================================================
- * In / out — tnpoint temporal value
- * ===================================================================== */
-
-bool NpointFunctions::Tnpoint_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = tnpoint_in(str.c_str());
-            return TempToBlob(result, t);
         });
     return true;
 }
@@ -256,16 +205,10 @@ bool NpointFunctions::Tnpoint_out_cast(
  * ===================================================================== */
 
 void NpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, npoint(),
-        NpointFunctions::Npoint_in_cast);
     RegisterMeosCastFunction(loader, npoint(), LogicalType::VARCHAR,
         NpointFunctions::Npoint_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, nsegment(),
-        NpointFunctions::Nsegment_in_cast);
     RegisterMeosCastFunction(loader, nsegment(), LogicalType::VARCHAR,
         NpointFunctions::Nsegment_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tnpoint(),
-        NpointFunctions::Tnpoint_in_cast);
     RegisterMeosCastFunction(loader, tnpoint(), LogicalType::VARCHAR,
         NpointFunctions::Tnpoint_out_cast);
 }

@@ -48,41 +48,6 @@ namespace duckdb {
 // The text form of a tpcpoint is read by tpcpoint_in and written by temporal_out through the
 // VARCHAR <-> tpcpoint cast below; its I/O functions are generated from the catalog.
 
-bool TpcpointFunctions::StringToTpcpoint(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_string) -> string_t {
-            std::string input_str = input_string.GetString();
-
-            Temporal *temp = tpcpoint_in(input_str.c_str());
-            if (!temp) {
-                throw InvalidInputException("Invalid tpcpoint input: " + input_str);
-            }
-
-            size_t data_size = temporal_mem_size(temp);
-            uint8_t *data_buffer = (uint8_t*)malloc(data_size);
-            if (!data_buffer) {
-                free(temp);
-                throw InvalidInputException("Failed to allocate memory for tpcpoint data");
-            }
-
-            memcpy(data_buffer, temp, data_size);
-
-            string_t data_string_t(reinterpret_cast<const char*>(data_buffer), data_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, data_string_t);
-
-            free(data_buffer);
-            free(temp);
-
-            return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-    return true;
-}
-
 bool TpcpointFunctions::TpcpointToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -128,7 +93,6 @@ bool TpcpointFunctions::TpcpointToString(Vector &source, Vector &result, idx_t c
 }
 
 void TPcpointTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TPcpointTypes::tpcpoint(), TpcpointFunctions::StringToTpcpoint);
     RegisterMeosCastFunction(loader, TPcpointTypes::tpcpoint(), LogicalType::VARCHAR, TpcpointFunctions::TpcpointToString);
     // Base pcpoint value render cast: generated startValue/endValue return the pcpoint
     // base value, rendered as hex-WKB text via pcpoint_hex_out (cbuffer sibling pattern).

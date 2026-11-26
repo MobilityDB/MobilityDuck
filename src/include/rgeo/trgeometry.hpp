@@ -61,7 +61,6 @@ struct TrgeometryTypes {
 };
 
 struct TrgeometryFunctions {
-    static bool Trgeometry_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Trgeometry_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

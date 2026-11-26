@@ -71,14 +71,10 @@ void S2cellTypes::RegisterTypes(ExtensionLoader &loader) {
 }
 
 void S2cellTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, s2cell(),
-        S2cellFunctions::S2cell_in_cast);
     RegisterMeosCastFunction(loader, s2cell(), LogicalType::VARCHAR,
         S2cellFunctions::S2cell_out_cast);
     RegisterMeosCastFunction(loader, s2cell(), LogicalType::BIGINT,
         S2cellFunctions::S2cell_to_bigint_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, ts2cell(),
-        S2cellFunctions::Ts2cell_in_cast);
     RegisterMeosCastFunction(loader, ts2cell(), LogicalType::VARCHAR,
         S2cellFunctions::Ts2cell_out_cast);
 }
@@ -102,22 +98,6 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 }
 
 } // namespace
-
-/* =====================================================================
- * In / out — static S2CELL cell
- * ===================================================================== */
-
-bool S2cellFunctions::S2cell_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, uint64_t>(
-        source, result, count,
-        [&](string_t s) -> uint64_t {
-            std::string str(s.GetData(), s.GetSize());
-            return s2cell_in(str.c_str());
-        });
-    return true;
-}
 
 bool S2cellFunctions::S2cell_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
@@ -146,23 +126,6 @@ bool S2cellFunctions::S2cell_to_bigint_cast(
     UnaryExecutor::Execute<uint64_t, int64_t>(
         source, result, count,
         [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
-    return true;
-}
-
-/* =====================================================================
- * In / out — TS2CELL temporal value
- * ===================================================================== */
-
-bool S2cellFunctions::Ts2cell_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = ts2cell_in(str.c_str());
-            return TempToBlob(result, t);
-        });
     return true;
 }
 

@@ -56,31 +56,12 @@ void TboxType::RegisterType(ExtensionLoader &loader) {
 }
 
 void TboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, 
-        LogicalType::VARCHAR,
-        tbox(),
-        TboxFunctions::Tbox_in_cast
-    );
 
     RegisterMeosCastFunction(loader, 
         tbox(),
         LogicalType::VARCHAR,
         TboxFunctions::Tbox_out_cast
     );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }
 

@@ -78,30 +78,6 @@ bool SpansetFunctions::Spanset_to_text(Vector &source, Vector &result, idx_t cou
     return true;
 }
 
-bool SpansetFunctions::Text_to_spanset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    source.Flatten(count);
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-
-    auto target_type = result.GetType();
-    MeosType spanset_type = SpansetTypeMapping::GetMeosTypeFromAlias(target_type.GetAlias());
-
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_str) -> string_t {
-            std::string str = input_str.GetString();
-
-            SpanSet *s = spanset_in(str.c_str(), spanset_type);            
-
-            string_t result_blob = StringVector::AddStringOrBlob(result, (const char *)s, spanset_mem_size(s));
-            free(s);
-            return result_blob;
-        }
-    );
-
-    return true;
-}
-
-
 // --- Conversion: base type -> spanset ---
 
 static inline void Write_spanset(Vector &result, idx_t row, SpanSet *s) {

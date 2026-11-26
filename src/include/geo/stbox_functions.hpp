@@ -46,7 +46,6 @@ struct StboxFunctions {
     /* ***************************************************
      * In/out functions: VARCHAR <-> stbox
      ****************************************************/
-    static bool Stbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Stbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************

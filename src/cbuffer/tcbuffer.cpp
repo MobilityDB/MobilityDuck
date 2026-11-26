@@ -115,23 +115,6 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-/* =====================================================================
- * In / out — static cbuffer value
- * ===================================================================== */
-
-bool CbufferFunctions::Cbuffer_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Cbuffer *cb = cbuffer_in(str.c_str());
-            return CbufferToBlob(result, cb);
-        });
-    return true;
-}
-
 bool CbufferFunctions::Cbuffer_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -144,23 +127,6 @@ bool CbufferFunctions::Cbuffer_out_cast(
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-/* =====================================================================
- * In / out — tcbuffer temporal value
- * ===================================================================== */
-
-bool CbufferFunctions::Tcbuffer_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = tcbuffer_in(str.c_str());
-            return TempToBlob(result, t);
         });
     return true;
 }
@@ -186,12 +152,8 @@ bool CbufferFunctions::Tcbuffer_out_cast(
  * ===================================================================== */
 
 void CbufferTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, cbuffer(),
-        CbufferFunctions::Cbuffer_in_cast);
     RegisterMeosCastFunction(loader, cbuffer(), LogicalType::VARCHAR,
         CbufferFunctions::Cbuffer_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tcbuffer(),
-        CbufferFunctions::Tcbuffer_in_cast);
     RegisterMeosCastFunction(loader, tcbuffer(), LogicalType::VARCHAR,
         CbufferFunctions::Tcbuffer_out_cast);
 }

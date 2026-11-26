@@ -116,23 +116,6 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 
 } // namespace
 
-/* =====================================================================
- * In / out — static posechain value
- * ===================================================================== */
-
-bool PosechainFunctions::Posechain_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            PoseChain *pc = posechain_in(str.c_str());
-            return PosechainToBlob(result, pc);
-        });
-    return true;
-}
-
 bool PosechainFunctions::Posechain_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -145,23 +128,6 @@ bool PosechainFunctions::Posechain_out_cast(
             std::string copy(str);
             free(str);
             return StringVector::AddString(result, copy);
-        });
-    return true;
-}
-
-/* =====================================================================
- * In / out — tposechain temporal value
- * ===================================================================== */
-
-bool PosechainFunctions::Tposechain_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = tposechain_in(str.c_str());
-            return TempToBlob(result, t);
         });
     return true;
 }
@@ -187,12 +153,8 @@ bool PosechainFunctions::Tposechain_out_cast(
  * ===================================================================== */
 
 void PosechainTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, posechain(),
-        PosechainFunctions::Posechain_in_cast);
     RegisterMeosCastFunction(loader, posechain(), LogicalType::VARCHAR,
         PosechainFunctions::Posechain_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tposechain(),
-        PosechainFunctions::Tposechain_in_cast);
     RegisterMeosCastFunction(loader, tposechain(), LogicalType::VARCHAR,
         PosechainFunctions::Tposechain_out_cast);
 }

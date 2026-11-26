@@ -66,16 +66,6 @@ void SpatialSetType::RegisterTypes(ExtensionLoader &loader){
 }
 
 void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {        
-    RegisterMeosCastFunction(loader, 
-        LogicalType::VARCHAR, 
-        SpatialSetType::geomset(),                                    
-        SpatialSetFunctions::Text_to_geoset   
-    );     
-    RegisterMeosCastFunction(loader, 
-        LogicalType::VARCHAR, 
-        SpatialSetType::geogset(),                                    
-        SpatialSetFunctions::Text_to_geoset   
-    ); 
     // A geometry set writes its text as every spatial set does: its WKT, through
     // spatialset_as_text
     RegisterMeosCastFunction(loader,
@@ -88,32 +78,6 @@ void SpatialSetType::RegisterCastFunctions(ExtensionLoader &loader) {
         LogicalType::VARCHAR,
         SetFunctions::Set_to_text
     );
-}
-
-// --- Cast Function ---
-bool SpatialSetFunctions::Text_to_geoset(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    source.Flatten(count);
-
-    auto target_type = result.GetType();    
-    auto input_data = FlatVector::GetData<string_t>(source);
-    auto result_data = FlatVector::GetData<string_t>(result);
-
-    for (idx_t i = 0; i < count; ++i) {
-        if (FlatVector::IsNull(source, i)) {
-            FlatVector::SetNull(result, i, true);
-            continue;
-        }
-
-        const std::string input_blob = input_data[i].GetString();
-        auto set_type = (target_type == SpatialSetType::geomset()) ? T_GEOMSET:T_GEOGSET;
-        Set *s = set_in(input_blob.c_str(), set_type);        
-        size_t total_size =  set_mem_size(s); 
-        result_data[i] = StringVector::AddStringOrBlob(result, (const char*)s, total_size);        
-        free(s);
-    }
-
-    result.SetVectorType(VectorType::FLAT_VECTOR);
-    return true;
 }
 
 } // namespace duckdb

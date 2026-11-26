@@ -48,41 +48,6 @@ namespace duckdb {
 // The text form of a tpcpatch is read by tpcpatch_in and written by temporal_out through the
 // VARCHAR <-> tpcpatch cast below; its I/O functions are generated from the catalog.
 
-bool TpcpatchFunctions::StringToTpcpatch(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_string) -> string_t {
-            std::string input_str = input_string.GetString();
-
-            Temporal *temp = tpcpatch_in(input_str.c_str());
-            if (!temp) {
-                throw InvalidInputException("Invalid tpcpatch input: " + input_str);
-            }
-
-            size_t data_size = temporal_mem_size(temp);
-            uint8_t *data_buffer = (uint8_t*)malloc(data_size);
-            if (!data_buffer) {
-                free(temp);
-                throw InvalidInputException("Failed to allocate memory for tpcpatch data");
-            }
-
-            memcpy(data_buffer, temp, data_size);
-
-            string_t data_string_t(reinterpret_cast<const char*>(data_buffer), data_size);
-            string_t stored_data = StringVector::AddStringOrBlob(result, data_string_t);
-
-            free(data_buffer);
-            free(temp);
-
-            return stored_data;
-        });
-
-    if (count == 1) {
-        result.SetVectorType(VectorType::CONSTANT_VECTOR);
-    }
-    return true;
-}
-
 bool TpcpatchFunctions::TpcpatchToString(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
         source, result, count,
@@ -128,7 +93,6 @@ bool TpcpatchFunctions::TpcpatchToString(Vector &source, Vector &result, idx_t c
 }
 
 void TPcpatchTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TPcpatchTypes::tpcpatch(), TpcpatchFunctions::StringToTpcpatch);
     RegisterMeosCastFunction(loader, TPcpatchTypes::tpcpatch(), LogicalType::VARCHAR, TpcpatchFunctions::TpcpatchToString);
     // Base pcpatch value render cast: generated startValue/endValue return the pcpatch
     // base value, rendered as hex-WKB text via pcpatch_hex_out (cbuffer sibling pattern).

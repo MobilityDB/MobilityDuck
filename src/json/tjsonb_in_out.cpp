@@ -48,20 +48,6 @@ extern "C" {
 
 namespace duckdb {
 
-bool TjsonbFunctions::StringToTjsonb(Vector &source, Vector &result, idx_t count,
-                                      CastParameters &parameters) {
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t input_string) -> string_t {
-            std::string s = input_string.GetString();
-            Temporal *temp = tjsonb_in(s.c_str());
-            if (!temp)
-                throw InvalidInputException("Invalid tjsonb input: " + s);
-            return TemporalToBlob(result, temp);
-        });
-    return true;
-}
-
 bool TjsonbFunctions::TjsonbToString(Vector &source, Vector &result, idx_t count,
                                       CastParameters &parameters) {
     UnaryExecutor::Execute<string_t, string_t>(
@@ -80,8 +66,6 @@ bool TjsonbFunctions::TjsonbToString(Vector &source, Vector &result, idx_t count
 }
 
 void TJsonbTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, TJsonbTypes::tjsonb(),
-                             TjsonbFunctions::StringToTjsonb);
     RegisterMeosCastFunction(loader, TJsonbTypes::tjsonb(), LogicalType::VARCHAR,
                              TjsonbFunctions::TjsonbToString);
     // Base jsonb value render cast (mirrors cbuffer()->VARCHAR): renders the

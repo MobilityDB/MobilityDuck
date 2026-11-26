@@ -58,7 +58,6 @@ struct PoseFunctions {
     static bool Pose_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* In/out — tpose temporal value */
-    static bool Tpose_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tpose_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

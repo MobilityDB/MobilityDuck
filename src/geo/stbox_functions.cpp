@@ -96,11 +96,6 @@ inline void Stbox_in_common(Vector &source, Vector &result, idx_t count) {
     }
 }
 
-bool StboxFunctions::Stbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    Stbox_in_common(source, result, count);
-    return true;
-}
-
 bool StboxFunctions::Stbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(
@@ -293,8 +288,6 @@ static void Tstzspan_to_stbox_common(Vector &source, Vector &result, idx_t count
         result.SetVectorType(VectorType::CONSTANT_VECTOR);
     }
 }
-
-   
 
 static void Tstzspanset_to_stbox_common(Vector &source, Vector &result, idx_t count) {
     UnaryExecutor::Execute<string_t, string_t>(

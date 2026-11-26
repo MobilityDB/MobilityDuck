@@ -50,8 +50,6 @@ struct TJsonbTypes {
 };
 
 struct TjsonbFunctions {
-    static bool StringToTjsonb(Vector &source, Vector &result, idx_t count,
-                                CastParameters &parameters);
     static bool TjsonbToString(Vector &source, Vector &result, idx_t count,
                                 CastParameters &parameters);
     // Base jsonb value (BLOB-alias) -> VARCHAR render cast, mirroring the cbuffer

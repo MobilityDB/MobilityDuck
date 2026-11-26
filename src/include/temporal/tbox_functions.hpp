@@ -48,7 +48,6 @@ struct TboxFunctions {
     /* ***************************************************
      * In/out functions: VARCHAR <-> tbox
      ****************************************************/
-    static bool Tbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Tbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* ***************************************************

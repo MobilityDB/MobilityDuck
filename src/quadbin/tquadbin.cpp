@@ -79,14 +79,10 @@ void QuadbinTypes::RegisterTypes(ExtensionLoader &loader) {
 }
 
 void QuadbinTypes::RegisterCastFunctions(ExtensionLoader &loader) {
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, quadbin(),
-        QuadbinFunctions::Quadbin_in_cast);
     RegisterMeosCastFunction(loader, quadbin(), LogicalType::VARCHAR,
         QuadbinFunctions::Quadbin_out_cast);
     RegisterMeosCastFunction(loader, quadbin(), LogicalType::BIGINT,
         QuadbinFunctions::Quadbin_to_bigint_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tquadbin(),
-        QuadbinFunctions::Tquadbin_in_cast);
     RegisterMeosCastFunction(loader, tquadbin(), LogicalType::VARCHAR,
         QuadbinFunctions::Tquadbin_out_cast);
 }
@@ -110,24 +106,6 @@ inline string_t TempToBlob(Vector &result, Temporal *t) {
 }
 
 } // namespace
-
-/* =====================================================================
- * In / out — static QUADBIN cell (UBIGINT)
- *
- * QUADBIN cells are represented as hexadecimal cell ids.
- * ===================================================================== */
-
-bool QuadbinFunctions::Quadbin_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, uint64_t>(
-        source, result, count,
-        [&](string_t s) -> uint64_t {
-            std::string str(s.GetData(), s.GetSize());
-            return quadbin_in(str.c_str());
-        });
-    return true;
-}
 
 bool QuadbinFunctions::Quadbin_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
@@ -156,23 +134,6 @@ bool QuadbinFunctions::Quadbin_to_bigint_cast(
     UnaryExecutor::Execute<uint64_t, int64_t>(
         source, result, count,
         [&](uint64_t v) -> int64_t { return static_cast<int64_t>(v); });
-    return true;
-}
-
-/* =====================================================================
- * In / out — TQUADBIN temporal value
- * ===================================================================== */
-
-bool QuadbinFunctions::Tquadbin_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = tquadbin_in(str.c_str());
-            return TempToBlob(result, t);
-        });
     return true;
 }
 

@@ -59,7 +59,6 @@ struct H3indexFunctions {
     static bool H3index_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 
     /* In/out — th3index temporal value */
-    static bool Th3index_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
     static bool Th3index_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters);
 };
 

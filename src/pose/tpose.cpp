@@ -148,23 +148,6 @@ bool PoseFunctions::Pose_out_cast(
     return true;
 }
 
-/* =====================================================================
- * In / out — tpose temporal value
- * ===================================================================== */
-
-bool PoseFunctions::Tpose_in_cast(
-    Vector &source, Vector &result, idx_t count, CastParameters &parameters)
-{
-    UnaryExecutor::Execute<string_t, string_t>(
-        source, result, count,
-        [&](string_t s) -> string_t {
-            std::string str(s.GetData(), s.GetSize());
-            Temporal *t = tpose_in(str.c_str());
-            return TempToBlob(result, t);
-        });
-    return true;
-}
-
 bool PoseFunctions::Tpose_out_cast(
     Vector &source, Vector &result, idx_t count, CastParameters &parameters)
 {
@@ -190,8 +173,6 @@ void PoseTypes::RegisterCastFunctions(ExtensionLoader &loader) {
         PoseFunctions::Pose_in_cast);
     RegisterMeosCastFunction(loader, pose(), LogicalType::VARCHAR,
         PoseFunctions::Pose_out_cast);
-    RegisterMeosCastFunction(loader, LogicalType::VARCHAR, tpose(),
-        PoseFunctions::Tpose_in_cast);
     RegisterMeosCastFunction(loader, tpose(), LogicalType::VARCHAR,
         PoseFunctions::Tpose_out_cast);
 }

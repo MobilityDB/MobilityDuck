@@ -53,36 +53,6 @@ inline string_t MallocBlobToResult(Vector &result, void *buf, size_t sz) {
 
 } // namespace
 
-bool TboxFunctions::Tbox_in_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
-    bool success = true;
-    try {
-        UnaryExecutor::ExecuteWithNulls<string_t, string_t>(
-            source, result, count,
-            [&](string_t input, ValidityMask &mask, idx_t idx) {
-                if (input.GetSize() == 0) {
-                    return string_t();
-                }
-                std::string input_str(input.GetDataUnsafe(), input.GetSize());
-                TBox *tbox = tbox_in(input_str.c_str());
-                if (!tbox) {
-                    throw InternalException("Failure in Tbox_in_cast: unable to cast string to tbox");
-                    success = false;
-                    return string_t();
-                }
-                size_t tbox_size = sizeof(TBox);
-                char *tbox_data = (char*)malloc(tbox_size);
-                memcpy(tbox_data, tbox, tbox_size);
-                free(tbox);
-                return MallocBlobToResult(result, tbox_data, tbox_size);
-            }
-        );
-    } catch (const std::exception &e) {
-        throw InternalException(e.what());
-        success = false;
-    }
-    return success;
-}
-
 bool TboxFunctions::Tbox_out_cast(Vector &source, Vector &result, idx_t count, CastParameters &parameters) {
     bool success = true;
     UnaryExecutor::Execute<string_t, string_t>(
