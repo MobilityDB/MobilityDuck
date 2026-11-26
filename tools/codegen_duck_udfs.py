@@ -4073,7 +4073,7 @@ def shape_split(f):
         ins = [p for p in ps if p["name"] not in bound]
         if len(ins) != len(args):
             return None
-        if any(_split_arg(p, t) is None for p, t in zip(ins[1:], args[1:])):
+        if any(_row_arg(p, t) is None for p, t in zip(ins[1:], args[1:])):
             return None
         bins = [(c, _split_bin(f, c["from"], c)) for c in cols[:-1]]
         if any(m is None for _c, m in bins):
@@ -4170,19 +4170,19 @@ def emit_split(f, S, s, ins, bound, bins):
             call.append(str(bound[nm]))
             continue
         i = byname[nm]
-        _dt, cpp, expr, freed = _split_arg(p, args[i])
+        _dt, cpp, expr, freed = _row_arg(p, args[i])
         e = expr.replace("a2", f"UnifiedVectorFormat::GetData<{cpp}>(u[{i}])[r[{i}]]")
         if defs[i] is not None:
-            if freed:
+            if freed and args[i] in ("geometry", "geography"):
                 d = '%s("%s", -1)' % ("geog_in" if args[i] == "geography" else "geom_in",
                                       str(defs[i]).strip().strip("'"))
             else:
                 d = forward_literal(p, defs[i])
-                if d is None or base(p["canonical"]) == "Interval":
+                if d is None or freed or base(p["canonical"]) == "Interval":
                     raise ValueError(f"{name}: no literal for {nm}")
             e = f"(k > {i} ? {e} : {d})"
         if freed:
-            L.append(f"                GSERIALIZED *g{i} = {e};")
+            L.append(f"                auto *g{i} = {e};")
             frees.append(f"g{i}")
             call.append(f"g{i}")
         else:
@@ -4244,7 +4244,7 @@ def _row_arg(p, sqlt):
     if a is not None:
         return a
     b, n = base(p["canonical"]), norm(p["canonical"])
-    dt = SQL_BASE_TO_DUCK.get(sqlt)
+    dt = SQL_BASE_TO_DUCK.get(sqlt) or SET_TYPES.get(sqlt)
     if n.count("*") == 1 and b in PTR_IN and PTR_IN[b][0] != "MD_TEMPORAL" and dt:
         return (dt, "string_t", PTR_IN[b][1] % "a2", True)
     return None
@@ -8485,7 +8485,7 @@ def gen_cpp(fns, out_path, aliases=None):
                 cols_ = ", ".join('"%s"' % c["name"] for c in s_["columns"])
                 for k_ in box_tile_forms(s_, ins_):
                     S_ = f"Split_{f['name']}_{len(SPLIT_BODIES)}" if key_ not in SPLIT_BODIES else None
-                    types_ = [acc_] + [_split_arg(p, t)[0] for p, t in zip(ins_[1:k_], s_["args"][1:k_])]
+                    types_ = [acc_] + [_row_arg(p, t)[0] for p, t in zip(ins_[1:k_], s_["args"][1:k_])]
                     nms = [reg_name(nm, f) for nm in reg_names(f, s_.get("sqlName") or f["sqlfn"], aliases)
                            if (reg_name(nm, f), tuple(types_)) not in SPLIT_REGISTERED]
                     if not nms:
