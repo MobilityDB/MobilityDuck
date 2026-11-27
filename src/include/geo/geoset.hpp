@@ -39,12 +39,6 @@ namespace duckdb {
 
 struct SpatialSetType{    
     #include "generated/spatial_set_type_accessors.hpp"
-
-    static void RegisterCastFunctions(ExtensionLoader &loader);
 };
-
-struct SpatialSetFunctions{
-    //cast
-};   
 
 } // namespace duckdb

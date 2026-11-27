@@ -440,8 +440,6 @@ static void LoadInternal(ExtensionLoader &loader) {
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
 
-	SpatialSetType::RegisterCastFunctions(loader);
-
 	QuadbinTypes::RegisterCastFunctions(loader);
 
 	S2cellTypes::RegisterCastFunctions(loader);
