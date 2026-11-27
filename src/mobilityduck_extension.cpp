@@ -381,16 +381,8 @@ static void LoadInternal(ExtensionLoader &loader) {
 	duckdb::RegisterMeosFunction(loader, ScalarFunction(
 		"mobilityduckFullVersion", {}, LogicalType::VARCHAR,
 		MobilityduckFullVersionScalarFun));
-	// Portable-SQL aliases — MobilityDB publishes `mobilitydbVersion` and
-	// `mobilitydbFullVersion`, so a query that probes for the engine version
-	// runs unchanged across both. The `mobilitydb_*` spellings this extension
-	// already publishes stay registered beside them.
-	duckdb::RegisterMeosFunctionAs(loader, ScalarFunction(
-		"mobilitydbVersion", {}, LogicalType::VARCHAR,
-		MobilityduckVersionScalarFun), {"mobilitydb_version"});
-	duckdb::RegisterMeosFunctionAs(loader, ScalarFunction(
-		"mobilitydbFullVersion", {}, LogicalType::VARCHAR,
-		MobilityduckFullVersionScalarFun), {"mobilitydb_full_version"});
+	// Each binding answers its own version under its own name, and the
+	// version of the MEOS it links; `mobilitydbVersion` is MobilityDB's.
 
 	// Temporal and related types/functions
 	RegisterGeneratedTypes(loader);

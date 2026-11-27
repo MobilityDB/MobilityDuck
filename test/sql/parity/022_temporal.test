@@ -16,9 +16,9 @@ require mobilityduck
 # Utility functions
 # =============================================================================
 
-# MobilityDuck exposes `mobilityduckVersion()` /
-# `mobilityduckFullVersion()` instead of the MobilityDB names — the
-# brand divergence is intentional. PR #28.
+# Each binding answers its own version under its own name:
+# `mobilityduckVersion()` / `mobilityduckFullVersion()`, never MobilityDB's
+# `mobilitydbVersion()` / `mobilitydbFullVersion()`.
 query I
 SELECT mobilityduckVersion() LIKE 'MobilityDuck%';
 ----
@@ -28,6 +28,26 @@ query I
 SELECT mobilityduckFullVersion() LIKE mobilityduckVersion() || ', linked MEOS %';
 ----
 true
+
+statement error
+SELECT mobilitydbVersion();
+----
+does not exist
+
+statement error
+SELECT mobilitydbFullVersion();
+----
+does not exist
+
+statement error
+SELECT mobilitydb_version();
+----
+does not exist
+
+statement error
+SELECT mobilitydb_full_version();
+----
+does not exist
 
 query I
 SELECT mobilityduckOpenSSLVersion('x') LIKE 'Mobilityduck x, my linked OpenSSL version is %';

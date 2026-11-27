@@ -450,16 +450,6 @@ SELECT asText(intset '{1,2,3}' - 2);
 ----
 {1, 3}
 
-query I
-SELECT mobilitydbVersion() = mobilitydb_version();
-----
-true
-
-query I
-SELECT mobilitydbFullVersion() = mobilitydb_full_version();
-----
-true
-
 query I 
 SELECT dateset '{2000-01-01}' = dateset '{2000-01-01, 2000-01-02, 2000-01-03}';
 ----

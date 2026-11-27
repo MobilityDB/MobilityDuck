@@ -110,21 +110,6 @@ inline void RegisterMeosFunction(ExtensionLoader &loader, ScalarFunction sf) {
 	loader.RegisterFunction(FollowingSessionTimezone(std::move(sf)));
 }
 
-/**
- * Register one scalar under the canonical MobilityDB name it is built with, and
- * under any additional spelling this extension already publishes. The canonical
- * name is the one the MobilityDB manual and every other binding use, so a query
- * written against them runs here; an extra spelling stays valid beside it.
- */
-inline void RegisterMeosFunctionAs(ExtensionLoader &loader, ScalarFunction sf, const vector<string> &also) {
-	for (const auto &name : also) {
-		ScalarFunction alias = sf;
-		alias.name = name;
-		RegisterMeosFunction(loader, std::move(alias));
-	}
-	RegisterMeosFunction(loader, std::move(sf));
-}
-
 inline void RegisterMeosFunction(ExtensionLoader &loader, ScalarFunctionSet set) {
 	for (auto &function : set.functions) {
 		function = FollowingSessionTimezone(std::move(function));
