@@ -7952,14 +7952,16 @@ def sig_call_ret(f, s, outs, cexpr=None):
     sr = struct_row(sqlr) if rn.count("*") == 1 and "const" not in rc else None
     if sr and sr[0] == rb:
         # the row of the fields of the structure MEOS answers (#struct_row_lines), the structure
-        # freed after. Where MEOS answers none, having raised no error, it counts nothing
-        # (raster_summary_stats over a band whose every pixel is nodata), and the row is the
-        # empty one
-        _counts, empty, writes = struct_row_lines(sr, "r", "i")
+        # freed after. A structure counting nothing (raster_summary_stats over a band none of
+        # whose pixels carries a value) is the empty row, as the aggregate's Write writes it and
+        # MobilityDB's wrapper writes it from a count of 0; so is none, MEOS having raised no
+        # error
+        counts, empty, writes = struct_row_lines(sr, "r", "i")
+        nothing = "".join(" || r->%s == 0" % fl for fl in counts)
         return (sr[1], None, ["%s *r = CALL;" % rb],
                 ["auto &cols = StructVector::GetEntries(result);",
-                 "if (!r) {"] + ["    " + x for x in empty] + ["    continue;", "}"] +
-                writes + ["free(r);"], {})
+                 "if (!r%s) {" % nothing] + ["    " + x for x in empty] +
+                ["    free(r);", "    continue;", "}"] + writes + ["free(r);"], {})
     if rn.endswith("*") and "const" not in rc:
         if rb in TEMPORAL_PTR_RET:
             acc = SIG_TEMPORAL_ACC.get(sqlr)

@@ -3977,10 +3977,11 @@ static void Gen_raster_summary_stats(DataChunk &args, ExpressionState &, Vector 
         BandStats *r = raster_summary_stats(p0, in1[i], in2[i]);
         free(p0);
         auto &cols = StructVector::GetEntries(result);
-        if (!r) {
+        if (!r || r->count == 0) {
             for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);
             FlatVector::Validity(*cols[0]).SetValid(i);
             FlatVector::GetData<int64_t>(*cols[0])[i] = 0;
+            free(r);
             continue;
         }
         FlatVector::GetData<int64_t>(*cols[0])[i] = r->count;
@@ -4007,10 +4008,11 @@ static void Gen_raster_summary_stats_v1(DataChunk &args, ExpressionState &, Vect
         BandStats *r = raster_summary_stats(p0, in1[i], true);
         free(p0);
         auto &cols = StructVector::GetEntries(result);
-        if (!r) {
+        if (!r || r->count == 0) {
             for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);
             FlatVector::Validity(*cols[0]).SetValid(i);
             FlatVector::GetData<int64_t>(*cols[0])[i] = 0;
+            free(r);
             continue;
         }
         FlatVector::GetData<int64_t>(*cols[0])[i] = r->count;
@@ -4035,10 +4037,11 @@ static void Gen_raster_summary_stats_v2(DataChunk &args, ExpressionState &, Vect
         BandStats *r = raster_summary_stats(p0, 1, true);
         free(p0);
         auto &cols = StructVector::GetEntries(result);
-        if (!r) {
+        if (!r || r->count == 0) {
             for (idx_t j = 0; j < cols.size(); j++) FlatVector::SetNull(*cols[j], i, true);
             FlatVector::Validity(*cols[0]).SetValid(i);
             FlatVector::GetData<int64_t>(*cols[0])[i] = 0;
+            free(r);
             continue;
         }
         FlatVector::GetData<int64_t>(*cols[0])[i] = r->count;
