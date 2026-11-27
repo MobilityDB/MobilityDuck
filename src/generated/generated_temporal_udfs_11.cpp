@@ -1071,6 +1071,15 @@ inline TBox * tintbox_value_time_tiles_border_inc_torigin(const TBox * p0, int p
 inline TBox * tintbox_value_time_tiles_border_inc_torigin_vorigin(const TBox * p0, int p1, const MeosInterval * p2, int * p3) {
     return ::tintbox_value_time_tiles(p0, p1, p2, 0, timestamptz_in("2000-01-03", -1), true, p3);
 }
+inline char * geo_as_geojson_srs(const GSERIALIZED * p0, int p1, int p2) {
+    return ::geo_as_geojson(p0, p1, p2, NULL);
+}
+inline char * geo_as_geojson_option_9_precision_8_srs_null(const GSERIALIZED * p0) {
+    return ::geo_as_geojson(p0, 9, 8, NULL);
+}
+inline char * geo_as_geojson_option_9_precision_0_srs_null(const GSERIALIZED * p0) {
+    return ::geo_as_geojson(p0, 9, 0, NULL);
+}
 inline GSERIALIZED * geo_affine_c_f_g_h_i_zoff(const GSERIALIZED * p0, double p1, double p2, double p3, double p4, double p5, double p6) {
     return ::geo_affine(p0, p1, p2, 0, p3, p4, 0, 0, 0, 1, p5, p6, 0);
 }

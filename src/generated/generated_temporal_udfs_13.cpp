@@ -1071,6 +1071,15 @@ inline TBox * tintbox_value_time_tiles_border_inc_torigin(const TBox * p0, int p
 inline TBox * tintbox_value_time_tiles_border_inc_torigin_vorigin(const TBox * p0, int p1, const MeosInterval * p2, int * p3) {
     return ::tintbox_value_time_tiles(p0, p1, p2, 0, timestamptz_in("2000-01-03", -1), true, p3);
 }
+inline char * geo_as_geojson_srs(const GSERIALIZED * p0, int p1, int p2) {
+    return ::geo_as_geojson(p0, p1, p2, NULL);
+}
+inline char * geo_as_geojson_option_9_precision_8_srs_null(const GSERIALIZED * p0) {
+    return ::geo_as_geojson(p0, 9, 8, NULL);
+}
+inline char * geo_as_geojson_option_9_precision_0_srs_null(const GSERIALIZED * p0) {
+    return ::geo_as_geojson(p0, 9, 0, NULL);
+}
 inline GSERIALIZED * geo_affine_c_f_g_h_i_zoff(const GSERIALIZED * p0, double p1, double p2, double p3, double p4, double p5, double p6) {
     return ::geo_affine(p0, p1, p2, 0, p3, p4, 0, 0, 0, 1, p5, p6, 0);
 }
@@ -1503,6 +1512,1518 @@ static void Gen_tspatial_as_text_d(DataChunk &args, ExpressionState &, Vector &r
             free(t);
             return TakeCString(result, r);
         });
+}
+
+static void Gen_tspatialarr_as_ewkt(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v9(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v10(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v11(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v12(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v13(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v14(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v16(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_ewkt_v17(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_ewkt((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v9(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v10(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v11(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v12(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v13(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v14(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v15(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v16(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tspatialarr_as_text_v17(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? tspatialarr_as_text((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -3292,6 +4813,377 @@ static void Gen_ttext_in(DataChunk &args, ExpressionState &, Vector &result) {
         });
 }
 
+static void Gen_temparr_out(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v2(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v3(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v4(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v5(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v6(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), in1[i]) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v7(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_temparr_out_v8(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<list_entry_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        const int cnt = (int) v0.size();
+        char ** r = cnt > 0 ? temparr_out((const Temporal **) v0.data(), (int) v0.size(), 15) : NULL;
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        const idx_t off = ListVector::GetListSize(result);
+        ListVector::Reserve(result, off + cnt);
+        auto &ent = ListVector::GetEntry(result);
+        for (int j = 0; j < cnt; j++) {
+            if (r[j]) FlatVector::GetData<string_t>(ent)[off + j] = TakeCString(ent, r[j]);
+            else FlatVector::SetNull(ent, off + j, true);
+        }
+        ListVector::SetListSize(result, off + cnt);
+        out[i] = list_entry_t{off, idx_t(cnt)};
+        free(r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
 } // anonymous
 
 void RegisterGenerated_meos_cbuffer_restrict(ExtensionLoader &loader) {
@@ -3415,6 +5307,42 @@ void RegisterGenerated_meos_geo_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("asText", {NpointTypes::tnpoint()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterMeosFunction(loader, ScalarFunction("asText", {PoseTypes::tpose()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
     RegisterMeosFunction(loader, ScalarFunction("asText", {PosechainTypes::tposechain()}, LogicalType::VARCHAR, Gen_tspatial_as_text_d));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(CbufferTypes::tcbuffer())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v2));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v3));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v4));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v5));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v6));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v7));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v8));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v9));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v10));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(NpointTypes::tnpoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v11));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v12));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(PoseTypes::tpose())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v13));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v14));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(PosechainTypes::tposechain())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v15));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v16));
+    RegisterMeosFunction(loader, ScalarFunction("asEWKT", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_ewkt_v17));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(CbufferTypes::tcbuffer()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(CbufferTypes::tcbuffer())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TGeometryTypes::tgeometry()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v2));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TGeometryTypes::tgeometry())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v3));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TGeographyTypes::tgeography()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v4));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TGeographyTypes::tgeography())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v5));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TgeompointType::tgeompoint()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v6));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TgeompointType::tgeompoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v7));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TgeogpointType::tgeogpoint()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v8));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TgeogpointType::tgeogpoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v9));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(NpointTypes::tnpoint()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v10));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(NpointTypes::tnpoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v11));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(PoseTypes::tpose()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v12));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(PoseTypes::tpose())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v13));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v14));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(PosechainTypes::tposechain())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v15));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TrgeometryTypes::trgeometry()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v16));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TrgeometryTypes::trgeometry())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_tspatialarr_as_text_v17));
 }
 
 void RegisterGenerated_meos_h3_accessor(ExtensionLoader &loader) {
@@ -3859,6 +5787,15 @@ void RegisterGenerated_meos_temporal_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("ttextFromMFJSON", {LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_ttext_from_mfjson));
     RegisterMeosFunction(loader, ScalarFunction("ttextFromText", {LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_ttext_in));
     RegisterMeosFunction(loader, ScalarFunction("ttext", {LogicalType::VARCHAR}, TemporalTypes::ttext(), Gen_ttext_in));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TJsonbTypes::tjsonb())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TPcpointTypes::tpcpoint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v1));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TPcpatchTypes::tpcpatch())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v2));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TemporalTypes::tbool())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v3));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TemporalTypes::tint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v4));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TemporalTypes::tbigint())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v5));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TemporalTypes::tfloat()), LogicalType::INTEGER}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v6));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TemporalTypes::tfloat())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v7));
+    RegisterMeosFunction(loader, ScalarFunction("asText", {LogicalType::LIST(TemporalTypes::ttext())}, LogicalType::LIST(LogicalType::VARCHAR), Gen_temparr_out_v8));
 }
 
 } // namespace duckdb

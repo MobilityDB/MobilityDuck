@@ -66,50 +66,9 @@ void TgeogpointType::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 void TgeogpointType::RegisterScalarFunctions(ExtensionLoader &loader) {
-
-    /* ***************************************************
-     * In/out functions
-     ****************************************************/
-
-    const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
-
-    duckdb::RegisterMeosFunction(loader,
-        ScalarFunction(
-            "asText",
-            {LogicalType::LIST(tgeogpoint())},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_text
-        )
-    );
-    duckdb::RegisterMeosFunction(loader,
-        ScalarFunction(
-            "asText",
-            {LogicalType::LIST(tgeogpoint()), LogicalType::INTEGER},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_text
-        )
-    );
-
-    duckdb::RegisterMeosFunction(loader,
-        ScalarFunction(
-            "asEWKT",
-            {LogicalType::LIST(tgeogpoint())},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_ewkt
-        )
-    );
-    duckdb::RegisterMeosFunction(loader,
-        ScalarFunction(
-            "asEWKT",
-            {LogicalType::LIST(tgeogpoint()), LogicalType::INTEGER},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_ewkt
-        )
-    );
-
-    // stbox(tgeogpoint) and shiftScaleTime(tgeogpoint, interval, interval) are generated from the
-    // catalog (meos_geo_conversion, meos_temporal_transf); MobilityDB declares makeSimple over
-    // tgeompoint alone.
+    // asText and asEWKT over tgeogpoint[], stbox(tgeogpoint) and shiftScaleTime(tgeogpoint,
+    // interval, interval) are generated from the catalog (meos_geo_inout, meos_geo_conversion,
+    // meos_temporal_transf); MobilityDB declares makeSimple over tgeompoint alone.
 }
 
 } // namespace duckdb

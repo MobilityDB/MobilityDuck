@@ -1,0 +1,86 @@
+# name: test/sql/array_text_writers.test
+# description: asText and asEWKT over a list of temporal values, geometries and circular buffers,
+#              each answering what MobilityDB answers over the array, one string per element.
+# group: [sql]
+
+require mobilityduck
+
+# ── temporal points ──────────────────────────────────────────────────────────
+
+query T
+SELECT unnest(asText([tgeompoint 'Point(1 1.123456789)@2012-01-01 08:00:00',
+  tgeompoint '[Point(1 1)@2012-01-01 08:00:00, Point(2 2)@2012-01-01 08:05:00]']));
+----
+POINT(1 1.123456789)@2012-01-01 08:00:00+01
+[POINT(1 1)@2012-01-01 08:00:00+01, POINT(2 2)@2012-01-01 08:05:00+01]
+
+query T
+SELECT unnest(asText([tgeompoint 'Point(1 1.123456789)@2012-01-01 08:00:00',
+  tgeompoint '[Point(1 1)@2012-01-01 08:00:00, Point(2 2)@2012-01-01 08:05:00]'], 2));
+----
+POINT(1 1.12)@2012-01-01 08:00:00+01
+[POINT(1 1)@2012-01-01 08:00:00+01, POINT(2 2)@2012-01-01 08:05:00+01]
+
+query T
+SELECT unnest(asEWKT([tgeompoint 'SRID=3812;Point(1 1)@2012-01-01 08:00:00',
+  tgeompoint 'Point Z(1 2 3)@2012-01-01 08:00:00']));
+----
+SRID=3812;POINT(1 1)@2012-01-01 08:00:00+01
+POINT Z (1 2 3)@2012-01-01 08:00:00+01
+
+query T
+SELECT unnest(asText([tgeogpoint 'Point(4.35 50.85)@2012-01-01 08:00:00']));
+----
+POINT(4.35 50.85)@2012-01-01 08:00:00+01
+
+query T
+SELECT unnest(asEWKT([tgeogpoint 'Point(4.35 50.85)@2012-01-01 08:00:00'], 1));
+----
+SRID=4326;POINT(4.4 50.8)@2012-01-01 08:00:00+01
+
+# ── geometries ───────────────────────────────────────────────────────────────
+
+query T
+SELECT unnest(asText([geometry 'Point(1 1.123456789)', geometry 'Polygon((0 0,1 0,1 1,0 0))']));
+----
+POINT(1 1.123456789)
+POLYGON((0 0,1 0,1 1,0 0))
+
+query T
+SELECT unnest(asEWKT([geometry 'Point(1 1.123456789)', geometry 'Polygon((0 0,1 0,1 1,0 0))'], 3));
+----
+POINT(1 1.123)
+POLYGON((0 0,1 0,1 1,0 0))
+
+# ── circular buffers ─────────────────────────────────────────────────────────
+
+query T
+SELECT unnest(asText([cbuffer 'Cbuffer(Point(1.123456789 1.123456789), 0.123456789)'], 2));
+----
+Cbuffer(POINT(1.12 1.12),0.12)
+
+# ── temporal numbers ─────────────────────────────────────────────────────────
+
+query T
+SELECT unnest(asText([tint '1@2012-01-01 08:00:00',
+  tint '{2@2012-01-01 08:00:00, 3@2012-01-01 08:05:00}']));
+----
+1@2012-01-01 08:00:00+01
+{2@2012-01-01 08:00:00+01, 3@2012-01-01 08:05:00+01}
+
+query T
+SELECT unnest(asText([tfloat '1.123456789@2012-01-01 08:00:00'], 2));
+----
+1.12@2012-01-01 08:00:00+01
+
+# ── an empty list and a NULL element ─────────────────────────────────────────
+
+query T
+SELECT asText([]::tgeompoint[]);
+----
+NULL
+
+statement error
+SELECT asText([tgeompoint 'Point(1 1)@2012-01-01 08:00:00', NULL]);
+----
+null array element not allowed in this context
