@@ -59,23 +59,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType PoseTypes::pose() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("pose");
-    return type;
-}
-
-LogicalType PoseTypes::tpose() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tpose");
-    return type;
-}
-
-void PoseTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("pose",  pose());
-    loader.RegisterType("tpose", tpose());
-}
-
 namespace {
 
 /* pose is a varlena value: the stored BLOB holds the full varlena bytes, so

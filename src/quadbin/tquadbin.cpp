@@ -61,23 +61,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType QuadbinTypes::quadbin() {
-    LogicalType type = LogicalType::UBIGINT;
-    type.SetAlias("quadbin");
-    return type;
-}
-
-LogicalType QuadbinTypes::tquadbin() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tquadbin");
-    return type;
-}
-
-void QuadbinTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("quadbin",  quadbin());
-    loader.RegisterType("tquadbin", tquadbin());
-}
-
 void QuadbinTypes::RegisterCastFunctions(ExtensionLoader &loader) {
     RegisterMeosCastFunction(loader, quadbin(), LogicalType::BIGINT,
         QuadbinFunctions::Quadbin_to_bigint_cast);

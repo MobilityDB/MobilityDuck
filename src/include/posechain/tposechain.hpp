@@ -53,10 +53,8 @@ namespace duckdb {
  * This binding registers only the type + text I/O boundary; the operation
  * surface is generated from the MEOS-API catalog into src/generated/. */
 struct PosechainTypes {
-    static LogicalType posechain();
-    static LogicalType tposechain();
+    #include "generated/posechain_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

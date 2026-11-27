@@ -61,16 +61,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType TrgeometryTypes::trgeometry() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("trgeometry");
-    return type;
-}
-
-void TrgeometryTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("trgeometry", trgeometry());
-}
-
 namespace {
 
 inline Temporal *BlobToTemp(string_t blob) {

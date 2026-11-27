@@ -71,40 +71,15 @@ extern "C" {
     extern char *pcpoint_hex_out(const Pcpoint *pt, int maxdd, size_t *size_out);
 }
 
-
 namespace duckdb {
-
-LogicalType TPcpointTypes::pcpoint() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("pcpoint");
-    return type;
-}
-
-LogicalType TPcpointTypes::tpcpoint() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tpcpoint");
-    return type;
-}
 
 /*
  * Constructors
 */
 
-
-
-
-
-
-
-
 /*
  * Accessor Functions
 */
-
-
-
-
-
 
 /* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
  * generated (return the pcpoint base value, rendered via the pcpoint->VARCHAR cast). */
@@ -151,19 +126,7 @@ bool TpcpointFunctions::Pcpoint_out_cast(
     return true;
 }
 
-
-
-
-
-
-
 void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-
-
-
-
-
-
 
     /* getValue, startValue and endValue are now GENERATED (they return the pcpoint base value,
      * rendered as hex-WKB text via the pcpoint->VARCHAR cast), mirroring the cbuffer
@@ -172,11 +135,5 @@ void TPcpointTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // tpcpointInst(tpcpoint) and shiftScaleTime(tpcpoint, interval, interval) are generated from
     // the catalog (meos_temporal_transf).
 }
-
-void TPcpointTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "pcpoint", TPcpointTypes::pcpoint());
-    loader.RegisterType( "tpcpoint", TPcpointTypes::tpcpoint());
-}
-
 
 }

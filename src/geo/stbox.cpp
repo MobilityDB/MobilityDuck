@@ -45,18 +45,7 @@
 
 namespace duckdb {
 
-LogicalType StboxType::stbox() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("stbox");
-    return type;
-}
-
-void StboxType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType( "stbox", stbox());
-}
-
 void StboxType::RegisterCastFunctions(ExtensionLoader &loader) {
-
 
 }
 

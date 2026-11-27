@@ -48,16 +48,6 @@
 
 namespace duckdb {
 
-LogicalType TpcboxType::tpcbox() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("tpcbox");
-    return type;
-}
-
-void TpcboxType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType("tpcbox", tpcbox());
-}
-
 /* The blob holds the fixed-size TPCBox itself, so the value is copied in whole
  * and read back in place — the same marshalling stbox and tbox use. */
 bool TpcboxFunctions::Tpcbox_in_cast(Vector &source, Vector &result, idx_t count,

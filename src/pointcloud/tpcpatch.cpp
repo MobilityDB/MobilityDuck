@@ -72,40 +72,15 @@ extern "C" {
     extern char *pcpatch_hex_out(const Pcpatch *pt, int maxdd, size_t *size_out);
 }
 
-
 namespace duckdb {
-
-LogicalType TPcpatchTypes::pcpatch() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("pcpatch");
-    return type;
-}
-
-LogicalType TPcpatchTypes::tpcpatch() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tpcpatch");
-    return type;
-}
 
 /*
  * Constructors
 */
 
-
-
-
-
-
-
-
 /*
  * Accessor Functions
 */
-
-
-
-
-
 
 /* Temporal_start_value/Temporal_end_value retired: startValue/endValue are now
  * generated (return the pcpatch base value, rendered via the pcpatch->VARCHAR cast). */
@@ -152,19 +127,7 @@ bool TpcpatchFunctions::Pcpatch_out_cast(
     return true;
 }
 
-
-
-
-
-
-
 void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
-
-
-
-
-
-
 
     /* getValue, startValue and endValue are now GENERATED (they return the pcpatch base value,
      * rendered as hex-WKB text via the pcpatch->VARCHAR cast), mirroring the cbuffer
@@ -173,11 +136,5 @@ void TPcpatchTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // tpcpatchInst(tpcpatch) and shiftScaleTime(tpcpatch, interval, interval) are generated from
     // the catalog (meos_temporal_transf).
 }
-
-void TPcpatchTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "pcpatch", TPcpatchTypes::pcpatch());
-    loader.RegisterType( "tpcpatch", TPcpatchTypes::tpcpatch());
-}
-
 
 }

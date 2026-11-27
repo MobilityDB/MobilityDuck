@@ -40,10 +40,8 @@ namespace duckdb {
 
 
 struct TPcpointTypes {
-    static LogicalType pcpoint();
-    static LogicalType tpcpoint();
+    #include "generated/tpcpoint_types_accessors.hpp"
     static LogicalType GEOMETRY();
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };

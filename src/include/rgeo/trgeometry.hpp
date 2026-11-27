@@ -54,9 +54,8 @@ namespace duckdb {
  * This binding registers only the type + text I/O boundary; the operation
  * surface is generated from the MEOS-API catalog into src/generated/. */
 struct TrgeometryTypes {
-    static LogicalType trgeometry();
+    #include "generated/trgeometry_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

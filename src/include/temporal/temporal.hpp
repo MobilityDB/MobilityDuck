@@ -46,15 +46,10 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct TemporalTypes {
-    static LogicalType tint();
-    static LogicalType tbigint();
-    static LogicalType tbool();
-    static LogicalType tfloat();
-    static LogicalType ttext();
+    #include "generated/temporal_types_accessors.hpp"
 
     static const std::vector<LogicalType> &AllTypes();
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
 };

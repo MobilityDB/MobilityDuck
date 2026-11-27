@@ -66,30 +66,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType NpointTypes::npoint() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("npoint");
-    return type;
-}
-
-LogicalType NpointTypes::nsegment() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("nsegment");
-    return type;
-}
-
-LogicalType NpointTypes::tnpoint() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tnpoint");
-    return type;
-}
-
-void NpointTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("npoint",   npoint());
-    loader.RegisterType("nsegment", nsegment());
-    loader.RegisterType("tnpoint",  tnpoint());
-}
-
 namespace {
 
 /* Npoint / Nsegment are FIXED-size structs (palloc(sizeof(...))), so the stored

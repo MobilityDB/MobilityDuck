@@ -40,10 +40,8 @@ namespace duckdb {
 
 
 struct TPcpatchTypes {
-    static LogicalType pcpatch();
-    static LogicalType tpcpatch();
+    #include "generated/tpcpatch_types_accessors.hpp"
     static LogicalType GEOMETRY();
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };

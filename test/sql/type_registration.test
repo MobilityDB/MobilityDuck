@@ -1,0 +1,24 @@
+# name: test/sql/type_registration.test
+# description: The types of the families, the temporal types and the boxes, registered from the
+#              catalog's sqlTypes: a value the catalog stores by value is a UBIGINT, any other a BLOB
+# group: [sql]
+
+require mobilityduck
+
+query II
+SELECT logical_type, count(*) FROM duckdb_types() WHERE type_name IN (
+  'cbuffer', 'geogset', 'geomset', 'h3index', 'jsonb', 'jsonpath', 'npoint', 'nsegment',
+  'pcpatch', 'pcpoint', 'pose', 'posechain', 'quadbin', 'raquet', 'raster', 's2cell',
+  'stbox', 'tbigint', 'tbool', 'tbox', 'tcbuffer', 'tfloat', 'tgeogpoint', 'tgeography',
+  'tgeometry', 'tgeompoint', 'th3index', 'tint', 'tjsonb', 'tnpoint', 'tpcbox', 'tpcpatch',
+  'tpcpoint', 'tpose', 'tposechain', 'tquadbin', 'trgeometry', 'ts2cell', 'ttext')
+GROUP BY ALL ORDER BY 1;
+----
+BLOB	36
+UBIGINT	3
+
+query I
+SELECT string_agg(type_name, ',' ORDER BY type_name) FROM duckdb_types()
+WHERE logical_type = 'UBIGINT' AND type_name IN ('h3index', 'quadbin', 's2cell');
+----
+h3index,quadbin,s2cell

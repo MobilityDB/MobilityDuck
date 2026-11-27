@@ -59,23 +59,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType CbufferTypes::cbuffer() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("cbuffer");
-    return type;
-}
-
-LogicalType CbufferTypes::tcbuffer() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tcbuffer");
-    return type;
-}
-
-void CbufferTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("cbuffer",  cbuffer());
-    loader.RegisterType("tcbuffer", tcbuffer());
-}
-
 namespace {
 
 /* cbuffer is a varlena value: the stored BLOB holds the full varlena bytes, so

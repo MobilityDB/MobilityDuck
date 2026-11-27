@@ -319,6 +319,7 @@ extern "C" void MobilityduckMeosErrorHandler(int errlevel, int errcode, const ch
 void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader);
 // Defined in the same file: the casts MobilityDB declares, over the functions it registers.
 void RegisterGeneratedCasts(ExtensionLoader &loader);
+void RegisterGeneratedTypes(ExtensionLoader &loader);
 // Defined in the catalog-generated src/generated/generated_aggregates.cpp.
 void RegisterGeneratedAggregates(ExtensionLoader &loader);
 
@@ -364,7 +365,6 @@ static void LoadInternal(ExtensionLoader &loader) {
                 "at default instead of %s.\n", e.what(), MEOS_DEFAULT_TIMEZONE);
     }
 
-
 	// Register scalar function: mobilityduckOpenSSLVersion
 	auto mobilityduck_openssl_version_scalar_function =
 	    ScalarFunction(
@@ -393,34 +393,28 @@ static void LoadInternal(ExtensionLoader &loader) {
 		MobilityduckFullVersionScalarFun), {"mobilitydb_full_version"});
 
 	// Temporal and related types/functions
-	TemporalTypes::RegisterTypes(loader);
+	RegisterGeneratedTypes(loader);
 	TemporalTypes::RegisterCastFunctions(loader);
 	TemporalTypes::RegisterScalarFunctions(loader);
 
-	TboxType::RegisterType(loader);
 	TboxType::RegisterCastFunctions(loader);
 	TboxType::RegisterScalarFunctions(loader);
 
-	StboxType::RegisterType(loader);
 	StboxType::RegisterCastFunctions(loader);
 	StboxType::RegisterScalarFunctions(loader);
 
 	SpanTypes::RegisterTypes(loader);
 
-	TgeompointType::RegisterType(loader);
 	TgeompointType::RegisterCastFunctions(loader);
 	TgeompointType::RegisterScalarFunctions(loader);
 
-	TgeogpointType::RegisterType(loader);
 	TgeogpointType::RegisterCastFunctions(loader);
 	TgeogpointType::RegisterScalarFunctions(loader);
 
 	TGeometryTypes::RegisterScalarFunctions(loader);
-	TGeometryTypes::RegisterTypes(loader);
 	TGeometryTypes::RegisterCastFunctions(loader);
 	TGeometryOps::RegisterScalarFunctions(loader);
 
-	TGeographyTypes::RegisterTypes(loader);
 	TGeographyTypes::RegisterScalarFunctions(loader);
 	TGeographyTypes::RegisterCastFunctions(loader);
 	TGeographyOps::RegisterScalarFunctions(loader);
@@ -433,39 +427,31 @@ static void LoadInternal(ExtensionLoader &loader) {
 	PcschemaFunctions::RegisterScalarFunctions(loader);
 
 	// Bounding box of a temporal point cloud (requires the MEOS POINTCLOUD module).
-	TpcboxType::RegisterType(loader);
 	TpcboxType::RegisterCastFunctions(loader);
 
 	// Extended temporal type tpcpoint (requires the MEOS POINTCLOUD module).
-	TPcpointTypes::RegisterTypes(loader);
 	TPcpointTypes::RegisterCastFunctions(loader);
 	TPcpointTypes::RegisterScalarFunctions(loader);
 
 	// Extended temporal type tpcpatch (requires the MEOS POINTCLOUD module).
-	TPcpatchTypes::RegisterTypes(loader);
 	TPcpatchTypes::RegisterCastFunctions(loader);
 	TPcpatchTypes::RegisterScalarFunctions(loader);
 
 	SetTypes::RegisterTypes(loader);
 	SetTypes::RegisterCastFunctions(loader);
 
-	SpatialSetType::RegisterTypes(loader);
 	SpatialSetType::RegisterCastFunctions(loader);
 
-	QuadbinTypes::RegisterTypes(loader);
 	QuadbinTypes::RegisterCastFunctions(loader);
 
-	S2cellTypes::RegisterTypes(loader);
 	S2cellTypes::RegisterCastFunctions(loader);
 
 	// Raster tiles addressed by a QUADBIN cell; registered after the quadbin,
 	// tgeompoint and stbox types its surface refers to.
-	RaquetTypes::RegisterTypes(loader);
 	RaquetTypes::RegisterCastFunctions(loader);
 
 	// MEOS's raster: type registration and text casts are the hand layer, its
 	// function surface is generated.
-	RasterTypes::RegisterTypes(loader);
 	RasterTypes::RegisterCastFunctions(loader);
 	// The boundary to DuckDB's raster extension (duckdb-raster): a raster from
 	// a tile, the datacube and the metadata of a raster, the statistics.
@@ -473,25 +459,18 @@ static void LoadInternal(ExtensionLoader &loader) {
 
 	// H3 cell index types (h3index/th3index). Type registration + casts are the
 	// hand layer; the H3 function surface is generated (no RegisterScalarFunctions).
-	H3indexTypes::RegisterTypes(loader);
 	H3indexTypes::RegisterCastFunctions(loader);
 
-	CbufferTypes::RegisterTypes(loader);
 	CbufferTypes::RegisterCastFunctions(loader);
-	NpointTypes::RegisterTypes(loader);
 	NpointTypes::RegisterCastFunctions(loader);
-	PoseTypes::RegisterTypes(loader);
 	PoseTypes::RegisterCastFunctions(loader);
 	// The temporal rigid geometry, after the pose type its base value is.
-	TrgeometryTypes::RegisterTypes(loader);
 	TrgeometryTypes::RegisterCastFunctions(loader);
 	// The pose chain, after the pose type its links are.
-	PosechainTypes::RegisterTypes(loader);
 	PosechainTypes::RegisterCastFunctions(loader);
 
 	SpansetTypes::RegisterTypes(loader);
 
-	TJsonbTypes::RegisterTypes(loader);
 	TJsonbTypes::RegisterCastFunctions(loader);
 	TJsonbTypes::RegisterScalarFunctions(loader);
 

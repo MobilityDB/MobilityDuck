@@ -50,11 +50,8 @@ namespace duckdb {
  * boundary; the operation surface (constructors, accessors, predicates,
  * distance, …) is generated from the MEOS-API catalog into src/generated/. */
 struct NpointTypes {
-    static LogicalType npoint();
-    static LogicalType nsegment();
-    static LogicalType tnpoint();
+    #include "generated/npoint_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

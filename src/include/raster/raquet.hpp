@@ -45,9 +45,8 @@ namespace duckdb {
  * of the tile, the same wire form its text representation hex-encodes, so the
  * value round-trips through Parquet and through the VARCHAR casts. */
 struct RaquetTypes {
-    static LogicalType raquet();
+    #include "generated/raquet_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

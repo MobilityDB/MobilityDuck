@@ -60,23 +60,6 @@ extern "C" {
 
 namespace duckdb {
 
-LogicalType PosechainTypes::posechain() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("posechain");
-    return type;
-}
-
-LogicalType PosechainTypes::tposechain() {
-    auto type = LogicalType(LogicalTypeId::BLOB);
-    type.SetAlias("tposechain");
-    return type;
-}
-
-void PosechainTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType("posechain",  posechain());
-    loader.RegisterType("tposechain", tposechain());
-}
-
 namespace {
 
 /* posechain is a varlena value: the stored BLOB holds the full varlena bytes,

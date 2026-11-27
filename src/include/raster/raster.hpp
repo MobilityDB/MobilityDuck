@@ -43,9 +43,8 @@ namespace duckdb {
  * Parquet and through the VARCHAR casts. The raster types of DuckDB's raster
  * extension all carry the prefix RT_, so the two never share a name. */
 struct RasterTypes {
-    static LogicalType raster();
+    #include "generated/raster_types_accessors.hpp"
 
-    static void RegisterTypes(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
 };
 

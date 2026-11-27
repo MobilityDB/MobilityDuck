@@ -55,29 +55,6 @@
 
 namespace duckdb {
 
-#define DEFINE_TEMPORAL_TYPE(NAME) \
-    LogicalType TemporalTypes::NAME() { \
-        LogicalType type(LogicalTypeId::BLOB); \
-        type.SetAlias(#NAME); \
-        return type; \
-    }
-
-DEFINE_TEMPORAL_TYPE(tint)
-DEFINE_TEMPORAL_TYPE(tbigint)
-DEFINE_TEMPORAL_TYPE(tbool)
-DEFINE_TEMPORAL_TYPE(tfloat)
-DEFINE_TEMPORAL_TYPE(ttext)
-
-#undef DEFINE_TEMPORAL_TYPE
-
-void TemporalTypes::RegisterTypes(ExtensionLoader &loader) {
-    loader.RegisterType( "tint", tint());
-    loader.RegisterType( "tbigint", tbigint());
-    loader.RegisterType( "tbool", tbool());
-    loader.RegisterType( "tfloat", tfloat());
-    loader.RegisterType( "ttext", ttext());
-}
-
 const std::vector<LogicalType> &TemporalTypes::AllTypes() {
     static std::vector<LogicalType> types = {
         tint(),
@@ -156,7 +133,6 @@ void TemporalTypes::RegisterScalarFunctions(ExtensionLoader &loader) {
     // plus the shorter DEFAULT-arg overload via sqlSignatures argDefaults.
     // The meos_temporal_math group (abs/derivative/exp/ln/log10/deltaValue/trend) is
     // supplied by the generated surface (RETIRED_GROUPS in the codegen).
-
 
     // nearestApproachDistance / nad — scalar return
 

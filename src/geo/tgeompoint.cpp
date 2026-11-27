@@ -52,19 +52,7 @@
 
 namespace duckdb {
 
-LogicalType TgeompointType::tgeompoint() {
-    LogicalType type(LogicalTypeId::BLOB);
-    type.SetAlias("tgeompoint");
-    return type;
-}
-
-void TgeompointType::RegisterType(ExtensionLoader &loader) {
-    loader.RegisterType( "tgeompoint", tgeompoint());
-}
-
 void TgeompointType::RegisterCastFunctions(ExtensionLoader &loader) {
-
-
 
 }
 

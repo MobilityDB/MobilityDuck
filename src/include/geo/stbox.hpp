@@ -42,9 +42,8 @@ namespace duckdb {
 class ExtensionLoader;
 
 struct StboxType {
-    static LogicalType stbox();
+    #include "generated/stbox_type_accessors.hpp"
 
-    static void RegisterType(ExtensionLoader &loader);
     static void RegisterCastFunctions(ExtensionLoader &loader);
     static void RegisterScalarFunctions(ExtensionLoader &loader);
 };
