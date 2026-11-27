@@ -6187,6 +6187,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_rgeo_accessor", "meos_quadbin_accessor",
                   # the boxes of a geometry: a geometry first operand reaches #shape_array
                   "meos_geo_base_bbox",
+                  # the text of an array of geometries (geoarr_as_text, geoarr_as_ewkt)
+                  "meos_geo_base_inout",
                   # the accessors of the circular buffers, poses, pose chains, point clouds and H3
                   # and S2 cells
                   "meos_cbuffer_accessor", "meos_pose_accessor", "meos_posechain_accessor",
@@ -6377,10 +6379,17 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
 # setValues reads its values as a two-dimensional array whose dimensions give the width and height
 # of the block, which no SQL argument of its signature fills, so the catalog places none of
 # raster_set_values's C parameters width, height and noset; the JVM surfaces leave it out too.
+# The text, binary and GeoJSON readers and writers of a geometry or geography are PostGIS's, and
+# DuckDB's spatial extension answers them for a DuckDB geometry (ST_GeomFromText, ST_AsGeoJSON),
+# as PostGIS answers them for MobilityDB; meos_geo_base_inout is retired for the text of an array
+# of geometries (geoarr_as_text, geoarr_as_ewkt), which neither answers.
 RETIRE_UNCOVERED_OK = {"unnest", "box2d", "box3d", "stboxX",
                        "clusterKMeans", "clusterDBSCAN", "clusterIntersecting", "clusterWithin",
                        "pointCloudSchemaRegister",
-                       "setValues"}
+                       "setValues",
+                       "asGeoJSON", "geometryFromText", "geographyFromText",
+                       "geometryFromBinary", "geographyFromBinary", "geometryFromHexWKB",
+                       "geographyFromHexWKB", "geometryFromGeoJSON", "geographyFromGeoJSON"}
 def retired(f):
     return (f.get("group") or "") in RETIRED_GROUPS
 TEMPORAL_CBASES = {"Temporal", "TInstant", "TSequence", "TSequenceSet"}
@@ -7475,6 +7484,34 @@ def sig_call_arg(f, p, t, k, arrays, lenp):
                         post=["for (auto *e : v%d) free(e);" % k],
                         cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
                                lenp["name"]: "(%s) v%d.size()" % (ln, k)})
+        # a list of temporal values (tspatialarr_as_text over tgeompoint[]) or of geometries
+        # (geoarr_as_text over geometry[]), each element a temporal value by BlobToTemporal or a
+        # geometry with the SRID it states; a NULL element raises PostgreSQL's message for it, as
+        # temparr_extract and datumarr_extract ask deconstruct_array no NULL flags, and as the
+        # list of numbers below raises it. A list of geographies would be the DuckDB GEOMETRY
+        # list of the geometries, so it is left to them
+        tacc = SIG_TEMPORAL_ACC.get(t[:-2]) if t.endswith("[]") else None
+        if (eb in TEMPORAL_CBASES and elem.endswith("*") and tacc) or \
+                (eb == "GSERIALIZED" and elem.endswith("*") and t == "geometry[]"):
+            geo = eb == "GSERIALIZED"
+            read = ("GeometryToGSerialized(ch%dd[le%d.offset + j], 0)" if geo
+                    else "BlobToTemporal(ch%dd[le%d.offset + j])") % (k, k)
+            pre = ["const list_entry_t le%d = %s;" % (k, v),
+                   "vector<%s *> v%d;" % ("GSERIALIZED" if geo else "Temporal", k),
+                   "v%d.reserve(le%d.length + 1);" % (k, k),
+                   "for (idx_t j = 0; j < le%d.length; j++) {" % k,
+                   "    if (!ch%dv.RowIsValid(le%d.offset + j)) {" % (k, k),
+                   "        for (auto *e : v%d) free(e);" % k,
+                   "        throw InvalidInputException(\"null array element not allowed in "
+                   "this context\");",
+                   "    }",
+                   "    v%d.push_back(%s);" % (k, read),
+                   "}"]
+            return dict(kind="list", cpp="list_entry_t", pre=pre,
+                        dt="LogicalType::LIST(%s)" % ("MobilityDuckGeometryType()" if geo else tacc),
+                        post=["for (auto *e : v%d) free(e);" % k],
+                        cexpr={p["name"]: "(%s) v%d.data()" % (p["cType"], k),
+                               lenp["name"]: "(%s) v%d.size()" % (ln, k)})
         # a list of boxes handed over as the C array of their values (stboxarr_round), each
         # element the bytes of one box as StboxToBlob writes them, the NULL elements left out as
         # the list of base values above leaves them out
@@ -7730,6 +7767,10 @@ def set_elem(t, celem):
         return None
     if b == "text" and t == "text":
         return ("LogicalType::VARCHAR", "TakeText")
+    # a C string a text writer answers (tspatialarr_as_text, one per value of the array it is
+    # given), freed by TakeCString as the single writers' strings are
+    if b == "char" and t == "text":
+        return ("LogicalType::VARCHAR", "TakeCString")
     acc = BASE_LOGICAL.get(t)
     if b in BASEVAL_PTR_RET and acc and PTR_RET[b][0] == acc:
         return (acc, PTR_RET[b][1].split("(", 1)[0])

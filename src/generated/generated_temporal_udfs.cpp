@@ -330,6 +330,7 @@ void RegisterGenerated_meos_cellindex(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_base_bbox(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_base_dist(ExtensionLoader &loader);
+void RegisterGenerated_meos_geo_base_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_base_spatial(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_base_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_bbox_pos(ExtensionLoader &loader);
@@ -604,6 +605,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_geo_accessor(loader);
     RegisterGenerated_meos_geo_base_bbox(loader);
     RegisterGenerated_meos_geo_base_dist(loader);
+    RegisterGenerated_meos_geo_base_inout(loader);
     RegisterGenerated_meos_geo_base_spatial(loader);
     RegisterGenerated_meos_geo_base_transf(loader);
     RegisterGenerated_meos_geo_bbox_pos(loader);

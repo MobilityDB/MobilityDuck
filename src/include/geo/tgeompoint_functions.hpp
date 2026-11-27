@@ -43,13 +43,6 @@ class ExtensionLoader;
 
 struct TgeompointFunctions {
     /* ***************************************************
-     * In/out functions
-     ****************************************************/
-    // Out function: overload Temporal_out
-    static void Spatialarr_as_text(DataChunk &args, ExpressionState &state, Vector &result);
-    static void Spatialarr_as_ewkt(DataChunk &args, ExpressionState &state, Vector &result);
-
-    /* ***************************************************
      * Conversion functions
      ****************************************************/
 

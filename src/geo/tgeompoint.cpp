@@ -57,83 +57,11 @@ void TgeompointType::RegisterCastFunctions(ExtensionLoader &loader) {
 }
 
 void TgeompointType::RegisterScalarFunctions(ExtensionLoader &loader) {
-
-    /* ***************************************************
-     * In/out functions
-     ****************************************************/
-
-    const auto varchar_list = LogicalType::LIST(LogicalType::VARCHAR);
-
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asText",
-            {LogicalType::LIST(tgeompoint())},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_text
-        )
-    );
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asText",
-            {LogicalType::LIST(tgeompoint()), LogicalType::INTEGER},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_text
-        )
-    );
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asText",
-            {LogicalType::LIST(MobilityDuckGeometryType())},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_text
-        )
-    );
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asText",
-            {LogicalType::LIST(MobilityDuckGeometryType()), LogicalType::INTEGER},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_text
-        )
-    );
-
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asEWKT",
-            {LogicalType::LIST(tgeompoint())},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_ewkt
-        )
-    );
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asEWKT",
-            {LogicalType::LIST(tgeompoint()), LogicalType::INTEGER},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_ewkt
-        )
-    );
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asEWKT",
-            {LogicalType::LIST(MobilityDuckGeometryType())},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_ewkt
-        )
-    );
-    duckdb::RegisterMeosFunction(loader, 
-        ScalarFunction(
-            "asEWKT",
-            {LogicalType::LIST(MobilityDuckGeometryType()), LogicalType::INTEGER},
-            varchar_list,
-            TgeompointFunctions::Spatialarr_as_ewkt
-        )
-    );
-
-    // stbox(tgeompoint), shiftScaleTime(tgeompoint, interval, interval), rotate and scale over
-    // tgeompoint, and collect(geometry[]) and distance(geometry, geometry), the native geometry
-    // operations, are generated from the catalog (meos_geo_conversion, meos_temporal_transf,
-    // meos_geo_transf, meos_geo_base_spatial, meos_geo_base_dist).
+    // asText and asEWKT over tgeompoint[] and geometry[], stbox(tgeompoint),
+    // shiftScaleTime(tgeompoint, interval, interval), rotate and scale over tgeompoint, and
+    // collect(geometry[]) and distance(geometry, geometry), the native geometry operations, are
+    // generated from the catalog (meos_geo_inout, meos_geo_base_inout, meos_geo_conversion,
+    // meos_temporal_transf, meos_geo_transf, meos_geo_base_spatial, meos_geo_base_dist).
 }
 
 } // namespace duckdb

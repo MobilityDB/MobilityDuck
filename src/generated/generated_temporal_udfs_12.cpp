@@ -1071,6 +1071,15 @@ inline TBox * tintbox_value_time_tiles_border_inc_torigin(const TBox * p0, int p
 inline TBox * tintbox_value_time_tiles_border_inc_torigin_vorigin(const TBox * p0, int p1, const MeosInterval * p2, int * p3) {
     return ::tintbox_value_time_tiles(p0, p1, p2, 0, timestamptz_in("2000-01-03", -1), true, p3);
 }
+inline char * geo_as_geojson_srs(const GSERIALIZED * p0, int p1, int p2) {
+    return ::geo_as_geojson(p0, p1, p2, NULL);
+}
+inline char * geo_as_geojson_option_9_precision_8_srs_null(const GSERIALIZED * p0) {
+    return ::geo_as_geojson(p0, 9, 8, NULL);
+}
+inline char * geo_as_geojson_option_9_precision_0_srs_null(const GSERIALIZED * p0) {
+    return ::geo_as_geojson(p0, 9, 0, NULL);
+}
 inline GSERIALIZED * geo_affine_c_f_g_h_i_zoff(const GSERIALIZED * p0, double p1, double p2, double p3, double p4, double p5, double p6) {
     return ::geo_affine(p0, p1, p2, 0, p3, p4, 0, 0, 0, 1, p5, p6, 0);
 }
@@ -3231,6 +3240,70 @@ static void Gen_tposechain_from_mfjson(DataChunk &args, ExpressionState &, Vecto
             Temporal *r = tposechain_from_mfjson(in.GetString().c_str());
             return TemporalToBlobN(result, r, mask, idx);
         });
+}
+
+static void Gen_tposechainarr_as_geopose(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 2; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto in1 = FlatVector::GetData<int32_t>(args.data[1]);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        if (!FlatVector::Validity(args.data[1]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        SizedString r = tposechainarr_as_geopose((const Temporal **) v0.data(), (int) v0.size(), in1[i]);
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_tposechainarr_as_geopose_v1(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    for (idx_t c = 0; c < 1; c++) args.data[c].Flatten(rows);
+    auto in0 = ListVector::GetData(args.data[0]);
+    auto &ch0 = ListVector::GetEntry(args.data[0]);
+    ch0.Flatten(ListVector::GetListSize(args.data[0]));
+    auto ch0d = FlatVector::GetData<string_t>(ch0);
+    auto &ch0v = FlatVector::Validity(ch0);
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        if (!FlatVector::Validity(args.data[0]).RowIsValid(i)) { outv.SetInvalid(i); continue; }
+        const list_entry_t le0 = in0[i];
+        vector<Temporal *> v0;
+        v0.reserve(le0.length + 1);
+        for (idx_t j = 0; j < le0.length; j++) {
+            if (!ch0v.RowIsValid(le0.offset + j)) {
+                for (auto *e : v0) free(e);
+                throw InvalidInputException("null array element not allowed in this context");
+            }
+            v0.push_back(BlobToTemporal(ch0d[le0.offset + j]));
+        }
+        SizedString r = tposechainarr_as_geopose((const Temporal **) v0.data(), (int) v0.size(), -1);
+        for (auto *e : v0) free(e);
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
 }
 
 
@@ -6813,6 +6886,8 @@ void RegisterGenerated_meos_posechain_inout(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("tposechainFromEWKT", {LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_tposechain_in));
     RegisterMeosFunction(loader, ScalarFunction("tposechain", {LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_tposechain_in));
     RegisterMeosFunction(loader, ScalarFunction("tposechainFromMFJSON", {LogicalType::VARCHAR}, PosechainTypes::tposechain(), Gen_tposechain_from_mfjson));
+    RegisterMeosFunction(loader, ScalarFunction("asGeoPose", {LogicalType::LIST(PosechainTypes::tposechain()), LogicalType::INTEGER}, LogicalType::VARCHAR, Gen_tposechainarr_as_geopose));
+    RegisterMeosFunction(loader, ScalarFunction("asGeoPose", {LogicalType::LIST(PosechainTypes::tposechain())}, LogicalType::VARCHAR, Gen_tposechainarr_as_geopose_v1));
 }
 
 void RegisterGenerated_meos_posechain_transf(ExtensionLoader &loader) {
