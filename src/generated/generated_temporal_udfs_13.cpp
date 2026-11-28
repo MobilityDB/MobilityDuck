@@ -756,6 +756,9 @@ inline double distance_set_geo(const Set * p0, const GSERIALIZED * p1) {
 inline Temporal * tgeo_centroid(const Temporal * p0) {
     return ::tgeo_centroid(p0, true);
 }
+inline double tgeo_space_time_volume(const Temporal * p0) {
+    return ::tgeo_space_time_volume(p0, true);
+}
 inline Temporal * tpoint_cumulative_length(const Temporal * p0) {
     return ::tpoint_cumulative_length(p0, true);
 }
@@ -848,6 +851,9 @@ inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Tempor
 }
 inline Temporal * tgeo_centroid_full(const Temporal * p0, bool p1) {
     return ::tgeo_centroid(p0, p1);
+}
+inline double tgeo_space_time_volume_full(const Temporal * p0, bool p1) {
+    return ::tgeo_space_time_volume(p0, p1);
 }
 inline Temporal * tpoint_cumulative_length_full(const Temporal * p0, bool p1) {
     return ::tpoint_cumulative_length(p0, p1);
@@ -1324,6 +1330,20 @@ static void Gen_tcbuffer_minus_stbox_d(DataChunk &args, ExpressionState &, Vecto
             Temporal *r = tcbuffer_minus_stbox(t, a2p, true);
             free(a2p); free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+
+// ===== @ingroup meos_cbuffer_spatial_accessor =====
+static void Gen_tcbuffer_space_time_volume(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = BlobToTemporal(in);
+            double r = tcbuffer_space_time_volume(t);
+            free(t);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
@@ -5195,6 +5215,10 @@ void RegisterGenerated_meos_cbuffer_restrict(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("minusGeometry", {CbufferTypes::tcbuffer(), MobilityDuckGeometryType()}, CbufferTypes::tcbuffer(), Gen_tcbuffer_minus_geom));
     RegisterMeosFunction(loader, ScalarFunction("minusStbox", {CbufferTypes::tcbuffer(), StboxType::stbox(), LogicalType::BOOLEAN}, CbufferTypes::tcbuffer(), Gen_tcbuffer_minus_stbox));
     RegisterMeosFunction(loader, ScalarFunction("minusStbox", {CbufferTypes::tcbuffer(), StboxType::stbox()}, CbufferTypes::tcbuffer(), Gen_tcbuffer_minus_stbox_d));
+}
+
+void RegisterGenerated_meos_cbuffer_spatial_accessor(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("spaceTimeVolume", {CbufferTypes::tcbuffer()}, LogicalType::DOUBLE, Gen_tcbuffer_space_time_volume));
 }
 
 void RegisterGenerated_meos_geo_inout(ExtensionLoader &loader) {

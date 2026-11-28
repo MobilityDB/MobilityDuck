@@ -756,6 +756,9 @@ inline double distance_set_geo(const Set * p0, const GSERIALIZED * p1) {
 inline Temporal * tgeo_centroid(const Temporal * p0) {
     return ::tgeo_centroid(p0, true);
 }
+inline double tgeo_space_time_volume(const Temporal * p0) {
+    return ::tgeo_space_time_volume(p0, true);
+}
 inline Temporal * tpoint_cumulative_length(const Temporal * p0) {
     return ::tpoint_cumulative_length(p0, true);
 }
@@ -848,6 +851,9 @@ inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Tempor
 }
 inline Temporal * tgeo_centroid_full(const Temporal * p0, bool p1) {
     return ::tgeo_centroid(p0, p1);
+}
+inline double tgeo_space_time_volume_full(const Temporal * p0, bool p1) {
+    return ::tgeo_space_time_volume(p0, p1);
 }
 inline Temporal * tpoint_cumulative_length_full(const Temporal * p0, bool p1) {
     return ::tpoint_cumulative_length(p0, p1);
@@ -1414,6 +1420,18 @@ static void Gen_tgeo_end_value(DataChunk &args, ExpressionState &state, Vector &
         });
 }
 
+static void Gen_tgeo_space_time_volume(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    UnaryExecutor::ExecuteWithNulls<string_t, double>(args.data[0], result, args.size(),
+        [&](string_t in, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = BlobToTemporal(in);
+            double r = tgeo_space_time_volume(t);
+            free(t);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
+        });
+}
+
 static void Gen_tgeo_start_value(DataChunk &args, ExpressionState &state, Vector &result) {
     EnsureMeosThreadInitialized();
     UnaryExecutor::ExecuteWithNulls<string_t, string_t>(args.data[0], result, args.size(),
@@ -1677,6 +1695,18 @@ static void Gen_tgeo_centroid_full(DataChunk &args, ExpressionState &, Vector &r
             Temporal *r = tgeo_centroid_full(t, a2);
             free(t);
             return TemporalToBlobN(result, r, mask, idx);
+        });
+}
+
+static void Gen_tgeo_space_time_volume_full(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    BinaryExecutor::ExecuteWithNulls<string_t, bool, double>(args.data[0], args.data[1], result, args.size(),
+        [&](string_t in, bool a2, ValidityMask &mask, idx_t idx) -> double {
+            Temporal *t = BlobToTemporal(in);
+            double r = tgeo_space_time_volume_full(t, a2);
+            free(t);
+            if (r == DBL_MAX) { mask.SetInvalid(idx); return double(); }
+            return (double) r;
         });
 }
 
@@ -7262,6 +7292,8 @@ void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("endValue", {TgeogpointType::tgeogpoint()}, MobilityDuckGeometryType(), Gen_tgeo_end_value));
     RegisterMeosFunction(loader, ScalarFunction("endValue", {TGeometryTypes::tgeometry()}, MobilityDuckGeometryType(), Gen_tgeo_end_value));
     RegisterMeosFunction(loader, ScalarFunction("endValue", {TGeographyTypes::tgeography()}, MobilityDuckGeometryType(), Gen_tgeo_end_value));
+    RegisterMeosFunction(loader, ScalarFunction("spaceTimeVolume", {TGeometryTypes::tgeometry()}, LogicalType::DOUBLE, Gen_tgeo_space_time_volume));
+    RegisterMeosFunction(loader, ScalarFunction("spaceTimeVolume", {TGeographyTypes::tgeography()}, LogicalType::DOUBLE, Gen_tgeo_space_time_volume));
     RegisterMeosFunction(loader, ScalarFunction("startValue", {TgeompointType::tgeompoint()}, MobilityDuckGeometryType(), Gen_tgeo_start_value));
     RegisterMeosFunction(loader, ScalarFunction("startValue", {TgeogpointType::tgeogpoint()}, MobilityDuckGeometryType(), Gen_tgeo_start_value));
     RegisterMeosFunction(loader, ScalarFunction("startValue", {TGeometryTypes::tgeometry()}, MobilityDuckGeometryType(), Gen_tgeo_start_value));
@@ -7307,6 +7339,7 @@ void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("trajectory", {TgeogpointType::tgeogpoint()}, MobilityDuckGeometryType(), Gen_tpoint_trajectory_d));
     RegisterMeosFunction(loader, ScalarFunction("twCentroid", {TgeompointType::tgeompoint()}, MobilityDuckGeometryType(), Gen_tpoint_twcentroid));
     RegisterMeosFunction(loader, ScalarFunction("centroid", {TGeographyTypes::tgeography(), LogicalType::BOOLEAN}, TgeogpointType::tgeogpoint(), Gen_tgeo_centroid_full));
+    RegisterMeosFunction(loader, ScalarFunction("spaceTimeVolume", {TGeographyTypes::tgeography(), LogicalType::BOOLEAN}, LogicalType::DOUBLE, Gen_tgeo_space_time_volume_full));
     RegisterMeosFunction(loader, ScalarFunction("cumulativeLength", {TgeogpointType::tgeogpoint(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_tpoint_cumulative_length_full));
     RegisterMeosFunction(loader, ScalarFunction("length", {TgeogpointType::tgeogpoint(), LogicalType::BOOLEAN}, LogicalType::DOUBLE, Gen_tpoint_length_full));
     RegisterMeosFunction(loader, ScalarFunction("speed", {TgeogpointType::tgeogpoint(), LogicalType::BOOLEAN}, TemporalTypes::tfloat(), Gen_tpoint_speed_full));

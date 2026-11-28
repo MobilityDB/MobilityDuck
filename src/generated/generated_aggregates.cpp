@@ -757,6 +757,9 @@ inline double distance_set_geo(const Set * p0, const GSERIALIZED * p1) {
 inline Temporal * tgeo_centroid(const Temporal * p0) {
     return ::tgeo_centroid(p0, true);
 }
+inline double tgeo_space_time_volume(const Temporal * p0) {
+    return ::tgeo_space_time_volume(p0, true);
+}
 inline Temporal * tpoint_cumulative_length(const Temporal * p0) {
     return ::tpoint_cumulative_length(p0, true);
 }
@@ -849,6 +852,9 @@ inline int * tdwithin_tgeoarr_tgeoarr(const Temporal ** p0, int p1, const Tempor
 }
 inline Temporal * tgeo_centroid_full(const Temporal * p0, bool p1) {
     return ::tgeo_centroid(p0, p1);
+}
+inline double tgeo_space_time_volume_full(const Temporal * p0, bool p1) {
+    return ::tgeo_space_time_volume(p0, p1);
 }
 inline Temporal * tpoint_cumulative_length_full(const Temporal * p0, bool p1) {
     return ::tpoint_cumulative_length(p0, p1);
