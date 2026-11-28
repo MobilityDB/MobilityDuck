@@ -32,14 +32,14 @@
 
 // The string writers at the arity the shapes call them, each size left
 // unread (fold_string_sizes).
-inline SizedString mobilitydb_version() {
+inline SizedString meos_version() {
     size_t size = 0;
-    char *s = ::mobilitydb_version(&size);
+    char *s = ::meos_version(&size);
     return SizedString(s, size);
 }
-inline SizedString mobilitydb_full_version() {
+inline SizedString meos_full_version() {
     size_t size = 0;
-    char *s = ::mobilitydb_full_version(&size);
+    char *s = ::meos_full_version(&size);
     return SizedString(s, size);
 }
 inline SizedString temporal_as_mfjson(const Temporal * p0, int p1, int p2, int p3, const char * p4) {
