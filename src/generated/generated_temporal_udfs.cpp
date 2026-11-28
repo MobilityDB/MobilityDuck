@@ -325,6 +325,7 @@ void RegisterGenerated_meos_cbuffer_set_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_set_constructor(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_set_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_set_inout(ExtensionLoader &loader);
+void RegisterGenerated_meos_cbuffer_spatial_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_cbuffer_transf(ExtensionLoader &loader);
 void RegisterGenerated_meos_cellindex(ExtensionLoader &loader);
 void RegisterGenerated_meos_geo_accessor(ExtensionLoader &loader);
@@ -600,6 +601,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_cbuffer_set_constructor(loader);
     RegisterGenerated_meos_cbuffer_set_conversion(loader);
     RegisterGenerated_meos_cbuffer_set_inout(loader);
+    RegisterGenerated_meos_cbuffer_spatial_accessor(loader);
     RegisterGenerated_meos_cbuffer_transf(loader);
     RegisterGenerated_meos_cellindex(loader);
     RegisterGenerated_meos_geo_accessor(loader);
