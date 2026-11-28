@@ -1,0 +1,23 @@
+# name: test/sql/meos_version.test
+# description: The version of the MEOS library MobilityDuck links
+# group: [sql]
+#
+# Each binding answers the version of the MEOS it links under MEOS's own
+# name, meosVersion() and meosFullVersion(), as MobilityDB does.
+
+require mobilityduck
+
+query I
+SELECT meosVersion() LIKE 'MEOS %';
+----
+true
+
+query I
+SELECT meosFullVersion() LIKE meosVersion() || ', PostgreSQL %, PostGIS %, PROJ %, JSON-C %';
+----
+true
+
+query I
+SELECT meosVersion() <> mobilityduckVersion();
+----
+true
