@@ -6189,6 +6189,8 @@ RETIRED_GROUPS = {# The restrictions of the temporal values, the temporal points
                   "meos_geo_base_bbox",
                   # the text of an array of geometries (geoarr_as_text, geoarr_as_ewkt)
                   "meos_geo_base_inout",
+                  # the version of the MEOS the binding links (meos_version, meos_full_version)
+                  "meos_misc",
                   # the accessors of the circular buffers, poses, pose chains, point clouds and H3
                   # and S2 cells
                   "meos_cbuffer_accessor", "meos_pose_accessor", "meos_posechain_accessor",
@@ -8280,8 +8282,10 @@ def emit_sig_call(f, plan, sfx, nargs, omitted):
     state = "state" if any("GSerializedToGeometry(" in x for x in rwrite) else ""
     L = [f"static void Gen_{name}{sfx}(DataChunk &args, ExpressionState &{state}, Vector &result) {{",
          "    EnsureMeosThreadInitialized();",
-         "    const idx_t rows = args.size();",
-         f"    for (idx_t c = 0; c < {nargs}; c++) args.data[c].Flatten(rows);"]
+         "    const idx_t rows = args.size();"]
+    # a function of no argument (meos_version) has no column to flatten
+    if nargs:
+        L.append(f"    for (idx_t c = 0; c < {nargs}; c++) args.data[c].Flatten(rows);")
     for k, a in enumerate(args):
         if a["kind"] == "list":
             L += [f"    auto in{k} = ListVector::GetData(args.data[{k}]);",

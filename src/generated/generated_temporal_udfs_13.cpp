@@ -3143,6 +3143,34 @@ static void Gen_h3index_to_set(DataChunk &args, ExpressionState &, Vector &resul
 }
 
 
+// ===== @ingroup meos_misc =====
+static void Gen_meos_version(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        SizedString r = meos_version();
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+static void Gen_meos_full_version(DataChunk &args, ExpressionState &, Vector &result) {
+    EnsureMeosThreadInitialized();
+    const idx_t rows = args.size();
+    auto out = FlatVector::GetData<string_t>(result);
+    auto &outv = FlatVector::Validity(result);
+    for (idx_t i = 0; i < rows; i++) {
+        SizedString r = meos_full_version();
+        if (!r) { outv.SetInvalid(i); continue; }
+        out[i] = TakeCString(result, r);
+    }
+    if (rows == 1) result.SetVectorType(VectorType::CONSTANT_VECTOR);
+}
+
+
 // ===== @ingroup meos_npoint_base_srid =====
 static void Gen_npoint_srid(DataChunk &args, ExpressionState &, Vector &result) {
     EnsureMeosThreadInitialized();
@@ -5379,6 +5407,11 @@ void RegisterGenerated_meos_h3_accessor(ExtensionLoader &loader) {
 
 void RegisterGenerated_meos_h3_set_conversion(ExtensionLoader &loader) {
     RegisterMeosFunction(loader, ScalarFunction("set", {H3indexTypes::h3index()}, SetTypes::h3indexset(), Gen_h3index_to_set));
+}
+
+void RegisterGenerated_meos_misc(ExtensionLoader &loader) {
+    RegisterMeosFunction(loader, ScalarFunction("meosVersion", {}, LogicalType::VARCHAR, Gen_meos_version));
+    RegisterMeosFunction(loader, ScalarFunction("meosFullVersion", {}, LogicalType::VARCHAR, Gen_meos_full_version));
 }
 
 void RegisterGenerated_meos_npoint_base_srid(ExtensionLoader &loader) {

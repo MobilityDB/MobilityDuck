@@ -408,6 +408,7 @@ void RegisterGenerated_meos_json_set_conversion(ExtensionLoader &loader);
 void RegisterGenerated_meos_json_set_inout(ExtensionLoader &loader);
 void RegisterGenerated_meos_json_set_json(ExtensionLoader &loader);
 void RegisterGenerated_meos_json_transf(ExtensionLoader &loader);
+void RegisterGenerated_meos_misc(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_base_accessor(ExtensionLoader &loader);
 void RegisterGenerated_meos_npoint_base_comp(ExtensionLoader &loader);
@@ -684,6 +685,7 @@ void RegisterGeneratedTemporalUdfs(ExtensionLoader &loader) {
     RegisterGenerated_meos_json_set_inout(loader);
     RegisterGenerated_meos_json_set_json(loader);
     RegisterGenerated_meos_json_transf(loader);
+    RegisterGenerated_meos_misc(loader);
     RegisterGenerated_meos_npoint_accessor(loader);
     RegisterGenerated_meos_npoint_base_accessor(loader);
     RegisterGenerated_meos_npoint_base_comp(loader);
